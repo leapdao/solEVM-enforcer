@@ -35,7 +35,7 @@
     "babel-preset-stage-3": "^6.17.0",
     "babel-register": "^6.26.0",
     "chai": "^4.0.2",
-    "chai-as-promised": "^7.0.0",
+    "chai-as-promised": "^7.1.1",
     "chai-bignumber": "^2.0.0",
     "coveralls": "^2.13.1",
     "dotenv": "^4.0.0",
