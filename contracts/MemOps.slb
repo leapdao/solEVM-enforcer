@@ -1,0 +1,113 @@
+pragma experimental "v0.5.0";
+pragma experimental ABIEncoderV2;
+pragma solidity ^0.4.22;
+
+/*
+    Operations to do with EVM memory. This library uses 0x40 as free memory pointer just as LLL and
+    Solidity, but only for storage; it always reads the value from MSIZE. Allocation will allocate new
+    memory from free memory by expanding it and then updating the free memory pointer with the new address.
+*/
+library MemOps {
+
+    uint constant internal WORD_SIZE = 32;
+    uint constant internal FREE_MEM_ADDR = 0x40;
+    uint constant internal ONES = ~uint(0);
+
+    // Returns the next free memory address. NOTE this will always
+    // point to free, unallocated memory because it is calls MSIZE.
+    function freeMemPtr() internal pure returns (uint addr) {
+        assembly {
+            // free memory address - constants doesn't work in inline assembly.
+            addr := mload(0x40)
+        }
+    }
+
+    /*
+        Allocates 'numBytes' bytes of memory.
+    */
+    function allocate(uint numBytes) internal pure returns (uint addr) {
+        assembly {
+            // free memory address 0x40 - constants doesn't work in inline assembly.
+            addr := mload(0x40)
+            mstore(0x40, add(addr, numBytes))
+        }
+    }
+
+    /*
+        Allocates 'words' words of memory.
+    */
+    function allocate32(uint words) internal pure returns (uint addr) {
+        uint numBytes = words * WORD_SIZE;
+        assembly {
+            // free memory address 0x40 - constants doesn't work in inline assembly.
+            addr := mload(0x40)
+            mstore(0x40, add(addr, numBytes))
+        }
+    }
+
+    // Copies 'len' bytes from 'srcPtr' to 'destPtr'.
+    // NOTE: This function does not check if memory is allocated, it only copies the bytes.
+    function memcopy(uint srcPtr, uint destPtr, uint len) internal pure {
+        uint offset = 0;
+        uint size = len / WORD_SIZE;
+        // Copy word-length chunks while possible.
+        for (uint i = 0; i < size; i++) {
+            offset = i * WORD_SIZE;
+            assembly {
+                mstore(add(destPtr, offset), mload(add(srcPtr, offset)))
+            }
+        }
+        offset = size*WORD_SIZE;
+        uint mask = ONES << 8*(32 - len % WORD_SIZE);
+        assembly {
+            let nSrc := add(srcPtr, offset)
+            let nDest := add(destPtr, offset)
+            mstore(nDest, or(and(mload(nSrc), mask), and(mload(nDest), not(mask))))
+        }
+    }
+
+    // Copies 'words*32' bytes from 'srcPtr' to 'destPtr'.
+    // NOTE: This function does not check if memory is allocated, it only copies the bytes.
+    function memcopy32(uint srcPtr, uint destPtr, uint words) internal pure {
+        // Copy word-length chunks.
+        for (uint i = 0; i < words; i++) {
+            uint mp = i * WORD_SIZE;
+            assembly {
+                mstore(add(destPtr, mp), mload(add(srcPtr, mp)))
+            }
+        }
+    }
+
+    // Sets 'len' bytes from 'startPtr' to 0.
+    // NOTE: This function does not check if memory is allocated, it only writes the bytes.
+    function memclear(uint startPtr, uint len) internal pure {
+        uint offset = 0;
+        uint size = len / WORD_SIZE;
+        // Write word-length chunks while possible.
+        for (uint i = 0; i < size; i++) {
+            offset = i * WORD_SIZE;
+            assembly {
+                mstore(add(startPtr, offset), 0)
+            }
+        }
+        offset = size*WORD_SIZE;
+        uint mask = ONES >> 8*(len % WORD_SIZE);
+        assembly {
+            let nDest := add(startPtr, offset)
+            mstore(nDest, and(mload(nDest), mask))
+        }
+    }
+
+    // Sets 'words*32' bytes from 'srcPtr' to 0.
+    // NOTE: This function does not check if memory is allocated, it only writes the bytes.
+    function memclear32(uint startPtr, uint words) internal pure {
+        // Copy word-length chunks.
+        for (uint i = 0; i < words; i++) {
+            uint mp = i * WORD_SIZE;
+            assembly {
+                mstore(add(startPtr, mp), 0)
+            }
+        }
+    }
+
+}

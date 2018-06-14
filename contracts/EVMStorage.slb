@@ -1,0 +1,123 @@
+pragma experimental "v0.5.0";
+pragma experimental ABIEncoderV2;
+pragma solidity ^0.4.22;
+
+library EVMStorage {
+
+    struct StorageSlot {
+        uint addr;
+        uint val;
+    }
+
+    struct Element {
+        uint _next;
+        StorageSlot slot;
+    }
+
+    struct Storage {
+        Element head;
+        uint size;
+    }
+
+    function store(Storage memory self, uint addr, uint val) internal pure {
+        if (self.size == 0) {
+            Element memory e;
+            e.slot.addr = addr;
+            e.slot.val = val;
+            self.head = e;
+            self.size = 1;
+        } else {
+            Element memory e = self.head;
+            while (true) {
+                if (e.slot.addr == addr) {
+                    e.slot.val = val;
+                    return;
+                }
+                if (e._next == 0) {
+                    break;
+                }
+                uint n = e._next;
+                assembly {
+                    e := n
+                }
+            }
+            Element memory newElem = Element(0, StorageSlot(addr, val));
+            uint elemAddr;
+            assembly {
+                elemAddr := newElem
+            }
+            e._next = elemAddr;
+            self.size++;
+        }
+    }
+
+    function load(Storage memory self, uint addr) internal pure returns (uint val) {
+        if (self.size != 0) {
+            Element memory e = self.head;
+            while (true) {
+                if (e.slot.addr == addr) {
+                    val = e.slot.val;
+                    return;
+                }
+                if (e._next == 0) {
+                    break;
+                }
+                uint n = e._next;
+                assembly {
+                    e := n
+                }
+            }
+        }
+        val = 0;
+        return;
+    }
+
+    function copy(Storage memory self) internal pure returns (Storage memory stg) {
+        if (self.size == 0) {
+            return;
+        }
+        stg.size = self.size;
+        Element memory e = self.head;
+        stg.head = Element(0, StorageSlot(e.slot.addr, e.slot.val));
+        Element memory e2 = stg.head;
+        while (true) {
+            if (e._next == 0) {
+                break;
+            }
+            uint n = e._next;
+            assembly {
+                e := n
+            }
+            Element memory newElem = Element(0, StorageSlot(e.slot.addr, e.slot.val));
+            uint newElemAddr;
+            assembly {
+                newElemAddr := newElem
+            }
+            e2._next = newElemAddr;
+            e2 = newElem;
+        }
+        return;
+    }
+
+    function toArray(Storage memory self) internal pure returns (StorageSlot[] memory slots) {
+        if (self.size == 0) {
+            return;
+        }
+        slots = new StorageSlot[](self.size);
+        uint i = 0;
+        Element memory e = self.head;
+        while (true) {
+            slots[i++] = e.slot;
+            if (e._next == 0) {
+                break;
+            }
+            uint n = e._next;
+            assembly {
+                e := n
+            }
+        }
+        return;
+    }
+
+
+}

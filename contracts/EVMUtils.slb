@@ -1,0 +1,60 @@
+pragma experimental "v0.5.0";
+pragma experimental ABIEncoderV2;
+pragma solidity ^0.4.22;
+
+import {MemOps} from "./MemOps.slb";
+
+library EVMUtils {
+
+    function toUint(bytes memory bts, uint addr, uint numBytes) internal pure returns (uint data) {
+        assert(32 >= numBytes && numBytes > 0 && addr + numBytes <= bts.length);
+        assembly {
+            data := mload(add(add(bts, 0x20), addr))
+        }
+        data = data >> 8 * (32 - numBytes);
+    }
+
+    function fromUint(uint x) internal pure returns (bytes memory bts) {
+        bts = new bytes(32);
+        assembly {
+            mstore(add(bts, 0x20), x)
+        }
+    }
+
+    function copy(bytes memory src, bytes memory dest, uint srcIdx, uint destIdx, uint len) internal pure {
+        assert(srcIdx + len <= src.length);
+        assert(destIdx + len <= dest.length);
+        uint srcMPtr;
+        uint destMPtr;
+        assembly {
+            srcMPtr := add(add(src, srcIdx), 0x20)
+            destMPtr := add(add(dest, destIdx), 0x20)
+        }
+        MemOps.memcopy(srcMPtr, destMPtr, len);
+    }
+
+    function newAddress(address addr, uint8 nonce) internal pure returns (address) {
+        assert(addr != 0);
+        assert(nonce > 0);
+        uint8 nonceM1 = uint8(nonce - 1);
+        // TODO look into addresses with highest order bytes that are zero.
+        if (nonceM1 < 0x80) {
+            return address(keccak256(abi.encodePacked(
+                    uint8(0xd6),
+                    uint8(0x94),
+                    addr,
+                    nonceM1
+                )));
+        } else {
+            return address(keccak256(abi.encodePacked(
+                    uint8(0xd7),
+                    uint8(0x94),
+                    addr,
+                    uint8(0x81),
+                    nonceM1
+                )));
+        }
+
+    }
+
+}

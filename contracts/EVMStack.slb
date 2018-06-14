@@ -1,0 +1,122 @@
+pragma experimental "v0.5.0";
+pragma experimental ABIEncoderV2;
+pragma solidity ^0.4.22;
+
+import {MemOps} from "./MemOps.slb";
+
+library EVMStack {
+
+    uint constant internal INITIAL_CAP = 64;
+    uint constant internal MAX_SIZE = 1024;
+
+    struct Stack {
+        uint size;
+        uint cap;
+        uint dataPtr;
+    }
+
+    // Re-sizes and re-allocates the stack.
+    function expandCapacity(Stack memory self, uint capIncrease) internal pure {
+        assert(capIncrease != 0);
+        assert(self.cap + capIncrease <= MAX_SIZE);
+        self.cap += capIncrease;
+        uint src = self.dataPtr;
+        uint dest = MemOps.allocate32(self.cap);
+        MemOps.memcopy32(src, dest, self.size);
+        self.dataPtr = dest;
+    }
+
+    function newStack() internal pure returns (Stack memory stk) {
+        stk.size = 0;
+        stk.cap = INITIAL_CAP;
+        stk.dataPtr = MemOps.allocate32(INITIAL_CAP);
+    }
+
+    function fromArray(uint[] memory sArr) internal pure returns (Stack memory stk) {
+        stk.size = sArr.length;
+        stk.cap = sArr.length + INITIAL_CAP;
+        stk.dataPtr = MemOps.allocate32(sArr.length + INITIAL_CAP);
+        for (uint i = 0; i < sArr.length; i++) {
+            uint val = sArr[i];
+            uint slot = stk.dataPtr + 32*i;
+            assembly {
+                mstore(slot, val)
+            }
+        }
+    }
+
+    function toArray(Stack memory self) internal pure returns (uint[] memory arr) {
+        if (self.size == 0) {
+            return;
+        }
+        arr = new uint[](self.size);
+        uint dest;
+        assembly {
+            dest := add(arr, 0x20)
+        }
+        MemOps.memcopy32(self.dataPtr, dest, self.size);
+    }
+
+    function push(Stack self, uint val) internal pure {
+        assert(self.size < MAX_SIZE);
+        if (self.size == self.cap) {
+            expandCapacity(self, 32);
+        }
+        uint slot = self.dataPtr + 32*self.size++;
+        assembly {
+            mstore(slot, val)
+        }
+    }
+
+    function pop(Stack self) internal pure returns (uint) {
+        assert(self.size > 0);
+        uint data;
+        uint slot = self.dataPtr + --self.size*32;
+        assembly {
+            data := mload(slot)
+            mstore(slot, 0) // remove?
+        }
+        return data;
+    }
+
+    function read(Stack self, uint index) internal pure returns (uint) {
+        assert(index < self.size);
+        uint data;
+        uint slot = self.dataPtr + index*32;
+        assembly {
+            data := mload(slot)
+        }
+        return data;
+    }
+
+    function dup(Stack self, uint n) internal pure {
+        assert(self.size < MAX_SIZE);
+        assert(1 <= n && n <= 16);
+        assert(n <= self.size);
+        uint data;
+        uint slot1 = self.dataPtr + (self.size - n)*32;
+        assembly {
+            data := mload(slot1)
+        }
+        if (self.size == self.cap) {
+            expandCapacity(self, 32);
+        }
+        uint slot2 = self.dataPtr + 32*self.size++;
+        assembly {
+            mstore(slot2, data)
+        }
+    }
+
+    function swap(Stack self, uint n) internal pure {
+        assert(1 <= n && n <= 16);
+        assert(n < self.size);
+        uint slot1 = self.dataPtr + (self.size - 1)*32;
+        uint slot2 = self.dataPtr + (self.size - n - 1)*32;
+        assembly {
+            let data1 := mload(slot1)
+            mstore(slot1, mload(slot2))
+            mstore(slot2, data1)
+        }
+    }
+
+}

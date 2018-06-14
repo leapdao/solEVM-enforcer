@@ -1,0 +1,188 @@
+pragma experimental "v0.5.0";
+pragma experimental ABIEncoderV2;
+pragma solidity ^0.4.22;
+
+import {MemOps} from "./MemOps.slb";
+
+library EVMMemory {
+
+    uint constant internal ALLOC_SIZE = 64;
+    uint constant internal WORD_SIZE = 32;
+
+    struct Memory {
+        uint size; // in words
+        uint cap; // in words
+        uint dataPtr;
+    }
+
+    // Get the position of 'index' in actual memory, i.e. 'self.dataPtr + index'.
+    function memUPtr(Memory memory self, uint index) internal pure returns (uint) {
+        return self.dataPtr + index;
+    }
+    
+   function nextPowTwo(uint v) internal pure returns (uint) {
+        v--;
+        v|=v>>1;
+        v|=v>>2;
+        v|=v>>4;
+        v|=v>>8;
+        v|=v>>16;
+        v++;
+        return v;
+    }
+
+    // Resizes and re-allocates memory.
+    function setCapacity(Memory memory self, uint capNeeded) internal pure {
+        assert(capNeeded >= self.size);
+        uint src = self.dataPtr;
+        uint cap = nextPowTwo(capNeeded);
+        uint dest = MemOps.allocate32(cap);
+        MemOps.memcopy32(src, dest, self.size);
+        self.dataPtr = dest;
+        self.cap = cap;
+    }
+
+    function newMemory() internal pure returns (Memory memory mem) {
+        mem.size = 0;
+        mem.cap = ALLOC_SIZE;
+        mem.dataPtr = MemOps.allocate32(ALLOC_SIZE);
+    }
+
+    function fromArray(bytes memory memIn) internal pure returns (Memory memory mem) {
+        assert(memIn.length % 32 == 0);
+        mem.size = memIn.length / 32;
+        mem.cap = mem.size + ALLOC_SIZE;
+        mem.dataPtr = MemOps.allocate32(mem.cap);
+        uint dest = mem.dataPtr;
+        uint src;
+        assembly {
+            src := add(memIn, 0x20)
+        }
+        MemOps.memcopy32(src, dest, mem.size);
+    }
+
+    function toArray(Memory memory self) internal pure returns (bytes memory arr) {
+        arr = new bytes(self.size*WORD_SIZE);
+        uint dest;
+        assembly {
+            dest := add(arr, 0x20)
+        }
+        MemOps.memcopy32(self.dataPtr, dest, self.size);
+    }
+
+    function toArray(Memory memory self, uint start, uint len) internal pure returns (bytes memory arr) {
+        arr = new bytes(len);
+        uint newSize = (len + 31) / 32;
+        if(newSize >= self.cap) {
+            setCapacity(self, newSize);
+            self.size = newSize;
+        }
+        uint dest;
+        assembly {
+            dest := add(arr, 0x20)
+        }
+        MemOps.memcopy(self.dataPtr + start, dest, len);
+    }
+
+    function store8(Memory memory self, uint index, uint val) internal pure {
+        uint newSize = index / WORD_SIZE + 1;
+        if(newSize >= self.cap) {
+            setCapacity(self, newSize);
+        }
+        if(newSize > self.size) {
+            self.size = newSize;
+        }
+
+        uint slot = self.dataPtr + index;
+        assembly {
+            mstore8(slot, val)
+        }
+    }
+
+    function store(Memory memory self, uint index, uint val) internal pure {
+        uint newSize = (index + 31) / WORD_SIZE + 1; // +1 for an extra word due to the 32 bytes wide write.
+        if(newSize >= self.cap) {
+            setCapacity(self, newSize);
+        }
+        if(newSize > self.size) {
+            self.size = newSize;
+        }
+
+        uint slot = self.dataPtr + index;
+        assembly {
+            mstore(slot, val)
+        }
+    }
+
+    /*
+        Takes 'len' bytes from 'bts', starting at 'srcIndex', and copy into memory
+        starting at 'destIdx'. If 'srcIndex + len' is larger than 'bts.length',
+        the operation will fail.
+    */
+    function storeBytes(Memory memory self, bytes memory bts, uint srcIdx, uint destIdx, uint len) internal pure {
+        assert(srcIdx + len <= bts.length);
+        uint newSize = (destIdx + len + 31) / WORD_SIZE;
+        if(newSize >= self.cap) {
+            setCapacity(self, newSize);
+        }
+        if(newSize > self.size) {
+            self.size = newSize;
+        }
+        uint btsSrc;
+        assembly {
+            btsSrc := add(add(bts, 0x20), srcIdx)
+        }
+        uint memDest = self.dataPtr + destIdx;
+        MemOps.memcopy(btsSrc, memDest, len);
+    }
+
+    /*
+        Takes 'len' bytes from 'bts', starting at 'srcIndex', and copy into memory
+        starting at 'destIdx'. If 'srcIndex + len' is larger than 'bts.length',
+        the bytes that lies outside of 'bts' is considered to be 0.
+    */
+    function storeBytesAndPadWithZeroes(
+        Memory memory self,
+        bytes memory bts,
+        uint srcIdx,
+        uint destIdx,
+        uint len
+    ) internal pure {
+        uint newSize = (destIdx + len + 31) / WORD_SIZE;
+        if(newSize >= self.cap) {
+            setCapacity(self, newSize);
+        }
+        if(newSize > self.size) {
+            self.size = newSize;
+        }
+        uint btsSrc;
+        assembly {
+            btsSrc := add(add(bts, 0x20), srcIdx)
+        }
+        uint memDest = self.dataPtr + destIdx;
+        if (srcIdx + len <= bts.length) {
+            MemOps.memcopy(btsSrc, memDest, len);
+        } else {
+            MemOps.memcopy(btsSrc, memDest, bts.length - srcIdx);
+            MemOps.memclear(memDest + bts.length - srcIdx, len - bts.length + srcIdx);
+        }
+
+    }
+
+    function load(Memory memory self, uint index) internal pure returns (uint) {
+        uint newSize = (index + 31) / WORD_SIZE + 1; // +1 for an extra word due to the 32 bytes wide write.
+        if(newSize >= self.cap) {
+            setCapacity(self, newSize);
+        }
+        if(newSize > self.size) {
+            self.size = newSize;
+        }
+        uint slot = self.dataPtr + index;
+        uint data;
+        assembly {
+            data := mload(slot)
+        }
+        return data;
+    }
+
+}
