@@ -21,6 +21,7 @@ library EVMMemory {
     }
     
    function nextPowTwo(uint v) internal pure returns (uint) {
+        require(v == uint32(v));
         v--;
         v|=v>>1;
         v|=v>>2;
@@ -59,6 +60,26 @@ library EVMMemory {
             src := add(memIn, 0x20)
         }
         MemOps.memcopy32(src, dest, mem.size);
+    }
+
+    function merklize(bytes32[] hashes) internal pure returns (bytes32) {
+      if (hashes.length == 1) {
+       return hashes[0];
+      } else {
+        bytes32[] memory arr = new bytes32[](hashes.length / 2);
+        for(uint i = 0; i < hashes.length; i = i + 2) {
+          arr[0] = keccak256(abi.encodePacked(hashes[i], hashes[i + 1]));
+        }
+        return merklize(arr);
+      }
+    }
+
+    function getRootHash(Memory memory self) internal pure returns (uint) {
+      bytes32[] memory arr = new bytes32[](1);
+      for(uint i = 0; i < self.cap; i = i + 2) {
+        arr[0] = keccak256(abi.encodePacked(load(self, i * WORD_SIZE), load(self, (i + 1) * WORD_SIZE)));
+      }
+      return uint(merklize(arr));
     }
 
     function toArray(Memory memory self) internal pure returns (bytes memory arr) {
