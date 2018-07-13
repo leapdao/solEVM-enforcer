@@ -26,37 +26,37 @@ The OP-codes are organized in groups based on which elements of the VM they acce
 ADD, MUL, SUB, DIV, SDIV, MOD, SMOD, ADDMOD, MULMOD, EXP, SIGNEXTEND, SHL, SHR, SAR, LT, GT, SLT, SGT, EQ, ISZERO, AND, OR, XOR, NOT, BYTE, POP, DUP, SWAP, 
 
 
-**Context and stack type OP-codes:**
+**Context and stack type OP-codes:**  
 ADDRESS, BALANCE, ORIGIN, CALLER, CALLVALUE, GASPRICE, BLOCKHASH, COINBASE, TIMESTAMP, BLOCK_NUMBER, DIFFICULTY, GASLIMIT, JUMP, JUMPI, PC, GAS, RETURNDATASIZE
 
-**Code and stack type OP-codes:**
+**Code and stack type OP-codes:**  
 CODELOAD, CODESIZE, PUSH1 - PUSH32,
 
-**Data and stack type OP-codes:**
+**Data and stack type OP-codes:**  
 CALLDATALOAD, CALLDATASIZE  
 <--- (!!! at this point we should be able to prove basic contracts !!!) --->
 
-**Memory and Stack type:**
+**Memory and Stack type:**  
 MLOAD, MSTORE, MSTORE8, MSIZE
 
-**Storage and Stack type OP-codes:**
+**Storage and Stack type OP-codes:**  
 SSTORE, SLOAD  
 <--- (!!! prove basic contracts with memory and storage !!!) --->
 
-**Context, stack and memory type OP-codes:**
+**Context, stack and memory type OP-codes:**  
 LOG
 
-**Data, stack and memory type OP-codes:**
+**Data, stack and memory type OP-codes:**  
 CALLDATACOPY
 
-**Code, stack and memory type OP-codes:**
+**Code, stack and memory type OP-codes:**  
 CODECOPY
 
-**Return, Stack and Memory type OP-codes:**
+**Return, Stack and Memory type OP-codes:**  
 RETURN, REVENT, RETURNDATACOPY  
 <--- (!!! most self-contained contract provable !!!) --->
 
-**Extra difficult type:**
+**Extra difficult type:**  
 EXTCODECOPY, EXTCODESIZE, CREATE, CALL, DELEGATECALL, STATICCALL, SELFDESTRUCT, PRECOMPILES
 
 the complexity of opcodes differs based on the VM elements they need to access and the complexity of the access (read/write full word vs. read/write dynamic array or struct):
