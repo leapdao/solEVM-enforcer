@@ -2,7 +2,7 @@
 
 This is a simple Ethereum runtime written in Solidity. The runtime contract allows you to execute evm bytecode with calldata and various other parameters. It is meant to be Truebit-style computation verification games for off-chain execution. Check the [architecture docs](/docs/Architecture.md) for details.
 
-This is a fork of [https://github.com/Ohalo-Ltd/solevm]()
+This is a fork of [https://github.com/Ohalo-Ltd/solevm](https://github.com/Ohalo-Ltd/solevm)
 
 ### Setup
 
