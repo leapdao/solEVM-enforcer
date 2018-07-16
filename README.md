@@ -4,7 +4,7 @@ This is a simple Ethereum runtime written in Solidity. The runtime contract allo
 
 This is a fork of [solevm](https://github.com/Ohalo-Ltd/solevm) by [Andreas Olofsson](https://github.com/androlo).
 
-Discussions in this [Discord channel](https://discord.gg/6QRfS7).
+Discussions in this [Discord channel](https://discord.gg/7bfD6eB).
 
 There is a regular call going on currently every Monday at 13:00 UTC in [hangouts](https://hangouts.google.com/hangouts/_/calendar/ODJkajBpczc0NHJxNWd0MnAybjJmNTY5cWtAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ.6j7d7c6k2hgl8o3ka9oljcpk0g).
 
