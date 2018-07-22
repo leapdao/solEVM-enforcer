@@ -13,6 +13,7 @@ There is a regular call going on currently every Monday at 13:00 UTC in [hangout
 Currently there are only tests using truffle. You can run the tests like this:
 
 ```
+npm install --global lerna
 npm install
 npm test
 ```
