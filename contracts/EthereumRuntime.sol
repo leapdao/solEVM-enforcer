@@ -156,8 +156,12 @@ contract EthereumRuntime is IEthereumRuntime {
             result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
         );
     }
-    
+
     function execute(bytes memory code, bytes memory data) public pure returns (Result memory result) {
+        return execute(code, data, 0);
+    }
+    
+    function execute(bytes memory code, bytes memory data, uint pcTill) public pure returns (Result memory result) {
         
         TxInput memory input = TxInput(
             0,
@@ -181,7 +185,7 @@ contract EthereumRuntime is IEthereumRuntime {
             0,
             0
         );
-        return execute(input, context);
+        return execute(input, context, pcTill);
     }
     
     function execute(TxInput memory input) public pure returns (Result memory result) {
@@ -197,7 +201,7 @@ contract EthereumRuntime is IEthereumRuntime {
         return execute(input, context);
     }
     
-    function execute(TxInput memory input, Context memory context) public pure returns (Result memory result) {
+    function execute(TxInput memory input, Context memory context, uint pcTill) public pure returns (Result memory result) {
         EVMInput memory evmInput;
         evmInput.context = context;
         evmInput.handlers = _newHandlers();
@@ -218,7 +222,7 @@ contract EthereumRuntime is IEthereumRuntime {
         evmInput.staticExec = input.staticExec;
         
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call);
+        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, pcTill);
         
         result.stack = evm.stack.toArray();
         result.mem = evm.mem.toArray();
@@ -230,8 +234,14 @@ contract EthereumRuntime is IEthereumRuntime {
         (result.logs, result.logsData) = evm.logs.toArray();
         return;
     }
+
+    // Execute the EVM with the given code and call-data until the given op-count.
+    function executeAndStop(bytes memory code, bytes memory data, uint pcTill) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+        Result memory result = execute(code, data, pcTill);
+        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode, result.logs, result.logsData);
+    }
     
-    function _call(EVMInput memory evmInput, CallType callType) internal pure returns (EVM memory evm) {
+    function _call(EVMInput memory evmInput, CallType callType, uint pcTill) internal pure returns (EVM memory evm) {
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
         if (evmInput.staticExec) {
@@ -274,7 +284,7 @@ contract EthereumRuntime is IEthereumRuntime {
             
             evm.stack = EVMStack.newStack();
             evm.mem = EVMMemory.newMemory();
-            _run(evm, 0);
+            _run(evm, 0, pcTill);
         }
     }
     
@@ -314,8 +324,8 @@ contract EthereumRuntime is IEthereumRuntime {
         evm.code = evmInput.code;
         evm.stack = EVMStack.newStack();
         evm.mem = EVMMemory.newMemory();
-        _run(evm, 0);
-        
+        _run(evm, 0, 0);
+
         // TODO
         if (evm.errno != NO_ERROR) {
             return;
@@ -327,15 +337,18 @@ contract EthereumRuntime is IEthereumRuntime {
         newAcc.code = evm.returnData;
         addr = newAddress;
     }
-    
+
     // solhint-disable-next-line code-complexity, function-max-lines
-    function _run(EVM memory evm, uint pc) internal pure {
-        
+    function _run(EVM memory evm, uint pc, uint pcTill) internal pure {
+
         uint pcNext = 0;
         uint errno = NO_ERROR;
         bytes memory code = evm.code;
-        
-        while (errno == NO_ERROR && pc < code.length) {
+        if (pcTill == 0) {
+            pcTill = code.length;
+        }
+
+        while (errno == NO_ERROR && pc < pcTill) {
             uint opcode = uint(code[pc]);
             
             // Check for violation of static execution.
@@ -989,9 +1002,8 @@ contract EthereumRuntime is IEthereumRuntime {
         input.logs = state.logs;
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
-        
-        // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.Call);
+
+        EVM memory retEvm = _call(input, CallType.Call, 0);
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
@@ -1041,10 +1053,9 @@ contract EthereumRuntime is IEthereumRuntime {
         input.logs = state.logs;
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
-        
-        // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.DelegateCall);
-        
+
+        EVM memory retEvm = _call(input, CallType.DelegateCall, 0);
+
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
@@ -1079,9 +1090,8 @@ contract EthereumRuntime is IEthereumRuntime {
         input.logs = state.logs;
         input.handlers = state.handlers;
         input.staticExec = true;
-        
-        // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.StaticCall);
+
+        EVM memory retEvm = _call(input, CallType.StaticCall, 0);
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
