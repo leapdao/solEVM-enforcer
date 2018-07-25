@@ -248,15 +248,6 @@ contract EthereumRuntime is IEthereumRuntime {
         return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
     }
 
-    // Execute the EVM with the given code and call-data until the given op-count.
-    function initAndExecute(bytes memory code, bytes memory data, uint256 pcFrom, uint[] memory stack, bytes memory mem) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
-        EVMOverride memory override;
-        override.stack = EVMStack.fromArray(stack);
-        override.mem = EVMMemory.fromArray(mem);
-        override.pcFrom = pcFrom;
-        Result memory result = execute(code, data, override);
-        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
-    }
 
     function emptyEVMOverride() internal pure returns (EVMOverride memory override) {
         override.stack = EVMStack.newStack();
@@ -264,11 +255,6 @@ contract EthereumRuntime is IEthereumRuntime {
         override.pcFrom = 0;
         override.pcTill = 0;
     }
-
-    function callEmpty() public constant returns (uint256, uint256) {
-        EVMOverride memory ret = emptyEVMOverride();
-        return (ret.pcFrom, ret.pcTill);
-    } 
 
     function _call(EVMInput memory evmInput, CallType callType, EVMOverride memory evmOverride) internal pure returns (EVM memory evm){
         evm.context = evmInput.context;
@@ -310,7 +296,8 @@ contract EthereumRuntime is IEthereumRuntime {
                 return;
             }
             evm.code = evm.target.code;
-
+            evm.stack = evmOverride.stack;
+            evm.mem = evmOverride.mem;
             _run(evm, 0, evmOverride);
         }
     }
