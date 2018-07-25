@@ -131,7 +131,14 @@ contract IEthereumRuntime is EVMConstants {
         bool staticExec;
         Handlers handlers;
     }
-    
+
+    struct EVMOverride {
+        EVMMemory.Memory mem;
+        EVMStack.Stack stack;
+        uint pcFrom;
+        uint pcTill;
+    }
+
     // Execute the EVM with the given code and call-data.
     function execute(bytes memory code, bytes memory data) public pure returns (Result memory result);
     
@@ -147,22 +154,17 @@ contract IEthereumRuntime is EVMConstants {
 contract EthereumRuntime is IEthereumRuntime {
     
     // Execute the EVM with the given code and call-data.
-    function executeFlat(
-        bytes memory code, bytes memory data
-    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+    function executeFlat(bytes memory code, bytes memory data) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
         Result memory result = execute(code, data);
-        return (
-            result.errno, result.errpc, result.returnData, result.stack,
-            result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
-        );
+        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode, result.logs, result.logsData);
     }
 
     function execute(bytes memory code, bytes memory data) public pure returns (Result memory result) {
-        return execute(code, data, 0);
+        return execute(code, data, emptyEVMOverride());
     }
-    
-    function execute(bytes memory code, bytes memory data, uint pcTill) public pure returns (Result memory result) {
-        
+
+    function execute(bytes memory code, bytes memory data, EVMOverride memory evmOverride) public pure returns (Result memory result) {
+
         TxInput memory input = TxInput(
             0,
             0,
@@ -175,7 +177,7 @@ contract EthereumRuntime is IEthereumRuntime {
             data,
             false
         );
-        
+
         Context memory context = Context(
             DEFAULT_CALLER,
             0,
@@ -185,9 +187,9 @@ contract EthereumRuntime is IEthereumRuntime {
             0,
             0
         );
-        return execute(input, context, pcTill);
+        return execute(input, context, evmOverride);
     }
-    
+
     function execute(TxInput memory input) public pure returns (Result memory result) {
         Context memory context = Context(
             input.caller,
@@ -200,30 +202,33 @@ contract EthereumRuntime is IEthereumRuntime {
         );
         return execute(input, context);
     }
-    
-    function execute(TxInput memory input, Context memory context, uint pcTill) public pure returns (Result memory result) {
+
+    function execute(TxInput memory input, Context memory context) public pure returns (Result memory result) {
+        return execute(input, context, emptyEVMOverride());
+    }
+
+    function execute(TxInput memory input, Context memory context, EVMOverride evmOverride) public pure returns (Result memory result) {
         EVMInput memory evmInput;
         evmInput.context = context;
         evmInput.handlers = _newHandlers();
         evmInput.data = input.data;
         evmInput.value = input.value;
-        
+
         EVMAccounts.Account memory caller = evmInput.accounts.get(input.caller);
         caller.balance = input.callerBalance;
         if (!input.staticExec) {
             caller.nonce = uint8(1);
         }
         evmInput.caller = input.caller;
-        
+
         EVMAccounts.Account memory target = evmInput.accounts.get(input.target);
         target.balance = input.targetBalance;
         target.code = input.targetCode;
         evmInput.target = input.target;
         evmInput.staticExec = input.staticExec;
-        
-        // solhint-disable-next-line avoid-low-level-calls
-        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, pcTill);
-        
+
+        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, evmOverride);
+
         result.stack = evm.stack.toArray();
         result.mem = evm.mem.toArray();
         result.returnData = evm.returnData;
@@ -236,12 +241,36 @@ contract EthereumRuntime is IEthereumRuntime {
     }
 
     // Execute the EVM with the given code and call-data until the given op-count.
-    function executeAndStop(bytes memory code, bytes memory data, uint pcTill) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
-        Result memory result = execute(code, data, pcTill);
-        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode, result.logs, result.logsData);
+    function executeAndStop(bytes memory code, bytes memory data, uint pcTill) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
+        EVMOverride memory override = emptyEVMOverride();
+        override.pcTill = pcTill;
+        Result memory result = execute(code, data, override);
+        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
     }
-    
-    function _call(EVMInput memory evmInput, CallType callType, uint pcTill) internal pure returns (EVM memory evm) {
+
+    // Execute the EVM with the given code and call-data until the given op-count.
+    function initAndExecute(bytes memory code, bytes memory data, uint256 pcFrom, uint[] memory stack, bytes memory mem) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
+        EVMOverride memory override;
+        override.stack = EVMStack.fromArray(stack);
+        override.mem = EVMMemory.fromArray(mem);
+        override.pcFrom = pcFrom;
+        Result memory result = execute(code, data, override);
+        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
+    }
+
+    function emptyEVMOverride() internal pure returns (EVMOverride memory override) {
+        override.stack = EVMStack.newStack();
+        override.mem = EVMMemory.newMemory();
+        override.pcFrom = 0;
+        override.pcTill = 0;
+    }
+
+    function callEmpty() public constant returns (uint256, uint256) {
+        EVMOverride memory ret = emptyEVMOverride();
+        return (ret.pcFrom, ret.pcTill);
+    } 
+
+    function _call(EVMInput memory evmInput, CallType callType, EVMOverride memory evmOverride) internal pure returns (EVM memory evm){
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
         if (evmInput.staticExec) {
@@ -281,10 +310,8 @@ contract EthereumRuntime is IEthereumRuntime {
                 return;
             }
             evm.code = evm.target.code;
-            
-            evm.stack = EVMStack.newStack();
-            evm.mem = EVMMemory.newMemory();
-            _run(evm, 0, pcTill);
+
+            _run(evm, 0, evmOverride);
         }
     }
     
@@ -324,7 +351,7 @@ contract EthereumRuntime is IEthereumRuntime {
         evm.code = evmInput.code;
         evm.stack = EVMStack.newStack();
         evm.mem = EVMMemory.newMemory();
-        _run(evm, 0, 0);
+        _run(evm, 0, emptyEVMOverride());
 
         // TODO
         if (evm.errno != NO_ERROR) {
@@ -339,16 +366,16 @@ contract EthereumRuntime is IEthereumRuntime {
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
-    function _run(EVM memory evm, uint pc, uint pcTill) internal pure {
+    function _run(EVM memory evm, uint pc, EVMOverride memory evmOverride) internal pure {
 
         uint pcNext = 0;
         uint errno = NO_ERROR;
         bytes memory code = evm.code;
-        if (pcTill == 0) {
-            pcTill = code.length;
+        if (evmOverride.pcTill == 0) {
+            evmOverride.pcTill = code.length;
         }
 
-        while (errno == NO_ERROR && pc < pcTill) {
+        while (errno == NO_ERROR && pc < evmOverride.pcTill) {
             uint opcode = uint(code[pc]);
             
             // Check for violation of static execution.
@@ -1003,7 +1030,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
-        EVM memory retEvm = _call(input, CallType.Call, 0);
+        EVM memory retEvm = _call(input, CallType.Call, emptyEVMOverride());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
@@ -1054,7 +1081,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
-        EVM memory retEvm = _call(input, CallType.DelegateCall, 0);
+        EVM memory retEvm = _call(input, CallType.DelegateCall, emptyEVMOverride());
 
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
@@ -1091,7 +1118,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = true;
 
-        EVM memory retEvm = _call(input, CallType.StaticCall, 0);
+        EVM memory retEvm = _call(input, CallType.StaticCall, emptyEVMOverride());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
