@@ -132,7 +132,7 @@ contract IEthereumRuntime is EVMConstants {
         Handlers handlers;
     }
 
-    struct EVMOverride {
+    struct EVMCallContext {
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
         uint pcFrom;
@@ -160,10 +160,10 @@ contract EthereumRuntime is IEthereumRuntime {
     }
 
     function execute(bytes memory code, bytes memory data) public pure returns (Result memory result) {
-        return execute(code, data, emptyEVMOverride());
+        return execute(code, data, blankEVMCallContext());
     }
 
-    function execute(bytes memory code, bytes memory data, EVMOverride memory evmOverride) public pure returns (Result memory result) {
+    function execute(bytes memory code, bytes memory data, EVMCallContext memory callContext) public pure returns (Result memory result) {
 
         TxInput memory input = TxInput(
             0,
@@ -187,7 +187,7 @@ contract EthereumRuntime is IEthereumRuntime {
             0,
             0
         );
-        return execute(input, context, evmOverride);
+        return execute(input, context, callContext);
     }
 
     function execute(TxInput memory input) public pure returns (Result memory result) {
@@ -204,10 +204,10 @@ contract EthereumRuntime is IEthereumRuntime {
     }
 
     function execute(TxInput memory input, Context memory context) public pure returns (Result memory result) {
-        return execute(input, context, emptyEVMOverride());
+        return execute(input, context, blankEVMCallContext());
     }
 
-    function execute(TxInput memory input, Context memory context, EVMOverride evmOverride) public pure returns (Result memory result) {
+    function execute(TxInput memory input, Context memory context, EVMCallContext callContext) public pure returns (Result memory result) {
         EVMInput memory evmInput;
         evmInput.context = context;
         evmInput.handlers = _newHandlers();
@@ -227,7 +227,7 @@ contract EthereumRuntime is IEthereumRuntime {
         evmInput.target = input.target;
         evmInput.staticExec = input.staticExec;
 
-        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, evmOverride);
+        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, callContext);
 
         result.stack = evm.stack.toArray();
         result.mem = evm.mem.toArray();
@@ -242,21 +242,22 @@ contract EthereumRuntime is IEthereumRuntime {
 
     // Execute the EVM with the given code and call-data until the given op-count.
     function executeAndStop(bytes memory code, bytes memory data, uint pcTill) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
-        EVMOverride memory override = emptyEVMOverride();
-        override.pcTill = pcTill;
-        Result memory result = execute(code, data, override);
+        EVMCallContext memory callContext = blankEVMCallContext();
+        callContext.pcTill = pcTill;
+        Result memory result = execute(code, data, callContext);
         return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
     }
 
 
-    function emptyEVMOverride() internal pure returns (EVMOverride memory override) {
-        override.stack = EVMStack.newStack();
-        override.mem = EVMMemory.newMemory();
-        override.pcFrom = 0;
-        override.pcTill = 0;
+
+    function blankEVMCallContext() internal pure returns (EVMCallContext memory callContext) {
+        callContext.stack = EVMStack.newStack();
+        callContext.mem = EVMMemory.newMemory();
+        callContext.pcFrom = 0;
+        callContext.pcTill = 0;
     }
 
-    function _call(EVMInput memory evmInput, CallType callType, EVMOverride memory evmOverride) internal pure returns (EVM memory evm){
+    function _call(EVMInput memory evmInput, CallType callType, EVMCallContext memory callContext) internal pure returns (EVM memory evm){
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
         if (evmInput.staticExec) {
@@ -296,9 +297,9 @@ contract EthereumRuntime is IEthereumRuntime {
                 return;
             }
             evm.code = evm.target.code;
-            evm.stack = evmOverride.stack;
-            evm.mem = evmOverride.mem;
-            _run(evm, 0, evmOverride);
+            evm.stack = callContext.stack;
+            evm.mem = callContext.mem;
+            _run(evm, 0, callContext);
         }
     }
     
@@ -338,7 +339,7 @@ contract EthereumRuntime is IEthereumRuntime {
         evm.code = evmInput.code;
         evm.stack = EVMStack.newStack();
         evm.mem = EVMMemory.newMemory();
-        _run(evm, 0, emptyEVMOverride());
+        _run(evm, 0, blankEVMCallContext());
 
         // TODO
         if (evm.errno != NO_ERROR) {
@@ -352,17 +353,16 @@ contract EthereumRuntime is IEthereumRuntime {
         addr = newAddress;
     }
 
-    // solhint-disable-next-line code-complexity, function-max-lines
-    function _run(EVM memory evm, uint pc, EVMOverride memory evmOverride) internal pure {
+    function _run(EVM memory evm, uint pc, EVMCallContext memory callContext) internal pure {
 
         uint pcNext = 0;
         uint errno = NO_ERROR;
         bytes memory code = evm.code;
-        if (evmOverride.pcTill == 0) {
-            evmOverride.pcTill = code.length;
+        if (callContext.pcTill == 0) {
+            callContext.pcTill = code.length;
         }
 
-        while (errno == NO_ERROR && pc < evmOverride.pcTill) {
+        while (errno == NO_ERROR && pc < callContext.pcTill) {
             uint opcode = uint(code[pc]);
             
             // Check for violation of static execution.
@@ -1017,7 +1017,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
-        EVM memory retEvm = _call(input, CallType.Call, emptyEVMOverride());
+        EVM memory retEvm = _call(input, CallType.Call, blankEVMCallContext());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
@@ -1068,7 +1068,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
-        EVM memory retEvm = _call(input, CallType.DelegateCall, emptyEVMOverride());
+        EVM memory retEvm = _call(input, CallType.DelegateCall, blankEVMCallContext());
 
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
@@ -1105,7 +1105,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = true;
 
-        EVM memory retEvm = _call(input, CallType.StaticCall, emptyEVMOverride());
+        EVM memory retEvm = _call(input, CallType.StaticCall, blankEVMCallContext());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
