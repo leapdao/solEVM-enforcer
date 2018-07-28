@@ -1,9 +1,10 @@
+pragma solidity 0.4.24;
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
-pragma solidity ^0.4.22;
+
 
 contract EVMConstants {
-
+    
     // Stop and arithmetic ops
     uint constant internal OP_STOP = 0x00;
     uint constant internal OP_ADD = 0x01;
@@ -17,7 +18,7 @@ contract EVMConstants {
     uint constant internal OP_MULMOD = 0x09;
     uint constant internal OP_EXP = 0x0a;
     uint constant internal OP_SIGNEXTEND = 0x0b;
-
+    
     // Comparison & bitwise logic
     uint constant internal OP_LT = 0x10;
     uint constant internal OP_GT = 0x11;
@@ -33,10 +34,10 @@ contract EVMConstants {
     uint constant internal OP_SHL = 0x1b;
     uint constant internal OP_SHR = 0x1c;
     uint constant internal OP_SAR = 0x1d;
-
+    
     // SHA3
     uint constant internal OP_SHA3 = 0x20;
-
+    
     // Environmental information
     uint constant internal OP_ADDRESS = 0x30;
     uint constant internal OP_BALANCE = 0x31;
@@ -53,7 +54,7 @@ contract EVMConstants {
     uint constant internal OP_EXTCODECOPY = 0x3c;
     uint constant internal OP_RETURNDATASIZE = 0x3d;
     uint constant internal OP_RETURNDATACOPY = 0x3e;
-
+    
     // Block information
     uint constant internal OP_BLOCKHASH = 0x40;
     uint constant internal OP_COINBASE = 0x41;
@@ -61,7 +62,7 @@ contract EVMConstants {
     uint constant internal OP_NUMBER = 0x43;
     uint constant internal OP_DIFFICULTY = 0x44;
     uint constant internal OP_GASLIMIT = 0x45;
-
+    
     // Stack, Memory, Storage and Flow Operations
     uint constant internal OP_POP = 0x50;
     uint constant internal OP_MLOAD = 0x51;
@@ -75,7 +76,7 @@ contract EVMConstants {
     uint constant internal OP_MSIZE = 0x59;
     uint constant internal OP_GAS = 0x5a;
     uint constant internal OP_JUMPDEST = 0x5b;
-
+    
     // Push operations
     uint constant internal OP_PUSH1 = 0x60;
     uint constant internal OP_PUSH2 = 0x61;
@@ -109,7 +110,7 @@ contract EVMConstants {
     uint constant internal OP_PUSH30 = 0x7d;
     uint constant internal OP_PUSH31 = 0x7e;
     uint constant internal OP_PUSH32 = 0x7f;
-
+    
     // Duplication operations
     uint constant internal OP_DUP1 = 0x80;
     uint constant internal OP_DUP2 = 0x81;
@@ -127,7 +128,7 @@ contract EVMConstants {
     uint constant internal OP_DUP14 = 0x8d;
     uint constant internal OP_DUP15 = 0x8e;
     uint constant internal OP_DUP16 = 0x8f;
-
+    
     // Exchange operations
     uint constant internal OP_SWAP1 = 0x90;
     uint constant internal OP_SWAP2 = 0x91;
@@ -145,14 +146,14 @@ contract EVMConstants {
     uint constant internal OP_SWAP14 = 0x9d;
     uint constant internal OP_SWAP15 = 0x9e;
     uint constant internal OP_SWAP16 = 0x9f;
-
+    
     // Logging operations
     uint constant internal OP_LOG0 = 0xa0;
     uint constant internal OP_LOG1 = 0xa1;
     uint constant internal OP_LOG2 = 0xa2;
     uint constant internal OP_LOG3 = 0xa3;
     uint constant internal OP_LOG4 = 0xa4;
-
+    
     // System operations
     uint constant internal OP_CREATE = 0xf0;
     uint constant internal OP_CALL = 0xf1;
@@ -163,7 +164,7 @@ contract EVMConstants {
     uint constant internal OP_REVERT = 0xfd;
     uint constant internal OP_INVALID = 0xfe;
     uint constant internal OP_SELFDESTRUCT = 0xff;
-
+    
     // GAS
     uint constant internal GAS_ZERO = 0;
     uint constant internal GAS_BASE = 2;
@@ -171,7 +172,7 @@ contract EVMConstants {
     uint constant internal GAS_LOW = 5;
     uint constant internal GAS_MID = 8;
     uint constant internal GAS_HIGH = 10;
-
+    
     uint constant internal GAS_EXTCODE = 700;
     uint constant internal GAS_BALANCE = 400;
     uint constant internal GAS_JUMPDEST = 1;
@@ -202,7 +203,7 @@ contract EVMConstants {
     uint constant internal GAS_COPY = 3;
     uint constant internal GAS_BLOCKHASH = 20;
     uint constant internal GAS_QUADDIVISOR = 100;
-
+    
     // Precompiles
     uint constant internal GAS_ECRECOVER = 3000;
     uint constant internal GAS_SHA256_BASE = 60;
@@ -211,9 +212,9 @@ contract EVMConstants {
     uint constant internal GAS_RIPEMD160_WORD = 120;
     uint constant internal GAS_IDENTITY_BASE = 15;
     uint constant internal GAS_IDENTITY_WORD = 3;
-
+    
     // ERRORS
-
+    
     uint constant internal NO_ERROR = 0;
     uint constant internal ERROR_STACK_OVERFLOW = 0x01;
     uint constant internal ERROR_STACK_UNDERFLOW = 0x02;
@@ -228,12 +229,12 @@ contract EVMConstants {
     uint constant internal ERROR_ILLEGAL_WRITE_OPERATION = 0x0b;
     uint constant internal ERROR_PRECOMPILE_NOT_IMPLEMENTED = 0x0c;
     uint constant internal ERROR_OUT_OF_GAS = 0x0d;
-
+    
     // ENV
-
+    
     uint constant internal MAX_STACK_SIZE = 1024;
     uint constant internal CALL_CREATE_DEPTH = 1024;
     uint constant internal WORD_SIZE = 32;
     uint constant internal MAX_CODE_SIZE = 24576;
-
+    
 }

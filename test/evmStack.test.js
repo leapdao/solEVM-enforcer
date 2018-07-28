@@ -1,13 +1,8 @@
 import EVMInvalid from './helpers/EVMInvalid';
-import chai from 'chai';
-
-const should = chai
-  .use(require('chai-as-promised'))
-  .should();
 
 const EVMStackMock = artifacts.require('EVMStackMock.sol');
 
-contract('TestEVMStack', function (accounts) {
+contract('TestEVMStack', function () {
   let stack;
   before(async () => {
     stack = await EVMStackMock.new();
@@ -36,5 +31,4 @@ contract('TestEVMStack', function (accounts) {
   it('dupThrowsOverflow', async function () {
     await stack.dupThrowsOverflow().should.be.rejectedWith(EVMInvalid);
   });
-
 });
