@@ -154,9 +154,14 @@ contract IEthereumRuntime is EVMConstants {
 contract EthereumRuntime is IEthereumRuntime {
     
     // Execute the EVM with the given code and call-data.
-    function executeFlat(bytes memory code, bytes memory data) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+    function executeFlat(
+        bytes memory code, bytes memory data
+    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
         Result memory result = execute(code, data);
-        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode, result.logs, result.logsData);
+        return (
+            result.errno, result.errpc, result.returnData, result.stack, 
+            result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
+        );
     }
 
     function execute(bytes memory code, bytes memory data) public pure returns (Result memory result) {
@@ -227,6 +232,7 @@ contract EthereumRuntime is IEthereumRuntime {
         evmInput.target = input.target;
         evmInput.staticExec = input.staticExec;
 
+        // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, callContext);
 
         result.stack = evm.stack.toArray();
@@ -241,14 +247,14 @@ contract EthereumRuntime is IEthereumRuntime {
     }
 
     // Execute the EVM with the given code and call-data until the given op-count.
-    function executeAndStop(bytes memory code, bytes memory data, uint pcTill) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
+    function executeAndStop(
+        bytes memory code, bytes memory data, uint pcTill
+    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
         EVMCallContext memory callContext = blankEVMCallContext();
         callContext.pcTill = pcTill;
         Result memory result = execute(code, data, callContext);
         return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
     }
-
-
 
     function blankEVMCallContext() internal pure returns (EVMCallContext memory callContext) {
         callContext.stack = EVMStack.newStack();
@@ -257,7 +263,7 @@ contract EthereumRuntime is IEthereumRuntime {
         callContext.pcTill = 0;
     }
 
-    function _call(EVMInput memory evmInput, CallType callType, EVMCallContext memory callContext) internal pure returns (EVM memory evm){
+    function _call(EVMInput memory evmInput, CallType callType, EVMCallContext memory callContext) internal pure returns (EVM memory evm) {
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
         if (evmInput.staticExec) {
@@ -353,6 +359,7 @@ contract EthereumRuntime is IEthereumRuntime {
         addr = newAddress;
     }
 
+    // solhint-disable-next-line code-complexity, function-max-lines
     function _run(EVM memory evm, uint pc, EVMCallContext memory callContext) internal pure {
 
         uint pcNext = 0;
@@ -1017,6 +1024,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
+        // solhint-disable-next-line avoid-low-level-calls
         EVM memory retEvm = _call(input, CallType.Call, blankEVMCallContext());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
@@ -1068,6 +1076,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
+        // solhint-disable-next-line avoid-low-level-calls
         EVM memory retEvm = _call(input, CallType.DelegateCall, blankEVMCallContext());
 
         if (retEvm.errno != NO_ERROR) {
@@ -1105,6 +1114,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.handlers = state.handlers;
         input.staticExec = true;
 
+        // solhint-disable-next-line avoid-low-level-calls
         EVM memory retEvm = _call(input, CallType.StaticCall, blankEVMCallContext());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
