@@ -1,10 +1,12 @@
+pragma solidity ^0.4.22;
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
-pragma solidity ^0.4.22;
+
 
 import "truffle/Assert.sol";
 import {EVMMemory} from "../contracts/EVMMemory.slb";
 import {MemOps} from "../contracts/MemOps.slb";
+
 
 contract TestEVMMemory {
     using EVMMemory for EVMMemory.Memory;
@@ -205,7 +207,7 @@ contract TestEVMMemory {
         Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE, fMem, "free memory pointer");
     }
 
-    function getRootHash() public constant returns (uint) {
+    function getRootHash() public view returns (uint) {
         bytes memory bts = hex"01020304050607080102030405060708010203040506070801020304050607080102030405060708";
         EVMMemory.Memory memory mem = EVMMemory.newMemory();
         mem.storeBytes(bts, 0, 0, bts.length);

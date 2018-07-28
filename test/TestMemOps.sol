@@ -1,9 +1,11 @@
+pragma solidity ^0.4.22;
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
-pragma solidity ^0.4.22;
+
 
 import "truffle/Assert.sol";
 import {MemOps} from "../contracts/MemOps.slb";
+
 
 contract TestMemOps {
 

@@ -1,15 +1,16 @@
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
-pragma solidity ^0.4.22;
+pragma solidity 0.4.24;
 
 import {MemOps} from "./MemOps.slb";
 import {EVMStorage} from "./EVMStorage.slb";
 import {EVMUtils} from "./EVMUtils.slb";
 
+
 library EVMAccounts {
-
+    
     using EVMStorage for EVMStorage.Storage;
-
+    
     struct Account {
         address addr;
         uint balance;
@@ -18,18 +19,18 @@ library EVMAccounts {
         bytes code;
         EVMStorage.Storage stge;
     }
-
+    
     struct Element {
         uint _next;
         Account account;
     }
-
+    
     struct Accounts {
         Element head;
         uint size;
     }
-
-    function get(Accounts memory self, address addr) internal pure returns (Account memory acc){
+    
+    function get(Accounts memory self, address addr) internal pure returns (Account memory acc) {
         if (self.size == 0) {
             Element memory e;
             e.account.addr = addr;
@@ -63,7 +64,7 @@ library EVMAccounts {
             self.size++;
         }
     }
-
+    
     function copy(Accounts memory self) internal pure returns (Accounts memory accs) {
         if (self.size == 0) {
             return;
@@ -71,13 +72,13 @@ library EVMAccounts {
         accs.size = self.size;
         Element memory e = self.head;
         accs.head = Element(0, Account(
-                e.account.addr,
-                e.account.balance,
-                e.account.nonce,
-                e.account.destroyed,
-                e.account.code,
-                e.account.stge.copy()
-            ));
+            e.account.addr,
+            e.account.balance,
+            e.account.nonce,
+            e.account.destroyed,
+            e.account.code,
+            e.account.stge.copy()
+        ));
         Element memory e2 = accs.head;
         while (true) {
             if (e._next == 0) {
@@ -88,13 +89,13 @@ library EVMAccounts {
                 e := n
             }
             Element memory newElem = Element(0, Account(
-                    e.account.addr,
-                    e.account.balance,
-                    e.account.nonce,
-                    e.account.destroyed,
-                    e.account.code,
-                    e.account.stge.copy()
-                ));
+                e.account.addr,
+                e.account.balance,
+                e.account.nonce,
+                e.account.destroyed,
+                e.account.code,
+                e.account.stge.copy()
+            ));
             uint newElemAddr;
             assembly {
                 newElemAddr := newElem
@@ -104,7 +105,7 @@ library EVMAccounts {
         }
         return;
     }
-
+    
     function toArray(Accounts memory self) internal pure returns (uint[] memory arr, bytes memory code) {
         if (self.size == 0) {
             return;
@@ -150,5 +151,5 @@ library EVMAccounts {
             codeOffset += acc.code.length;
         }
     }
-
+    
 }

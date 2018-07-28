@@ -1,37 +1,38 @@
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
-pragma solidity ^0.4.22;
+pragma solidity 0.4.24;
 
 import {MemOps} from "./MemOps.slb";
 
-library EVMMemory {
 
+library EVMMemory {
+    
     uint constant internal ALLOC_SIZE = 64;
     uint constant internal WORD_SIZE = 32;
-
+    
     struct Memory {
         uint size; // in words
         uint cap; // in words
         uint dataPtr;
     }
-
+    
     // Get the position of 'index' in actual memory, i.e. 'self.dataPtr + index'.
     function memUPtr(Memory memory self, uint index) internal pure returns (uint) {
         return self.dataPtr + index;
     }
     
-   function nextPowTwo(uint v) internal pure returns (uint) {
+    function nextPowTwo(uint v) internal pure returns (uint) {
         require(v == uint32(v));
         v--;
-        v|=v>>1;
-        v|=v>>2;
-        v|=v>>4;
-        v|=v>>8;
-        v|=v>>16;
+        v |= v>>1;
+        v |= v>>2;
+        v |= v>>4;
+        v |= v>>8;
+        v |= v>>16;
         v++;
         return v;
     }
-
+    
     // Resizes and re-allocates memory.
     function setCapacity(Memory memory self, uint capNeeded) internal pure {
         assert(capNeeded >= self.size);
@@ -42,13 +43,13 @@ library EVMMemory {
         self.dataPtr = dest;
         self.cap = cap;
     }
-
+    
     function newMemory() internal pure returns (Memory memory mem) {
         mem.size = 0;
         mem.cap = ALLOC_SIZE;
         mem.dataPtr = MemOps.allocate32(ALLOC_SIZE);
     }
-
+    
     function fromArray(bytes memory memIn) internal pure returns (Memory memory mem) {
         assert(memIn.length % 32 == 0);
         mem.size = memIn.length / 32;
@@ -61,27 +62,27 @@ library EVMMemory {
         }
         MemOps.memcopy32(src, dest, mem.size);
     }
-
+    
     function merklize(bytes32[] hashes) internal pure returns (bytes32) {
-      if (hashes.length == 1) {
-       return hashes[0];
-      } else {
-        bytes32[] memory arr = new bytes32[](hashes.length / 2);
-        for(uint i = 0; i < hashes.length; i = i + 2) {
-          arr[0] = keccak256(abi.encodePacked(hashes[i], hashes[i + 1]));
+        if (hashes.length == 1) {
+            return hashes[0];
+        } else {
+            bytes32[] memory arr = new bytes32[](hashes.length / 2);
+            for (uint i = 0; i < hashes.length; i = i + 2) {
+                arr[0] = keccak256(abi.encodePacked(hashes[i], hashes[i + 1]));
+            }
+            return merklize(arr);
         }
-        return merklize(arr);
-      }
     }
-
+    
     function getRootHash(Memory memory self) internal pure returns (uint) {
-      bytes32[] memory arr = new bytes32[](1);
-      for(uint i = 0; i < self.cap; i = i + 2) {
-        arr[0] = keccak256(abi.encodePacked(load(self, i * WORD_SIZE), load(self, (i + 1) * WORD_SIZE)));
-      }
-      return uint(merklize(arr));
+        bytes32[] memory arr = new bytes32[](1);
+        for (uint i = 0; i < self.cap; i = i + 2) {
+            arr[0] = keccak256(abi.encodePacked(load(self, i * WORD_SIZE), load(self, (i + 1) * WORD_SIZE)));
+        }
+        return uint(merklize(arr));
     }
-
+    
     function toArray(Memory memory self) internal pure returns (bytes memory arr) {
         arr = new bytes(self.size*WORD_SIZE);
         uint dest;
@@ -90,11 +91,11 @@ library EVMMemory {
         }
         MemOps.memcopy32(self.dataPtr, dest, self.size);
     }
-
+    
     function toArray(Memory memory self, uint start, uint len) internal pure returns (bytes memory arr) {
         arr = new bytes(len);
         uint newSize = (len + 31) / 32;
-        if(newSize >= self.cap) {
+        if (newSize >= self.cap) {
             setCapacity(self, newSize);
             self.size = newSize;
         }
@@ -104,49 +105,49 @@ library EVMMemory {
         }
         MemOps.memcopy(self.dataPtr + start, dest, len);
     }
-
+    
     function store8(Memory memory self, uint index, uint val) internal pure {
         uint newSize = index / WORD_SIZE + 1;
-        if(newSize >= self.cap) {
+        if (newSize >= self.cap) {
             setCapacity(self, newSize);
         }
-        if(newSize > self.size) {
+        if (newSize > self.size) {
             self.size = newSize;
         }
-
+        
         uint slot = self.dataPtr + index;
         assembly {
             mstore8(slot, val)
         }
     }
-
+    
     function store(Memory memory self, uint index, uint val) internal pure {
         uint newSize = (index + 31) / WORD_SIZE + 1; // +1 for an extra word due to the 32 bytes wide write.
-        if(newSize >= self.cap) {
+        if (newSize >= self.cap) {
             setCapacity(self, newSize);
         }
-        if(newSize > self.size) {
+        if (newSize > self.size) {
             self.size = newSize;
         }
-
+        
         uint slot = self.dataPtr + index;
         assembly {
             mstore(slot, val)
         }
     }
-
+    
     /*
-        Takes 'len' bytes from 'bts', starting at 'srcIndex', and copy into memory
-        starting at 'destIdx'. If 'srcIndex + len' is larger than 'bts.length',
-        the operation will fail.
+    Takes 'len' bytes from 'bts', starting at 'srcIndex', and copy into memory
+    starting at 'destIdx'. If 'srcIndex + len' is larger than 'bts.length',
+    the operation will fail.
     */
     function storeBytes(Memory memory self, bytes memory bts, uint srcIdx, uint destIdx, uint len) internal pure {
         assert(srcIdx + len <= bts.length);
         uint newSize = (destIdx + len + 31) / WORD_SIZE;
-        if(newSize >= self.cap) {
+        if (newSize >= self.cap) {
             setCapacity(self, newSize);
         }
-        if(newSize > self.size) {
+        if (newSize > self.size) {
             self.size = newSize;
         }
         uint btsSrc;
@@ -156,11 +157,11 @@ library EVMMemory {
         uint memDest = self.dataPtr + destIdx;
         MemOps.memcopy(btsSrc, memDest, len);
     }
-
+    
     /*
-        Takes 'len' bytes from 'bts', starting at 'srcIndex', and copy into memory
-        starting at 'destIdx'. If 'srcIndex + len' is larger than 'bts.length',
-        the bytes that lies outside of 'bts' is considered to be 0.
+    Takes 'len' bytes from 'bts', starting at 'srcIndex', and copy into memory
+    starting at 'destIdx'. If 'srcIndex + len' is larger than 'bts.length',
+    the bytes that lies outside of 'bts' is considered to be 0.
     */
     function storeBytesAndPadWithZeroes(
         Memory memory self,
@@ -170,10 +171,10 @@ library EVMMemory {
         uint len
     ) internal pure {
         uint newSize = (destIdx + len + 31) / WORD_SIZE;
-        if(newSize >= self.cap) {
+        if (newSize >= self.cap) {
             setCapacity(self, newSize);
         }
-        if(newSize > self.size) {
+        if (newSize > self.size) {
             self.size = newSize;
         }
         uint btsSrc;
@@ -187,15 +188,15 @@ library EVMMemory {
             MemOps.memcopy(btsSrc, memDest, bts.length - srcIdx);
             MemOps.memclear(memDest + bts.length - srcIdx, len - bts.length + srcIdx);
         }
-
+        
     }
-
+    
     function load(Memory memory self, uint index) internal pure returns (uint) {
         uint newSize = (index + 31) / WORD_SIZE + 1; // +1 for an extra word due to the 32 bytes wide write.
-        if(newSize >= self.cap) {
+        if (newSize >= self.cap) {
             setCapacity(self, newSize);
         }
-        if(newSize > self.size) {
+        if (newSize > self.size) {
             self.size = newSize;
         }
         uint slot = self.dataPtr + index;
@@ -205,5 +206,5 @@ library EVMMemory {
         }
         return data;
     }
-
+    
 }
