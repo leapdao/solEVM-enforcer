@@ -11,6 +11,8 @@
     "test"
   ],
   "scripts": {
+    "testrpc": "ganache-cli --mnemonic 'help print pelican mutual coil human screen voyage escape write portion timber' --gasLimit 13000000",
+    "truffle": "truffle",
     "test": "scripts/test.sh",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
