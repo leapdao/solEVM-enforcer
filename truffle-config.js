@@ -26,6 +26,8 @@ module.exports = {
       host: 'localhost',
       port: 8545,
       network_id: '*', // eslint-disable-line camelcase
+      gas: 0xfffffffffff,
+      gasPrice: 0x01,
     },
   },
 };
