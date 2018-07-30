@@ -229,6 +229,23 @@ contract EthereumRuntime is IEthereumRuntime {
         (result.logs, result.logsData) = evm.logs.toArray();
         return;
     }
+
+    // Execute the EVM with the given code and call-data until the given op-count.
+    function executeAndStop(
+        bytes memory code, bytes memory data, uint pcTill
+    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
+        Result memory result = execute(code, data);
+        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
+    }
+
+
+    // Execute the EVM with the given code and call-data until the given op-count.
+    function initAndExecute(
+        bytes memory code, bytes memory data, uint pcFrom, uint[] memory stack, bytes memory mem
+    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
+        Result memory result = execute(code, data);
+        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
+    }
     
     function _call(EVMInput memory evmInput, CallType callType) internal pure returns (EVM memory evm) {
         evm.context = evmInput.context;
