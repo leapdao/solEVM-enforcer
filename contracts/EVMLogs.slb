@@ -2,7 +2,7 @@ pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 pragma solidity 0.4.24;
 
-import {EVMUtils} from "./EVMUtils.slb";
+import { EVMUtils } from "./EVMUtils.slb";
 
 
 library EVMLogs {
@@ -28,7 +28,7 @@ library EVMLogs {
         uint size;
     }
     
-    function add(Logs memory self, LogEntry memory entry) internal pure {
+    function add(Logs memory self, LogEntry memory entry) public pure {
         
         if (self.size == 0) {
             self.tail = Element(0, entry);
@@ -45,7 +45,7 @@ library EVMLogs {
         }
     }
     
-    function copy(Logs memory self) internal pure returns (Logs memory newLogs) {
+    function copy(Logs memory self) public pure returns (Logs memory newLogs) {
         if (self.size == 0) {
             return;
         }
@@ -72,7 +72,7 @@ library EVMLogs {
         return;
     }
     
-    function toArray(Logs memory self) internal pure returns (uint[] memory logs, bytes memory data) {
+    function toArray(Logs memory self) public pure returns (uint[] memory logs, bytes memory data) {
         if (self.size == 0) {
             return;
         }

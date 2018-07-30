@@ -20,7 +20,7 @@ library EVMStorage {
         uint size;
     }
     
-    function store(Storage memory self, uint addr, uint val) internal pure {
+    function store(Storage memory self, uint addr, uint val) public pure {
         if (self.size == 0) {
             Element memory e;
             e.slot.addr = addr;
@@ -52,7 +52,7 @@ library EVMStorage {
         }
     }
     
-    function load(Storage memory self, uint addr) internal pure returns (uint val) {
+    function load(Storage memory self, uint addr) public pure returns (uint val) {
         if (self.size != 0) {
             Element memory e = self.head;
             while (true) {
@@ -73,7 +73,7 @@ library EVMStorage {
         return;
     }
     
-    function copy(Storage memory self) internal pure returns (Storage memory stg) {
+    function copy(Storage memory self) public pure returns (Storage memory stg) {
         if (self.size == 0) {
             return;
         }
@@ -100,7 +100,7 @@ library EVMStorage {
         return;
     }
     
-    function toArray(Storage memory self) internal pure returns (StorageSlot[] memory slots) {
+    function toArray(Storage memory self) public pure returns (StorageSlot[] memory slots) {
         if (self.size == 0) {
             return;
         }

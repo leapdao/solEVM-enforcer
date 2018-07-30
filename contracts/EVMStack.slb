@@ -2,7 +2,7 @@ pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 pragma solidity 0.4.24;
 
-import {MemOps} from "./MemOps.slb";
+import { MemOps } from "./MemOps.slb";
 
 
 library EVMStack {
@@ -17,7 +17,7 @@ library EVMStack {
     }
     
     // Re-sizes and re-allocates the stack.
-    function expandCapacity(Stack memory self, uint capIncrease) internal pure {
+    function expandCapacity(Stack memory self, uint capIncrease) public pure {
         assert(capIncrease != 0);
         assert(self.cap + capIncrease <= MAX_SIZE);
         self.cap += capIncrease;
@@ -27,13 +27,13 @@ library EVMStack {
         self.dataPtr = dest;
     }
     
-    function newStack() internal pure returns (Stack memory stk) {
+    function newStack() public pure returns (Stack memory stk) {
         stk.size = 0;
         stk.cap = INITIAL_CAP;
         stk.dataPtr = MemOps.allocate32(INITIAL_CAP);
     }
     
-    function fromArray(uint[] memory sArr) internal pure returns (Stack memory stk) {
+    function fromArray(uint[] memory sArr) public pure returns (Stack memory stk) {
         stk.size = sArr.length;
         stk.cap = sArr.length + INITIAL_CAP;
         stk.dataPtr = MemOps.allocate32(sArr.length + INITIAL_CAP);
@@ -46,7 +46,7 @@ library EVMStack {
         }
     }
     
-    function toArray(Stack memory self) internal pure returns (uint[] memory arr) {
+    function toArray(Stack memory self) public pure returns (uint[] memory arr) {
         if (self.size == 0) {
             return;
         }
@@ -58,7 +58,7 @@ library EVMStack {
         MemOps.memcopy32(self.dataPtr, dest, self.size);
     }
     
-    function push(Stack self, uint val) internal pure {
+    function push(Stack self, uint val) public pure {
         assert(self.size < MAX_SIZE);
         if (self.size == self.cap) {
             expandCapacity(self, 32);
@@ -69,7 +69,7 @@ library EVMStack {
         }
     }
     
-    function pop(Stack self) internal pure returns (uint) {
+    function pop(Stack self) public pure returns (uint) {
         assert(self.size > 0);
         uint data;
         uint slot = self.dataPtr + --self.size*32;
@@ -80,7 +80,7 @@ library EVMStack {
         return data;
     }
     
-    function read(Stack self, uint index) internal pure returns (uint) {
+    function read(Stack self, uint index) public pure returns (uint) {
         assert(index < self.size);
         uint data;
         uint slot = self.dataPtr + index*32;
@@ -90,7 +90,7 @@ library EVMStack {
         return data;
     }
     
-    function dup(Stack self, uint n) internal pure {
+    function dup(Stack self, uint n) public pure {
         assert(self.size < MAX_SIZE);
         assert(1 <= n && n <= 16);
         assert(n <= self.size);
@@ -108,7 +108,7 @@ library EVMStack {
         }
     }
     
-    function swap(Stack self, uint n) internal pure {
+    function swap(Stack self, uint n) public pure {
         assert(1 <= n && n <= 16);
         assert(n < self.size);
         uint slot1 = self.dataPtr + (self.size - 1)*32;

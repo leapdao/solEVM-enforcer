@@ -2,7 +2,7 @@ pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 pragma solidity 0.4.24;
 
-import {MemOps} from "./MemOps.slb";
+import { MemOps } from "./MemOps.slb";
 
 
 library EVMUtils {

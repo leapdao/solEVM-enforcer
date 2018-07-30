@@ -2,7 +2,6 @@ pragma solidity 0.4.24;
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 
-
 import { EVMConstants } from "./EVMConstants.sol";
 import { EVMAccounts } from "./EVMAccounts.slb";
 import { EVMStorage } from "./EVMStorage.slb";

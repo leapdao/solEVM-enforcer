@@ -3,7 +3,7 @@ pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 
 
-import {EVMStack} from "../EVMStack.slb";
+import { EVMStack } from "../EVMStack.slb";
 
 
 contract EVMStackMock {

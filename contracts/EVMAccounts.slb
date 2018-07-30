@@ -2,9 +2,9 @@ pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 pragma solidity 0.4.24;
 
-import {MemOps} from "./MemOps.slb";
-import {EVMStorage} from "./EVMStorage.slb";
-import {EVMUtils} from "./EVMUtils.slb";
+import { MemOps } from "./MemOps.slb";
+import { EVMStorage } from "./EVMStorage.slb";
+import { EVMUtils } from "./EVMUtils.slb";
 
 
 library EVMAccounts {
@@ -30,7 +30,7 @@ library EVMAccounts {
         uint size;
     }
     
-    function get(Accounts memory self, address addr) internal pure returns (Account memory acc) {
+    function get(Accounts memory self, address addr) public pure returns (Account memory acc) {
         if (self.size == 0) {
             Element memory e;
             e.account.addr = addr;
@@ -65,7 +65,7 @@ library EVMAccounts {
         }
     }
     
-    function copy(Accounts memory self) internal pure returns (Accounts memory accs) {
+    function copy(Accounts memory self) public pure returns (Accounts memory accs) {
         if (self.size == 0) {
             return;
         }
@@ -106,7 +106,7 @@ library EVMAccounts {
         return;
     }
     
-    function toArray(Accounts memory self) internal pure returns (uint[] memory arr, bytes memory code) {
+    function toArray(Accounts memory self) public pure returns (uint[] memory arr, bytes memory code) {
         if (self.size == 0) {
             return;
         }
