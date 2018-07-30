@@ -4,6 +4,8 @@ require('babel-polyfill');
 
 module.exports = {
   solc: {
+    // TODO: the code is supposed to work on constantinople EVM but fails if this is switched on
+    // evmVersion: 'constantinople',
     optimizer: {
       enabled: true,
       runs: 2,
