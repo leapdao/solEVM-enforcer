@@ -13,5 +13,3 @@ export function getUnbalancedMerkleProof (arr) {
 
   return ethUtils.bufferToHex(result);
 }
-
-console.log(getUnbalancedMerkleProof([5, 8, 12]));
