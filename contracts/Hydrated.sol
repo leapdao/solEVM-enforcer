@@ -9,15 +9,29 @@ contract Hydrated {
         uint256 stack1,
         uint256 stack2,
         
-        bytes stack1Proof,
-        bytes stack2Proof,
-        
         bytes32 sibling,
         bool hasSibling
     ) public pure returns (bool) {
-        // check if both stack elements are different
-        require(keccak256(stack1) != keccak256(stack2));
-        
+        if (hasSibling) {
+          require(
+            beforeHash == keccak256(
+              abi.encodePacked(
+                abi.encodePacked(stack1),
+                keccak256(abi.encodePacked(stack2, sibling))
+              )
+            )
+          );
+        } else {
+          require(
+            beforeHash == keccak256(
+              abi.encodePacked(
+                abi.encodePacked(stack1),
+                keccak256(abi.encodePacked(stack2))
+              )
+            )
+          );
+        }
+
         // add two stack elements
         uint256 result = stack1 + stack2;
         
