@@ -13,23 +13,23 @@ contract Hydrated {
         bool hasSibling
     ) public pure returns (bool) {
         if (hasSibling) {
-          require(
-            beforeHash == keccak256(
-              abi.encodePacked(
-                abi.encodePacked(stack1),
-                keccak256(abi.encodePacked(stack2, sibling))
-              )
-            )
-          );
+            require(
+                beforeHash == keccak256(
+                    abi.encodePacked(
+                        stack1,
+                        keccak256(abi.encodePacked(stack2, sibling))
+                    )
+                )
+            );
         } else {
-          require(
-            beforeHash == keccak256(
-              abi.encodePacked(
-                abi.encodePacked(stack1),
-                keccak256(abi.encodePacked(stack2))
-              )
-            )
-          );
+            require(
+                beforeHash == keccak256(
+                    abi.encodePacked(
+                        stack1,
+                        keccak256(abi.encodePacked(stack2))
+                    )
+                )
+            );
         }
 
         // add two stack elements
