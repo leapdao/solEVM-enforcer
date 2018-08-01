@@ -43,7 +43,7 @@ contract EthereumRuntime is EVMConstants {
     }
     
     struct TxInput {
-        uint64 gas;
+        uint gas;
         uint gasPrice;
         address caller;
         uint callerBalance;
@@ -66,6 +66,7 @@ contract EthereumRuntime is EVMConstants {
         bytes accountsCode;
         uint[] logs;
         bytes logsData;
+        uint gasRemaining;
     }
     
     // ************* Only used internally *************
@@ -77,7 +78,7 @@ contract EthereumRuntime is EVMConstants {
     }
     
     struct EVMInput {
-        uint64 gas;
+        uint gas;
         uint value;
         bytes data;
         address caller;
@@ -90,7 +91,7 @@ contract EthereumRuntime is EVMConstants {
     }
     
     struct EVMCreateInput {
-        uint64 gas;
+        uint gas;
         uint value;
         bytes code;
         address caller;
@@ -107,7 +108,7 @@ contract EthereumRuntime is EVMConstants {
     }
     
     struct EVM {
-        uint64 gas;
+        uint gas;
         uint value;
         bytes code;
         bytes data;
@@ -143,14 +144,14 @@ contract EthereumRuntime is EVMConstants {
     // Execute the EVM with the given code and call-data.
     function executeFlat(
         bytes memory code, bytes memory data
-    ) public pure returns (uint[3], uint[], uint[], uint[], bytes, uint[4]) {
+    ) public pure returns (uint[4], uint[], uint[], uint[], bytes, uint[4]) {
         return executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT]);
     }
 
     // Execute the EVM with the given code and call-data until the given op-count.
     function executeAndStop(
         bytes memory code, bytes memory data, uint[3] memory intInput
-    ) public pure returns (uint[3], uint[], uint[], uint[], bytes, uint[4]) {
+    ) public pure returns (uint[4], uint[], uint[], uint[], bytes, uint[4]) {
         uint[] memory stack;
         bytes memory mem;
         address[] memory accounts;
@@ -166,7 +167,7 @@ contract EthereumRuntime is EVMConstants {
     function initAndExecute(
         bytes memory code, bytes memory data, uint[3] memory intInput, uint[] memory stack,
         bytes memory mem, address[] memory accounts, uint[] memory balances
-    ) public pure returns (uint[3], uint[], uint[], uint[], bytes, uint[4]) {
+    ) public pure returns (uint[4], uint[], uint[], uint[], bytes, uint[4]) {
         Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, balances);
         return flattenResult(result);
     }
@@ -208,10 +209,11 @@ contract EthereumRuntime is EVMConstants {
         // TODO handle accounts that result from a failed transaction.
         (result.accounts, result.accountsCode) = evm.accounts.toArray();
         (result.logs, result.logsData) = evm.logs.toArray();
+        result.gasRemaining = evm.gas;
     }
 
     function flattenResult(Result memory result) internal pure returns (
-        uint[3], uint[], uint[], uint[], bytes, uint[4]
+        uint[4], uint[], uint[], uint[], bytes, uint[4]
     ) {
         bytes memory bytesResult = BytesLib.concat(
             result.returnData, 
@@ -224,8 +226,8 @@ contract EthereumRuntime is EVMConstants {
             result.returnData.length, result.mem.length,
             result.accountsCode.length, result.logsData.length
         ];
-        return ([result.errno, result.errpc, result.pc], result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);  
-
+        return ([result.errno, result.errpc, result.pc, result.gasRemaining],
+                result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);
     }
 
     function getEVMInput(
@@ -246,6 +248,7 @@ contract EthereumRuntime is EVMConstants {
             0,
             0
         );
+        evmInput.gas = gasLimit;
     } 
 
     function initCallerAndTarget(EVMInput memory evmInput, bytes memory code) internal pure {
@@ -371,6 +374,10 @@ contract EthereumRuntime is EVMConstants {
             pcEnd = code.length;
         }
 
+        if (evm.gas > evm.context.gasLimit) {
+            errno = ERROR_OUT_OF_GAS;
+        }
+
         while (errno == NO_ERROR && pc < pcEnd) {
             uint opcode = uint(code[pc]);
             
@@ -393,7 +400,13 @@ contract EthereumRuntime is EVMConstants {
                 errno = ERROR_STACK_OVERFLOW;
                 break;
             }
-            
+
+            if (ins.gas > evm.gas) {
+                errno = ERROR_OUT_OF_GAS;
+                break;
+            }
+            evm.gas -= ins.gas;
+
             if (OP_PUSH1 <= opcode && opcode <= OP_PUSH32) {
                 evm.pc = pc;
                 uint n = opcode - OP_PUSH1 + 1;
@@ -975,7 +988,7 @@ contract EthereumRuntime is EVMConstants {
         uint memPos = state.stack.pop();
         uint size = state.stack.pop();
         EVMCreateInput memory input;
-        // TODO gas
+        input.gas = state.gas;
         input.value = value;
         input.code = state.mem.toArray(memPos, size);
         input.caller = state.target.addr;
@@ -995,7 +1008,7 @@ contract EthereumRuntime is EVMConstants {
             state.target = state.accounts.get(state.target.addr);
             state.logs = retEvm.logs;
         }
-        
+        state.gas = retEvm.gas;
     }
     
     function handleCREATE2(EVM memory) internal pure returns (uint) {
@@ -1003,8 +1016,10 @@ contract EthereumRuntime is EVMConstants {
     }
     
     function handleCALL(EVM memory state) internal pure returns (uint) {
-        state.stack.pop();
-        // gas
+        EVMInput memory input;
+
+        input.gas = state.stack.pop();
+
         uint targetAddr = state.stack.pop();
         uint value = state.stack.pop();
         uint inOffset = state.stack.pop();
@@ -1015,8 +1030,10 @@ contract EthereumRuntime is EVMConstants {
         uint retSize = state.stack.pop();
         // return size
         
-        EVMInput memory input;
-        // TODO gas
+        if (input.gas > state.gas) {
+            return ERROR_OUT_OF_GAS;
+        }
+
         input.value = value;
         input.data = state.mem.toArray(inOffset, inSize);
         input.caller = state.target.addr;
@@ -1042,6 +1059,7 @@ contract EthereumRuntime is EVMConstants {
             state.target = state.accounts.get(state.target.addr);
             state.logs = retEvm.logs;
         }
+        state.gas -= input.gas - retEvm.gas;
     }
     
     function handleCALLCODE(EVM memory) internal pure returns (uint) {
@@ -1055,16 +1073,20 @@ contract EthereumRuntime is EVMConstants {
     }
     
     function handleDELEGATECALL(EVM memory state) internal pure returns (uint) {
-        // gas
-        state.stack.pop();
+        EVMInput memory input;
+
+        input.gas = state.stack.pop();
+
         uint targetAddr = state.stack.pop();
         uint inOffset = state.stack.pop();
         uint inSize = state.stack.pop();
         uint retOffset = state.stack.pop();
         uint retSize = state.stack.pop();
-        
-        EVMInput memory input;
-        // TODO gas
+
+        if (input.gas > state.gas) {
+            return ERROR_OUT_OF_GAS;
+        }
+
         input.data = state.mem.toArray(inOffset, inSize);
         input.value = state.value;
         input.caller = state.caller.addr;
@@ -1095,19 +1117,24 @@ contract EthereumRuntime is EVMConstants {
             state.logs = retEvm.logs;
         }
         state.target.code = oldCode;
+        state.gas -= input.gas - retEvm.gas;
     }
     
     function handleSTATICCALL(EVM memory state) internal pure returns (uint) {
-        // gas
-        state.stack.pop();
+        EVMInput memory input;
+
+        input.gas = state.stack.pop();
+
         uint targetAddr = state.stack.pop();
         uint inOffset = state.stack.pop();
         uint inSize = state.stack.pop();
         uint retOffset = state.stack.pop();
         uint retSize = state.stack.pop();
         
-        EVMInput memory input;
-        // TODO gas
+        if (input.gas > state.gas) {
+            return ERROR_OUT_OF_GAS;
+        }
+
         input.data = state.mem.toArray(inOffset, inSize);
         input.caller = state.target.addr;
         input.target = address(targetAddr);
@@ -1127,6 +1154,7 @@ contract EthereumRuntime is EVMConstants {
             state.mem.storeBytesAndPadWithZeroes(retEvm.returnData, 0, retOffset, retSize);
             state.lastRet = retEvm.returnData;
         }
+        state.gas -= input.gas - retEvm.gas;
     }
     
     function handleREVERT(EVM memory state) internal pure returns (uint) {
