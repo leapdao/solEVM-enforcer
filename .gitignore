@@ -12,11 +12,6 @@ pids
 allFiredEvents
 scTopics
 
-# Coverage directory used by tools like istanbul
-coverage
-coverage.json
-coverageEnv
-
 # node-waf configuration
 .lock-wscript
 
