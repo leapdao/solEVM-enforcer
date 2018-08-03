@@ -12,8 +12,8 @@ import { EVMLogs } from "./EVMLogs.slb";
 import { EVMUtils } from "./EVMUtils.slb";
 
 
-contract IEthereumRuntime is EVMConstants {
-    
+contract EthereumRuntime is EVMConstants {
+
     enum CallType {
         Call,
         StaticCall,
@@ -135,106 +135,65 @@ contract IEthereumRuntime is EVMConstants {
     struct EVMCallContext {
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
-        uint pcFrom;
-        uint pcTill;
+        uint pcStart;
+        uint pcEnd;
     }
 
-    // Execute the EVM with the given code and call-data.
-    function execute(bytes memory code, bytes memory data) public pure returns (Result memory result);
-    
-    // Execute the EVM with the given transaction input.
-    function execute(TxInput memory input) public pure returns (Result memory result);
-    
-    // Execute the EVM with the given transaction input and context.
-    function execute(TxInput memory input, Context memory context) public pure returns (Result memory result);
-    
-}
-
-
-contract EthereumRuntime is IEthereumRuntime {
-    
-    // Execute the EVM with the given code and call-data.
-    function executeFlat(
-        bytes memory code, bytes memory data
-    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
-        Result memory result = execute(code, data);
-        return (
-            result.errno, result.errpc, result.returnData, result.stack, 
-            result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
-        );
+    // Execute the EVM with the given code and call-data until the given op-count.
+    function executeAndStop(
+        bytes memory code, bytes memory data, uint pcEnd
+    ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+        Result memory result = executeAndStopInternal(code, data, pcEnd);
+        return flattenResult(result);
     }
 
-    function execute(bytes memory code, bytes memory data) public pure returns (Result memory result) {
-        return execute(code, data, blankEVMCallContext());
+    // Init EVM with given stack and memory and execute from the given opcode
+    function initAndExecute(
+        bytes memory code, bytes memory data, uint pcStart, uint[] memory stack, bytes memory mem
+    ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+        Result memory result = initAndExecuteInternal(code, data, pcStart, stack, mem);
+        return flattenResult(result);
     }
 
-    function execute(bytes memory code, bytes memory data, EVMCallContext memory callContext) public pure returns (Result memory result) {
+    // Execute the EVM with the given code and call-data until the given op-count.
+    function executeAndStopInternal(
+        bytes memory code, bytes memory data, uint pcEnd
+    ) internal pure returns (Result memory) {
+        EVMInput memory evmInput = getEVMInput(data);
 
-        TxInput memory input = TxInput(
-            0,
-            0,
-            DEFAULT_CALLER,
-            0,
-            0,
-            DEFAULT_CONTRACT_ADDRESS,
-            0,
-            code,
-            data,
-            false
-        );
-
-        Context memory context = Context(
-            DEFAULT_CALLER,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        );
-        return execute(input, context, callContext);
-    }
-
-    function execute(TxInput memory input) public pure returns (Result memory result) {
-        Context memory context = Context(
-            input.caller,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        );
-        return execute(input, context);
-    }
-
-    function execute(TxInput memory input, Context memory context) public pure returns (Result memory result) {
-        return execute(input, context, blankEVMCallContext());
-    }
-
-    function execute(TxInput memory input, Context memory context, EVMCallContext callContext) public pure returns (Result memory result) {
-        EVMInput memory evmInput;
-        evmInput.context = context;
-        evmInput.handlers = _newHandlers();
-        evmInput.data = input.data;
-        evmInput.value = input.value;
-
-        EVMAccounts.Account memory caller = evmInput.accounts.get(input.caller);
-        caller.balance = input.callerBalance;
-        if (!input.staticExec) {
-            caller.nonce = uint8(1);
-        }
-        evmInput.caller = input.caller;
-
-        EVMAccounts.Account memory target = evmInput.accounts.get(input.target);
-        target.balance = input.targetBalance;
-        target.code = input.targetCode;
-        evmInput.target = input.target;
-        evmInput.staticExec = input.staticExec;
+        initCallerAndTarget(evmInput, code);
 
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, callContext);
+        EVM memory evm = _call(evmInput, CallType.Call, EVMCallContext(            
+            EVMMemory.Memory(0, 0, 0),
+            EVMStack.Stack(0, 0, 0),
+            0,
+            pcEnd
+        ));
+        
+        return toResult(evm);
+    }
 
+    // Init EVM with given stack and memory and execute from the given opcode
+    function initAndExecuteInternal(
+        bytes memory code, bytes memory data, uint pcStart, uint[] memory stack, bytes memory mem
+    ) internal pure returns (Result memory) {
+        EVMInput memory evmInput = getEVMInput(data);
+
+        initCallerAndTarget(evmInput, code);
+
+        // solhint-disable-next-line avoid-low-level-calls
+        EVM memory evm = _call(evmInput, CallType.Call, EVMCallContext(            
+            EVMMemory.fromArray(mem),
+            EVMStack.fromArray(stack),
+            pcStart,
+            0
+        ));
+        
+        return toResult(evm);
+    }
+
+    function toResult(EVM memory evm) internal pure returns (Result memory result) {
         result.stack = evm.stack.toArray();
         result.mem = evm.mem.toArray();
         result.returnData = evm.returnData;
@@ -243,24 +202,48 @@ contract EthereumRuntime is IEthereumRuntime {
         // TODO handle accounts that result from a failed transaction.
         (result.accounts, result.accountsCode) = evm.accounts.toArray();
         (result.logs, result.logsData) = evm.logs.toArray();
-        return;
     }
 
-    // Execute the EVM with the given code and call-data until the given op-count.
-    function executeAndStop(
-        bytes memory code, bytes memory data, uint pcTill
-    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes) {
-        EVMCallContext memory callContext = blankEVMCallContext();
-        callContext.pcTill = pcTill;
-        Result memory result = execute(code, data, callContext);
-        return (result.errno, result.errpc, result.returnData, result.stack, result.mem, result.accounts, result.accountsCode);
+    function flattenResult(Result memory result) internal pure returns (
+        uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes
+    ) {
+        return ([result.errno, result.errpc], result.returnData, result.stack, result.mem,
+                result.accounts, result.accountsCode, result.logs, result.logsData);  
+
+    }
+
+    function getEVMInput(bytes memory data) internal pure returns (EVMInput memory evmInput) {
+        evmInput.data = data;
+        evmInput.handlers = _newHandlers();
+        evmInput.staticExec = false;
+        evmInput.caller = DEFAULT_CALLER;
+        evmInput.target = DEFAULT_CONTRACT_ADDRESS;
+        evmInput.context = Context(
+            DEFAULT_CALLER,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+        );
+    } 
+
+    function initCallerAndTarget(EVMInput memory evmInput, bytes memory code) internal pure {
+        EVMAccounts.Account memory caller = evmInput.accounts.get(DEFAULT_CALLER);
+        caller.balance = 0;
+        caller.nonce = uint8(1);
+
+        EVMAccounts.Account memory target = evmInput.accounts.get(DEFAULT_CONTRACT_ADDRESS);
+        target.balance = 0;
+        target.code = code;
     }
 
     function blankEVMCallContext() internal pure returns (EVMCallContext memory callContext) {
         callContext.stack = EVMStack.newStack();
         callContext.mem = EVMMemory.newMemory();
-        callContext.pcFrom = 0;
-        callContext.pcTill = 0;
+        callContext.pcStart = 0;
+        callContext.pcEnd = 0;
     }
 
     function _call(EVMInput memory evmInput, CallType callType, EVMCallContext memory callContext) internal pure returns (EVM memory evm) {
@@ -305,7 +288,7 @@ contract EthereumRuntime is IEthereumRuntime {
             evm.code = evm.target.code;
             evm.stack = callContext.stack;
             evm.mem = callContext.mem;
-            _run(evm, 0, callContext);
+            _run(evm, callContext.pcStart, callContext.pcEnd);
         }
     }
     
@@ -345,7 +328,7 @@ contract EthereumRuntime is IEthereumRuntime {
         evm.code = evmInput.code;
         evm.stack = EVMStack.newStack();
         evm.mem = EVMMemory.newMemory();
-        _run(evm, 0, blankEVMCallContext());
+        _run(evm, 0, 0);
 
         // TODO
         if (evm.errno != NO_ERROR) {
@@ -360,16 +343,16 @@ contract EthereumRuntime is IEthereumRuntime {
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
-    function _run(EVM memory evm, uint pc, EVMCallContext memory callContext) internal pure {
+    function _run(EVM memory evm, uint pc, uint pcEnd) internal pure {
 
         uint pcNext = 0;
         uint errno = NO_ERROR;
         bytes memory code = evm.code;
-        if (callContext.pcTill == 0) {
-            callContext.pcTill = code.length;
+        if (pcEnd == 0) {
+            pcEnd = code.length;
         }
 
-        while (errno == NO_ERROR && pc < callContext.pcTill) {
+        while (errno == NO_ERROR && pc < pcEnd) {
             uint opcode = uint(code[pc]);
             
             // Check for violation of static execution.
