@@ -139,11 +139,20 @@ contract EthereumRuntime is EVMConstants {
         uint pcEnd;
     }
 
+    // Execute the EVM with the given code and call-data.
+    function executeFlat(
+        bytes memory code, bytes memory data
+    ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+        return executeAndStop(code, data, 0);
+    }
+
     // Execute the EVM with the given code and call-data until the given op-count.
     function executeAndStop(
         bytes memory code, bytes memory data, uint pcEnd
     ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
-        Result memory result = executeAndStopInternal(code, data, pcEnd);
+        uint[] memory stack;
+        bytes memory mem;
+        Result memory result = initAndExecuteInternal(code, data, 0, pcEnd, stack, mem);
         return flattenResult(result);
     }
 
@@ -151,32 +160,13 @@ contract EthereumRuntime is EVMConstants {
     function initAndExecute(
         bytes memory code, bytes memory data, uint pcStart, uint[] memory stack, bytes memory mem
     ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
-        Result memory result = initAndExecuteInternal(code, data, pcStart, stack, mem);
+        Result memory result = initAndExecuteInternal(code, data, pcStart, 0, stack, mem);
         return flattenResult(result);
     }
 
-    // Execute the EVM with the given code and call-data until the given op-count.
-    function executeAndStopInternal(
-        bytes memory code, bytes memory data, uint pcEnd
-    ) internal pure returns (Result memory) {
-        EVMInput memory evmInput = getEVMInput(data);
-
-        initCallerAndTarget(evmInput, code);
-
-        // solhint-disable-next-line avoid-low-level-calls
-        EVM memory evm = _call(evmInput, CallType.Call, EVMCallContext(            
-            EVMMemory.Memory(0, 0, 0),
-            EVMStack.Stack(0, 0, 0),
-            0,
-            pcEnd
-        ));
-        
-        return toResult(evm);
-    }
-
-    // Init EVM with given stack and memory and execute from the given opcode
+    // Init EVM with given stack and memory and execute from the pcStart opcode till the pcEnd opcode
     function initAndExecuteInternal(
-        bytes memory code, bytes memory data, uint pcStart, uint[] memory stack, bytes memory mem
+        bytes memory code, bytes memory data, uint pcStart, uint pcEnd, uint[] memory stack, bytes memory mem
     ) internal pure returns (Result memory) {
         EVMInput memory evmInput = getEVMInput(data);
 
@@ -187,7 +177,7 @@ contract EthereumRuntime is EVMConstants {
             EVMMemory.fromArray(mem),
             EVMStack.fromArray(stack),
             pcStart,
-            0
+            pcEnd
         ));
         
         return toResult(evm);

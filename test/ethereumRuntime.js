@@ -5,6 +5,14 @@ const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 const toNum = arr => arr.map(e => e.toNumber());
 
 contract('Runtime', function () {
+  it('should allow to add', async function () {
+    let rt = await EthereumRuntime.new();
+    const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + ADD;
+    const data = '0x';
+    let rv = await rt.executeFlat(code, data);
+    assert.equal(rv[2][0], 8);
+  });
+
   describe('executeAndStop', () => {
     it('should allow to stop at specified op-count', async function () {
       let rt = await EthereumRuntime.new();
