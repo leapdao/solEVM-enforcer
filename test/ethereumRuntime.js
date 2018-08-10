@@ -62,6 +62,12 @@ contract('Runtime', function () {
       let opcode = fixture.opcode;
       let code = `0x${opcode}`;
       let pc = 0;
+      // if not a single opcode, but a program
+      if (opcode.join) {
+        pc = opcode.length - 1;
+        code = `0x${opcode.join('')}`;
+        opcode = opcode[pc];
+      }
       it(opcodes[opcode], async () => {
         const initialStack = fixture.stack || [];
         const initialMemory = fixture.memory || '0x';

@@ -1,4 +1,9 @@
+import { BLOCK_GAS_LIMIT } from './helpers/constants';
+
 const OP = require('./helpers/constants');
+
+const DEFAULT_CONTRACT_ADDRESS = `0x${OP.DEFAULT_CONTRACT_ADDRESS}`;
+const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
 
 const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
 
@@ -80,5 +85,25 @@ export default [
     accounts: { '0x4ae7b3e204fed41c82d57ecd2242470196d70d02': 254 },
     result: { stack: [254], gasUsed: 400 },
   },
+  { opcode: OP.ADDRESS, result: { stack: [parseInt(DEFAULT_CONTRACT_ADDRESS, 16)], gasUsed: 2 } },
+  { opcode: OP.ORIGIN, result: { stack: [parseInt(DEFAULT_CALLER_ADDRESS, 16)], gasUsed: 2 } },
+  { opcode: OP.CALLER, result: { stack: [parseInt(DEFAULT_CALLER_ADDRESS, 16)], gasUsed: 2 } },
+  // always 0 in current implementation
+  // TODO: do we need it non-zero?
+  { opcode: OP.CALLVALUE, result: { stack: [0], gasUsed: 2 } },
+  // always 0 in current implementation
+  // TODO: do we need it non-zero?
+  { opcode: OP.GASPRICE, result: { stack: [0], gasUsed: 2 } },
+  { opcode: OP.BLOCKHASH, result: { stack: [], gasUsed: 20 } },
+  { opcode: OP.COINBASE, result: { stack: [0], gasUsed: 2 } },
+  { opcode: OP.TIMESTAMP, result: { stack: [0], gasUsed: 2 } },
+  { opcode: OP.NUMBER, result: { stack: [0], gasUsed: 2 } },
+  { opcode: OP.DIFFICULTY, result: { stack: [0], gasUsed: 2 } },
+  { opcode: OP.GASLIMIT, result: { stack: [parseInt(BLOCK_GAS_LIMIT, 16)], gasUsed: 2 } },
+  { opcode: [OP.GASPRICE, OP.POP, OP.PC], result: { stack: [2], gasUsed: 2 } },
+  // { opcode: OP.GAS, result: { stack: [0], gasUsed: 2 } },
+  // { opcode: OP.RETURNDATASIZE, result: { stack: [0], gasUsed: 2 } },
+  // { opcode: OP.JUMP, result: { stack: [], gasUsed: 8 } },
+  // { opcode: OP.JUMPI, result: { stack: [], gasUsed: 10 } },
 
 ];
