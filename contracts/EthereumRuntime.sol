@@ -143,38 +143,45 @@ contract EthereumRuntime is EVMConstants {
     function executeFlat(
         bytes memory code, bytes memory data
     ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
-        return executeAndStop(code, data, 0);
+        return executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT]);
     }
 
     // Execute the EVM with the given code and call-data until the given op-count.
     function executeAndStop(
-        bytes memory code, bytes memory data, uint pcEnd
+        bytes memory code, bytes memory data, uint[3] memory intInput
     ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
         uint[] memory stack;
         bytes memory mem;
         address[] memory accounts;
         uint[] memory balances;
-        Result memory result = initAndExecuteInternal(code, data, 0, pcEnd, stack, mem, accounts, balances);
+        Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, balances);
         return flattenResult(result);
     }
 
     // Init EVM with given stack and memory and execute from the given opcode
+    // intInput[0] - pcStart
+    // intInput[1] - pcEnd
+    // intInput[2] - gasLimit
     function initAndExecute(
-        bytes memory code, bytes memory data, uint pcStart, uint[] memory stack,
+        bytes memory code, bytes memory data, uint[3] memory intInput, uint[] memory stack,
         bytes memory mem, address[] memory accounts, uint[] memory balances
     ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
-        Result memory result = initAndExecuteInternal(code, data, pcStart, 0, stack, mem, accounts, balances);
+        Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, balances);
         return flattenResult(result);
     }
 
     // Init EVM with given stack and memory and execute from the pcStart opcode till the pcEnd opcode
+    // intInput[0] - pcStart
+    // intInput[1] - pcEnd
+    // intInput[2] - gasLimit
     function initAndExecuteInternal(
-        bytes memory code, bytes memory data, uint pcStart, uint pcEnd,
+        bytes memory code, bytes memory data, uint[3] memory intInput,
         uint[] memory stack, bytes memory mem, address[] memory accounts, uint[] memory balances 
     ) internal pure returns (Result memory) {
         EVMInput memory evmInput = getEVMInput(
             data, 
-            EVMAccounts.fromArray(accounts, balances)
+            EVMAccounts.fromArray(accounts, balances),
+            intInput[2]
         );
 
         initCallerAndTarget(evmInput, code);
@@ -183,8 +190,8 @@ contract EthereumRuntime is EVMConstants {
         EVM memory evm = _call(evmInput, CallType.Call, EVMCallContext(            
             EVMMemory.fromArray(mem),
             EVMStack.fromArray(stack),
-            pcStart,
-            pcEnd
+            intInput[0],
+            intInput[1]
         ));
         
         return toResult(evm);
@@ -205,22 +212,22 @@ contract EthereumRuntime is EVMConstants {
         uint[2], uint[], uint[], uint[], bytes, uint[4]
     ) {
         bytes memory bytesResult = BytesLib.concat(
-          result.returnData, 
-          BytesLib.concat(
-            result.mem,
-            BytesLib.concat(result.accountsCode, result.logsData)
-          )
+            result.returnData, 
+            BytesLib.concat(
+                result.mem,
+                BytesLib.concat(result.accountsCode, result.logsData)
+            )
         );
         uint[4] memory bytesOffsets = [
-          result.returnData.length, result.mem.length,
-          result.accountsCode.length, result.logsData.length
+            result.returnData.length, result.mem.length,
+            result.accountsCode.length, result.logsData.length
         ];
         return ([result.errno, result.errpc], result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);  
 
     }
 
     function getEVMInput(
-        bytes memory data, EVMAccounts.Accounts memory accounts
+        bytes memory data, EVMAccounts.Accounts memory accounts, uint gasLimit
     ) internal pure returns (EVMInput memory evmInput) {
         evmInput.data = data;
         evmInput.handlers = _newHandlers();
@@ -231,7 +238,7 @@ contract EthereumRuntime is EVMConstants {
         evmInput.context = Context(
             DEFAULT_CALLER,
             0,
-            0,
+            gasLimit,
             0,
             0,
             0,

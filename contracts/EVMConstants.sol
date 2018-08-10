@@ -236,5 +236,6 @@ contract EVMConstants {
     uint constant internal CALL_CREATE_DEPTH = 1024;
     uint constant internal WORD_SIZE = 32;
     uint constant internal MAX_CODE_SIZE = 24576;
-    
+
+    uint constant internal BLOCK_GAS_LIMIT = 0xfffffffffffff;
 }

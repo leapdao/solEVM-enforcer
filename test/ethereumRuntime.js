@@ -1,7 +1,7 @@
 import fixtures from './fixtures';
 
 const OP = require('./helpers/constants');
-const { PUSH1 } = OP;
+const { PUSH1, BLOCK_GAS_LIMIT } = OP;
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 
@@ -27,13 +27,13 @@ contract('Runtime', function () {
     it('should allow to stop at specified op-count', async function () {
       const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
       const data = '0x';
-      let r = unpack(await rt.executeAndStop(code, data, 2));
+      let r = unpack(await rt.executeAndStop(code, data, [0, 2, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [3]);
 
-      r = unpack(await rt.executeAndStop(code, data, 4));
+      r = unpack(await rt.executeAndStop(code, data, [0, 4, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [3, 5]);
 
-      r = unpack(await rt.executeAndStop(code, data, 5));
+      r = unpack(await rt.executeAndStop(code, data, [0, 5, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [8]);
     });
   });
@@ -51,23 +51,25 @@ contract('Runtime', function () {
   describe('initAndExecute', () => {
     it('can continue from non-zero program counter', async () => {
       const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
-      const res = unpack(await rt.executeAndStop(code, '0x', 4));
+      const res = unpack(await rt.executeAndStop(code, '0x', [0, 4, BLOCK_GAS_LIMIT]));
       const { stack } = unpack(
-        await rt.initAndExecute(code, '0x', 4, res.stack, res.memory, [], [])
+        await rt.initAndExecute(code, '0x', [4, 0, BLOCK_GAS_LIMIT], res.stack, res.memory, [], [])
       );
       assert.deepEqual(toNum(stack), [8]);
     });
 
     fixtures.forEach(fixture => {
-      it(opcodes[fixture.opcode], async () => {
-        const code = `0x${fixture.opcode}`;
+      let opcode = fixture.opcode;
+      let code = `0x${opcode}`;
+      let pc = 0;
+      it(opcodes[opcode], async () => {
         const initialStack = fixture.stack || [];
         const initialMemory = fixture.memory || '0x';
         const initialAccounts = Object.keys(fixture.accounts || {});
         const initialBalances = Object.values(fixture.accounts || {});
         const { stack } = unpack(
           await rt.initAndExecute(
-            code, '0x', 0, initialStack, initialMemory, initialAccounts, initialBalances
+            code, '0x', [pc, 0, BLOCK_GAS_LIMIT], initialStack, initialMemory, initialAccounts, initialBalances
           )
         );
         if (fixture.result.stack) {

@@ -176,3 +176,5 @@ export const STATICCALL = 'fa';
 export const REVERT = 'fd';
 export const INVALID = 'fe';
 export const SELFDESTRUCT = 'ff';
+
+export const BLOCK_GAS_LIMIT = '0xfffffffffffff';
