@@ -53,7 +53,7 @@ contract('Runtime', function () {
       const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
       const res = unpack(await rt.executeAndStop(code, '0x', 4));
       const { stack } = unpack(
-        await rt.initAndExecute(code, '0x', 4, res.stack, res.memory)
+        await rt.initAndExecute(code, '0x', 4, res.stack, res.memory, [], [])
       );
       assert.deepEqual(toNum(stack), [8]);
     });
@@ -63,9 +63,11 @@ contract('Runtime', function () {
         const code = `0x${fixture.opcode}`;
         const initialStack = fixture.stack || [];
         const initialMemory = fixture.memory || '0x';
+        const initialAccounts = Object.keys(fixture.accounts || {});
+        const initialBalances = Object.values(fixture.accounts || {});
         const { stack } = unpack(
           await rt.initAndExecute(
-            code, '0x', 0, initialStack, initialMemory
+            code, '0x', 0, initialStack, initialMemory, initialAccounts, initialBalances
           )
         );
         if (fixture.result.stack) {

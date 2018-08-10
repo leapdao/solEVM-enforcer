@@ -152,23 +152,30 @@ contract EthereumRuntime is EVMConstants {
     ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
         uint[] memory stack;
         bytes memory mem;
-        Result memory result = initAndExecuteInternal(code, data, 0, pcEnd, stack, mem);
+        address[] memory accounts;
+        uint[] memory balances;
+        Result memory result = initAndExecuteInternal(code, data, 0, pcEnd, stack, mem, accounts, balances);
         return flattenResult(result);
     }
 
     // Init EVM with given stack and memory and execute from the given opcode
     function initAndExecute(
-        bytes memory code, bytes memory data, uint pcStart, uint[] memory stack, bytes memory mem
+        bytes memory code, bytes memory data, uint pcStart, uint[] memory stack,
+        bytes memory mem, address[] memory accounts, uint[] memory balances
     ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
-        Result memory result = initAndExecuteInternal(code, data, pcStart, 0, stack, mem);
+        Result memory result = initAndExecuteInternal(code, data, pcStart, 0, stack, mem, accounts, balances);
         return flattenResult(result);
     }
 
     // Init EVM with given stack and memory and execute from the pcStart opcode till the pcEnd opcode
     function initAndExecuteInternal(
-        bytes memory code, bytes memory data, uint pcStart, uint pcEnd, uint[] memory stack, bytes memory mem 
+        bytes memory code, bytes memory data, uint pcStart, uint pcEnd,
+        uint[] memory stack, bytes memory mem, address[] memory accounts, uint[] memory balances 
     ) internal pure returns (Result memory) {
-        EVMInput memory evmInput = getEVMInput(data);
+        EVMInput memory evmInput = getEVMInput(
+            data, 
+            EVMAccounts.fromArray(accounts, balances)
+        );
 
         initCallerAndTarget(evmInput, code);
 
@@ -198,25 +205,29 @@ contract EthereumRuntime is EVMConstants {
         uint[2], uint[], uint[], uint[], bytes, uint[4]
     ) {
         bytes memory bytesResult = BytesLib.concat(
-            result.returnData, 
-            BytesLib.concat(
-              result.mem,
-              BytesLib.concat(result.accountsCode, result.logsData)
-            )
+          result.returnData, 
+          BytesLib.concat(
+            result.mem,
+            BytesLib.concat(result.accountsCode, result.logsData)
+          )
         );
         uint[4] memory bytesOffsets = [
-            result.returnData.length, result.mem.length,
-            result.accountsCode.length, result.logsData.length
+          result.returnData.length, result.mem.length,
+          result.accountsCode.length, result.logsData.length
         ];
-        return ([result.errno, result.errpc], result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);
+        return ([result.errno, result.errpc], result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);  
+
     }
 
-    function getEVMInput(bytes memory data) internal pure returns (EVMInput memory evmInput) {
+    function getEVMInput(
+        bytes memory data, EVMAccounts.Accounts memory accounts
+    ) internal pure returns (EVMInput memory evmInput) {
         evmInput.data = data;
         evmInput.handlers = _newHandlers();
         evmInput.staticExec = false;
         evmInput.caller = DEFAULT_CALLER;
         evmInput.target = DEFAULT_CONTRACT_ADDRESS;
+        evmInput.accounts = accounts;
         evmInput.context = Context(
             DEFAULT_CALLER,
             0,

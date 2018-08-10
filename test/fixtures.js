@@ -5,6 +5,7 @@ const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + 
 const stack16 = range(1, 16);
 
 export default [
+
   // 0x - arithmetic ops
   { opcode: OP.ADD, stack: ['3', '5'], result: { stack: [8], gasUsed: 3 } },
   { opcode: OP.MUL, stack: ['3', '5'], result: { stack: [15], gasUsed: 5 } },
@@ -73,4 +74,11 @@ export default [
   { opcode: OP.SWAP14, stack: range(1, 15), result: { stack: [15, ...range(2, 14), 1], gasUsed: 3 } },
   { opcode: OP.SWAP15, stack: range(1, 16), result: { stack: [16, ...range(2, 15), 1], gasUsed: 3 } },
   { opcode: OP.SWAP16, stack: range(1, 17), result: { stack: [17, ...range(2, 16), 1], gasUsed: 3 } },
+
+  { opcode: OP.BALANCE,
+    stack: ['0x4ae7b3e204fed41c82d57ecd2242470196d70d02'],
+    accounts: { '0x4ae7b3e204fed41c82d57ecd2242470196d70d02': 254 },
+    result: { stack: [254], gasUsed: 400 },
+  },
+
 ];

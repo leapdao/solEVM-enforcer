@@ -105,6 +105,14 @@ library EVMAccounts {
         }
         return;
     }
+
+    function fromArray(address[] addrs, uint[] balances) internal pure returns (Accounts memory accounts) {
+        require(addrs.length == balances.length, 'Addresses and Balances should be of the same size');
+        for (uint i = 0; i < addrs.length; i++) {
+            Account memory acc = get(accounts, addrs[i]);
+            acc.balance = balances[i];
+        }
+    }
     
     function toArray(Accounts memory self) internal pure returns (uint[] memory arr, bytes memory code) {
         if (self.size == 0) {
