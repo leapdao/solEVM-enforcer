@@ -52,6 +52,7 @@
   "author": "johannbarbie@me.com",
   "license": "ISC",
   "dependencies": {
+    "solidity-bytes-utils": "git+https://github.com/GNSPS/solidity-bytes-utils.git",
     "web3": "github:ethereum/web3.js#newAbiLib"
   }
 }

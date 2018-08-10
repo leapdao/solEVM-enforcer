@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 
-
+import "solidity-bytes-utils/contracts/BytesLib.sol";
 import { EVMConstants } from "./EVMConstants.sol";
 import { EVMAccounts } from "./EVMAccounts.slb";
 import { EVMStorage } from "./EVMStorage.slb";
@@ -142,14 +142,14 @@ contract EthereumRuntime is EVMConstants {
     // Execute the EVM with the given code and call-data.
     function executeFlat(
         bytes memory code, bytes memory data
-    ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+    ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
         return executeAndStop(code, data, 0);
     }
 
     // Execute the EVM with the given code and call-data until the given op-count.
     function executeAndStop(
         bytes memory code, bytes memory data, uint pcEnd
-    ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+    ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
         uint[] memory stack;
         bytes memory mem;
         Result memory result = initAndExecuteInternal(code, data, 0, pcEnd, stack, mem);
@@ -159,14 +159,14 @@ contract EthereumRuntime is EVMConstants {
     // Init EVM with given stack and memory and execute from the given opcode
     function initAndExecute(
         bytes memory code, bytes memory data, uint pcStart, uint[] memory stack, bytes memory mem
-    ) public pure returns (uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+    ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
         Result memory result = initAndExecuteInternal(code, data, pcStart, 0, stack, mem);
         return flattenResult(result);
     }
 
     // Init EVM with given stack and memory and execute from the pcStart opcode till the pcEnd opcode
     function initAndExecuteInternal(
-        bytes memory code, bytes memory data, uint pcStart, uint pcEnd, uint[] memory stack, bytes memory mem
+        bytes memory code, bytes memory data, uint pcStart, uint pcEnd, uint[] memory stack, bytes memory mem 
     ) internal pure returns (Result memory) {
         EVMInput memory evmInput = getEVMInput(data);
 
@@ -195,11 +195,20 @@ contract EthereumRuntime is EVMConstants {
     }
 
     function flattenResult(Result memory result) internal pure returns (
-        uint[2], bytes, uint[], bytes, uint[], bytes, uint[], bytes
+        uint[2], uint[], uint[], uint[], bytes, uint[4]
     ) {
-        return ([result.errno, result.errpc], result.returnData, result.stack, result.mem,
-                result.accounts, result.accountsCode, result.logs, result.logsData);  
-
+        bytes memory bytesResult = BytesLib.concat(
+            result.returnData, 
+            BytesLib.concat(
+              result.mem,
+              BytesLib.concat(result.accountsCode, result.logsData)
+            )
+        );
+        uint[4] memory bytesOffsets = [
+            result.returnData.length, result.mem.length,
+            result.accountsCode.length, result.logsData.length
+        ];
+        return ([result.errno, result.errpc], result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);
     }
 
     function getEVMInput(bytes memory data) internal pure returns (EVMInput memory evmInput) {
