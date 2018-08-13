@@ -100,8 +100,9 @@ export default [
   { opcode: OP.NUMBER, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.DIFFICULTY, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.GASLIMIT, result: { stack: [parseInt(BLOCK_GAS_LIMIT, 16)], gasUsed: 2 } },
-  { opcode: [OP.GASPRICE, OP.POP, OP.PC], result: { stack: [2], gasUsed: 2 } },
-  // { opcode: OP.GAS, result: { stack: [0], gasUsed: 2 } },
+  { opcode: OP.GASLIMIT, gasLimit: 100, result: { stack: [100], gasUsed: 2 } },
+  { opcode: [OP.GASPRICE, OP.POP, OP.PC], result: { stack: [2], gasUsed: 6 } }, // PC
+  { opcode: [OP.GASPRICE, OP.POP, OP.GAS], gasLimit: 10, result: { stack: [6], gasUsed: 4 } }, // GAS
   // { opcode: OP.RETURNDATASIZE, result: { stack: [0], gasUsed: 2 } },
   // { opcode: OP.JUMP, result: { stack: [], gasUsed: 8 } },
   // { opcode: OP.JUMPI, result: { stack: [], gasUsed: 10 } },
