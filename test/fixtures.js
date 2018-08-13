@@ -7,6 +7,8 @@ const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
 
 const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
 
+const hexRange = (from, to) => parseInt(range(from, to).join(''), 16);
+
 const stack16 = range(1, 16);
 
 export default [
@@ -110,4 +112,42 @@ export default [
   { opcode: [OP.PUSH1, '01', OP.PUSH1, '00', OP.JUMPI], stack: [1, 0], result: { stack: [], pc: 0, gasUsed: 16 } },
   { opcode: [OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], stack: [0, 0], result: { stack: [], pc: 5, gasUsed: 16 } },
 
+  // poor test
+  // TODO: init state with returnData first
+  { opcode: OP.RETURNDATASIZE, result: { stack: [0], gasUsed: 2 } },
+  //  Code and stack opcodes (CODELOAD, CODESIZE, PUSH1 - PUSH32)
+  { opcode: OP.CODESIZE, result: { stack: [1], gasUsed: 2 } },
+  { opcode: [OP.GASPRICE, OP.POP, OP.CODESIZE], result: { stack: [3], gasUsed: 6 } },
+  { opcode: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16)], gasUsed: 3 } },
+  { opcode: [OP.PUSH2, '01', '02'], pc: '0', result: { stack: [parseInt('0102', 16)], gasUsed: 3 } },
+  { opcode: [OP.PUSH3, '01', '02', '03'], pc: '0', result: { stack: [parseInt('010203', 16)], gasUsed: 3 } },
+  { opcode: [OP.PUSH4, ...range(10, 13)], pc: '0', result: { stack: [hexRange(10, 13)], gasUsed: 3 } },
+  { opcode: [OP.PUSH5, ...range(10, 14)], pc: '0', result: { stack: [hexRange(10, 14)], gasUsed: 3 } },
+  { opcode: [OP.PUSH6, ...range(10, 15)], pc: '0', result: { stack: [hexRange(10, 15)], gasUsed: 3 } },
+  { opcode: [OP.PUSH7, ...range(10, 16)], pc: '0', result: { stack: [hexRange(10, 16)], gasUsed: 3 } },
+  { opcode: [OP.PUSH8, ...range(10, 17)], pc: '0', result: { stack: [hexRange(10, 17)], gasUsed: 3 } },
+  { opcode: [OP.PUSH9, ...range(10, 18)], pc: '0', result: { stack: [hexRange(10, 18)], gasUsed: 3 } },
+  { opcode: [OP.PUSH10, ...range(10, 19)], pc: '0', result: { stack: [hexRange(10, 19)], gasUsed: 3 } },
+  { opcode: [OP.PUSH11, ...range(10, 20)], pc: '0', result: { stack: [hexRange(10, 20)], gasUsed: 3 } },
+  { opcode: [OP.PUSH12, ...range(10, 21)], pc: '0', result: { stack: [hexRange(10, 21)], gasUsed: 3 } },
+  { opcode: [OP.PUSH13, ...range(10, 22)], pc: '0', result: { stack: [hexRange(10, 22)], gasUsed: 3 } },
+  { opcode: [OP.PUSH14, ...range(10, 23)], pc: '0', result: { stack: [hexRange(10, 23)], gasUsed: 3 } },
+  { opcode: [OP.PUSH15, ...range(10, 24)], pc: '0', result: { stack: [hexRange(10, 24)], gasUsed: 3 } },
+  { opcode: [OP.PUSH16, ...range(10, 25)], pc: '0', result: { stack: [hexRange(10, 25)], gasUsed: 3 } },
+  { opcode: [OP.PUSH17, ...range(10, 26)], pc: '0', result: { stack: [hexRange(10, 26)], gasUsed: 3 } },
+  { opcode: [OP.PUSH18, ...range(10, 27)], pc: '0', result: { stack: [hexRange(10, 27)], gasUsed: 3 } },
+  { opcode: [OP.PUSH19, ...range(10, 28)], pc: '0', result: { stack: [hexRange(10, 28)], gasUsed: 3 } },
+  { opcode: [OP.PUSH20, ...range(10, 29)], pc: '0', result: { stack: [hexRange(10, 29)], gasUsed: 3 } },
+  { opcode: [OP.PUSH21, ...range(10, 30)], pc: '0', result: { stack: [hexRange(10, 30)], gasUsed: 3 } },
+  { opcode: [OP.PUSH22, ...range(10, 31)], pc: '0', result: { stack: [hexRange(10, 31)], gasUsed: 3 } },
+  { opcode: [OP.PUSH23, ...range(10, 32)], pc: '0', result: { stack: [hexRange(10, 32)], gasUsed: 3 } },
+  { opcode: [OP.PUSH24, ...range(10, 33)], pc: '0', result: { stack: [hexRange(10, 33)], gasUsed: 3 } },
+  { opcode: [OP.PUSH25, ...range(10, 34)], pc: '0', result: { stack: [hexRange(10, 34)], gasUsed: 3 } },
+  { opcode: [OP.PUSH26, ...range(10, 35)], pc: '0', result: { stack: [hexRange(10, 35)], gasUsed: 3 } },
+  { opcode: [OP.PUSH27, ...range(10, 36)], pc: '0', result: { stack: [hexRange(10, 36)], gasUsed: 3 } },
+  { opcode: [OP.PUSH28, ...range(10, 37)], pc: '0', result: { stack: [hexRange(10, 37)], gasUsed: 3 } },
+  { opcode: [OP.PUSH29, ...range(10, 38)], pc: '0', result: { stack: [hexRange(10, 38)], gasUsed: 3 } },
+  { opcode: [OP.PUSH30, ...range(10, 39)], pc: '0', result: { stack: [hexRange(10, 39)], gasUsed: 3 } },
+  { opcode: [OP.PUSH31, ...range(10, 40)], pc: '0', result: { stack: [hexRange(10, 40)], gasUsed: 3 } },
+  { opcode: [OP.PUSH32, ...range(10, 41)], pc: '0', result: { stack: [hexRange(10, 41)], gasUsed: 3 } },
 ];

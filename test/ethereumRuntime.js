@@ -61,13 +61,16 @@ contract('Runtime', function () {
 
     fixtures.forEach(fixture => {
       let opcode = fixture.opcode;
-      let code = `0x${opcode}`;
-      let pc = 0;
+      let code;
+      let pc;
       // if not a single opcode, but a program
       if (opcode.join) {
-        pc = opcode.length - 1;
+        pc = fixture.pc || opcode.length - 1;
         code = `0x${opcode.join('')}`;
         opcode = opcode[pc];
+      } else {
+        pc = fixture.pc || 0;
+        code = `0x${opcode}`;
       }
       it(opcodes[opcode], async () => {
         const initialStack = fixture.stack || [];
@@ -77,7 +80,7 @@ contract('Runtime', function () {
         const res = unpack(
           await rt.initAndExecute(
             code, '0x',
-            [pc, pc + 1, fixture.gasLimit || BLOCK_GAS_LIMIT],
+            [pc, 0, fixture.gasLimit || BLOCK_GAS_LIMIT],
             initialStack, initialMemory, initialAccounts, initialBalances
           )
         );
