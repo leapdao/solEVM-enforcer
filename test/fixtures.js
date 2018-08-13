@@ -103,8 +103,11 @@ export default [
   { opcode: OP.GASLIMIT, gasLimit: 100, result: { stack: [100], gasUsed: 2 } },
   { opcode: [OP.GASPRICE, OP.POP, OP.PC], result: { stack: [2], gasUsed: 6 } }, // PC
   { opcode: [OP.GASPRICE, OP.POP, OP.GAS], gasLimit: 10, result: { stack: [6], gasUsed: 4 } }, // GAS
-  // { opcode: OP.RETURNDATASIZE, result: { stack: [0], gasUsed: 2 } },
-  // { opcode: OP.JUMP, result: { stack: [], gasUsed: 8 } },
-  // { opcode: OP.JUMPI, result: { stack: [], gasUsed: 10 } },
+
+  // JUMP, infinite loop
+  { opcode: [OP.PUSH1, '01', OP.JUMP], stack: [0], result: { stack: [], pc: 0, gasUsed: 11 } },
+  // JUMPI, inifite loop
+  { opcode: [OP.PUSH1, '01', OP.PUSH1, '00', OP.JUMPI], stack: [1, 0], result: { stack: [], pc: 0, gasUsed: 16 } },
+  { opcode: [OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], stack: [0, 0], result: { stack: [], pc: 5, gasUsed: 16 } },
 
 ];

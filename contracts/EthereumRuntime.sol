@@ -58,6 +58,7 @@ contract EthereumRuntime is EVMConstants {
     struct Result {
         uint errno;
         uint errpc;
+        uint pc;
         bytes returnData;
         uint[] stack;
         bytes mem;
@@ -142,14 +143,14 @@ contract EthereumRuntime is EVMConstants {
     // Execute the EVM with the given code and call-data.
     function executeFlat(
         bytes memory code, bytes memory data
-    ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
+    ) public pure returns (uint[3], uint[], uint[], uint[], bytes, uint[4]) {
         return executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT]);
     }
 
     // Execute the EVM with the given code and call-data until the given op-count.
     function executeAndStop(
         bytes memory code, bytes memory data, uint[3] memory intInput
-    ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
+    ) public pure returns (uint[3], uint[], uint[], uint[], bytes, uint[4]) {
         uint[] memory stack;
         bytes memory mem;
         address[] memory accounts;
@@ -165,7 +166,7 @@ contract EthereumRuntime is EVMConstants {
     function initAndExecute(
         bytes memory code, bytes memory data, uint[3] memory intInput, uint[] memory stack,
         bytes memory mem, address[] memory accounts, uint[] memory balances
-    ) public pure returns (uint[2], uint[], uint[], uint[], bytes, uint[4]) {
+    ) public pure returns (uint[3], uint[], uint[], uint[], bytes, uint[4]) {
         Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, balances);
         return flattenResult(result);
     }
@@ -203,13 +204,14 @@ contract EthereumRuntime is EVMConstants {
         result.returnData = evm.returnData;
         result.errno = evm.errno;
         result.errpc = evm.errpc;
+        result.pc = evm.pc;
         // TODO handle accounts that result from a failed transaction.
         (result.accounts, result.accountsCode) = evm.accounts.toArray();
         (result.logs, result.logsData) = evm.logs.toArray();
     }
 
     function flattenResult(Result memory result) internal pure returns (
-        uint[2], uint[], uint[], uint[], bytes, uint[4]
+        uint[3], uint[], uint[], uint[], bytes, uint[4]
     ) {
         bytes memory bytesResult = BytesLib.concat(
             result.returnData, 
@@ -222,7 +224,7 @@ contract EthereumRuntime is EVMConstants {
             result.returnData.length, result.mem.length,
             result.accountsCode.length, result.logsData.length
         ];
-        return ([result.errno, result.errpc], result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);  
+        return ([result.errno, result.errpc, result.pc], result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);  
 
     }
 

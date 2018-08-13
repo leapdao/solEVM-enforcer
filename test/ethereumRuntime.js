@@ -38,14 +38,15 @@ contract('Runtime', function () {
     });
   });
 
-  const unpack = ([err, stack, accounts, logs, bytes, bytesOffsets]) => {
+  const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {   
     bytes = bytes.substring(2);
     bytesOffsets = bytesOffsets.map(o => o * 2);
     const returnData = `0x${bytes.substring(0, bytesOffsets[0])}`;
     const memory = `0x${bytes.substring(bytesOffsets[0], bytesOffsets[0] + bytesOffsets[1])}`;
     const accountsCode = `0x${bytes.substring(bytesOffsets[1], bytesOffsets[1] + bytesOffsets[2])}`;
     const logsData = `0x${bytes.substring(bytesOffsets[2], bytesOffsets[2] + bytesOffsets[3])}`;
-    return { err, returnData, stack, memory, accounts, accountsCode, logs, logsData };
+    const [errno, errpc, pc] = uints.map(n => n.toNumber());
+    return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData };
   };
 
   describe('initAndExecute', () => {
@@ -73,15 +74,18 @@ contract('Runtime', function () {
         const initialMemory = fixture.memory || '0x';
         const initialAccounts = Object.keys(fixture.accounts || {});
         const initialBalances = Object.values(fixture.accounts || {});
-        const { stack } = unpack(
+        const res = unpack(
           await rt.initAndExecute(
             code, '0x',
-            [pc, 0, fixture.gasLimit || BLOCK_GAS_LIMIT],
+            [pc, pc + 1, fixture.gasLimit || BLOCK_GAS_LIMIT],
             initialStack, initialMemory, initialAccounts, initialBalances
           )
         );
         if (fixture.result.stack) {
-          assert.deepEqual(toNum(stack), fixture.result.stack);
+          assert.deepEqual(toNum(res.stack), fixture.result.stack);
+        }
+        if (fixture.result.pc) {
+          assert.deepEqual(res.pc, fixture.result.pc);
         }
       });
     });
