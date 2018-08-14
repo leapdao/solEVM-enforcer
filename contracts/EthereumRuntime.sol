@@ -432,6 +432,7 @@ contract EthereumRuntime is EVMConstants {
         evm.errno = errno;
         // to be used if errno is non-zero
         evm.errpc = pc;
+        evm.pc = pc;
     }
     
     // ************************* Handlers ***************************

@@ -9,6 +9,17 @@ const opcodes = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {}
 
 const toNum = arr => arr.map(e => e.toNumber());
 
+const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {   
+  bytes = bytes.substring(2);
+  bytesOffsets = bytesOffsets.map(o => o * 2);
+  const returnData = `0x${bytes.substring(0, bytesOffsets[0])}`;
+  const memory = `0x${bytes.substring(bytesOffsets[0], bytesOffsets[0] + bytesOffsets[1])}`;
+  const accountsCode = `0x${bytes.substring(bytesOffsets[1], bytesOffsets[1] + bytesOffsets[2])}`;
+  const logsData = `0x${bytes.substring(bytesOffsets[2], bytesOffsets[2] + bytesOffsets[3])}`;
+  const [errno, errpc, pc] = uints.map(n => n.toNumber());
+  return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData };
+};
+
 contract('Runtime', function () {
   let rt;
   
@@ -21,33 +32,29 @@ contract('Runtime', function () {
     const data = '0x';
     let rv = unpack(await rt.executeFlat(code, data));
     assert.equal(rv.stack[0], 8);
+    assert.deepEqual(rv.pc, 5);
   });
 
   describe('executeAndStop', () => {
-    it('should allow to stop at specified op-count', async function () {
-      const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
+    it('should allow to stop at specified op-count and export the state', async function () {
+      const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD + PUSH1 + '00' + OP.MSTORE;
       const data = '0x';
       let r = unpack(await rt.executeAndStop(code, data, [0, 2, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [3]);
+      assert.deepEqual(r.pc, 2);
+      assert.deepEqual(r.memory, '0x');
 
       r = unpack(await rt.executeAndStop(code, data, [0, 4, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [3, 5]);
 
       r = unpack(await rt.executeAndStop(code, data, [0, 5, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [8]);
+      r = unpack(await rt.executeAndStop(code, data, [0, 8, BLOCK_GAS_LIMIT]));
+      assert.deepEqual(toNum(r.stack), []);
+      assert.deepEqual(r.pc, 8);
+      assert.deepEqual(parseInt(r.memory, 16), 8);
     });
   });
-
-  const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {   
-    bytes = bytes.substring(2);
-    bytesOffsets = bytesOffsets.map(o => o * 2);
-    const returnData = `0x${bytes.substring(0, bytesOffsets[0])}`;
-    const memory = `0x${bytes.substring(bytesOffsets[0], bytesOffsets[0] + bytesOffsets[1])}`;
-    const accountsCode = `0x${bytes.substring(bytesOffsets[1], bytesOffsets[1] + bytesOffsets[2])}`;
-    const logsData = `0x${bytes.substring(bytesOffsets[2], bytesOffsets[2] + bytesOffsets[3])}`;
-    const [errno, errpc, pc] = uints.map(n => n.toNumber());
-    return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData };
-  };
 
   describe('initAndExecute', () => {
     it('can continue from non-zero program counter', async () => {
