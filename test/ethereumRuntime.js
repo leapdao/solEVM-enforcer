@@ -95,6 +95,9 @@ contract('Runtime', function () {
         if (fixture.result.stack) {
           assert.deepEqual(toNum(res.stack), fixture.result.stack);
         }
+        if (fixture.result.memory) {
+          assert.deepEqual(res.memory, fixture.result.memory);
+        }
         if (fixture.result.pc) {
           assert.deepEqual(res.pc, fixture.result.pc);
         }
