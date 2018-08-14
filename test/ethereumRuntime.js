@@ -77,9 +77,10 @@ contract('Runtime', function () {
         const initialMemory = fixture.memory || '0x';
         const initialAccounts = Object.keys(fixture.accounts || {});
         const initialBalances = Object.values(fixture.accounts || {});
+        const callData = fixture.data || '0x';
         const res = unpack(
           await rt.initAndExecute(
-            code, '0x',
+            code, callData,
             [pc, 0, fixture.gasLimit || BLOCK_GAS_LIMIT],
             initialStack, initialMemory, initialAccounts, initialBalances
           )

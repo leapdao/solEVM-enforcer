@@ -82,6 +82,8 @@ export default [
   { opcode: OP.SWAP15, stack: range(1, 16), result: { stack: [16, ...range(2, 15), 1], gasUsed: 3 } },
   { opcode: OP.SWAP16, stack: range(1, 17), result: { stack: [17, ...range(2, 16), 1], gasUsed: 3 } },
 
+  // Context and stack opcodes
+
   { opcode: OP.BALANCE,
     stack: ['0x4ae7b3e204fed41c82d57ecd2242470196d70d02'],
     accounts: { '0x4ae7b3e204fed41c82d57ecd2242470196d70d02': 254 },
@@ -115,7 +117,9 @@ export default [
   // poor test
   // TODO: init state with returnData first
   { opcode: OP.RETURNDATASIZE, result: { stack: [0], gasUsed: 2 } },
-  //  Code and stack opcodes (CODELOAD, CODESIZE, PUSH1 - PUSH32)
+
+  //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
+  
   { opcode: OP.CODESIZE, result: { stack: [1], gasUsed: 2 } },
   { opcode: [OP.GASPRICE, OP.POP, OP.CODESIZE], result: { stack: [3], gasUsed: 6 } },
   { opcode: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16)], gasUsed: 3 } },
@@ -150,4 +154,16 @@ export default [
   { opcode: [OP.PUSH30, ...range(10, 39)], pc: '0', result: { stack: [hexRange(10, 39)], gasUsed: 3 } },
   { opcode: [OP.PUSH31, ...range(10, 40)], pc: '0', result: { stack: [hexRange(10, 40)], gasUsed: 3 } },
   { opcode: [OP.PUSH32, ...range(10, 41)], pc: '0', result: { stack: [hexRange(10, 41)], gasUsed: 3 } },
+
+  // Data and stack opcodes
+  
+  { opcode: OP.CALLDATALOAD,
+    stack: [1],
+    data: '0x123456',
+    result: {
+      stack: [parseInt('0x3456000000000000000000000000000000000000000000000000000000000000', 16)],
+      gasUsed: 3
+    },
+  },
+  { opcode: OP.CALLDATASIZE, data: '0x1234', result: { stack: [2], gasUsed: 2 } },
 ];
