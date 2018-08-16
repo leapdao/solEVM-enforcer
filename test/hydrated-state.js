@@ -14,8 +14,7 @@ contract('Hydrated', function () {
     let status = await contract.proveAddOperation(
       beforeHash,
       afterHash,
-      5,
-      8,
+      [5, 8],
       ethUtils.bufferToHex(ethUtils.keccak256(ethUtils.setLengthLeft(ethUtils.toBuffer(12), 32))),
       true
     );

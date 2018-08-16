@@ -1,45 +1,60 @@
 pragma solidity ^0.4.24;
 
+import { IEthereumRuntime } from './EthereumRuntime.sol';
 
 contract Hydrated {
-    function proveAddOperation(
+    function unbalancedMerkelRoot(
+        uint256[] arr, 
+        bytes32 sibling, 
+        bool isSibling
+    ) public pure returns (bytes32) {
+        bytes32 result = 0x0;
+        uint256 i = arr.length - 1;
+        if (isSibling) {
+            result = sibling;            
+        }
+
+        while (i >= 0) {
+            if (result == 0x0) {
+                result = keccak256(abi.encodePacked(arr[i]));
+            } else {
+                result = keccak256(abi.encodePacked(arr[i], result));
+            }
+
+            // break if i == 0
+            if (i == 0) {
+                break;
+            }
+            
+            // continue with while loop
+            i--;
+        }
+        
+        return result;
+    }
+
+    function proveArithmeticOperation(
+        bytes code,
         bytes32 beforeHash,
         bytes32 afterHash,
     
-        uint256 stack1,
-        uint256 stack2,
+        // stack
+        uint256[] stack,
         
         bytes32 sibling,
         bool hasSibling
     ) public pure returns (bool) {
-        if (hasSibling) {
-            require(
-                beforeHash == keccak256(
-                    abi.encodePacked(
-                        stack1,
-                        keccak256(abi.encodePacked(stack2, sibling))
-                    )
-                )
-            );
-        } else {
-            require(
-                beforeHash == keccak256(
-                    abi.encodePacked(
-                        stack1,
-                        keccak256(abi.encodePacked(stack2))
-                    )
-                )
-            );
-        }
+        require(
+            beforeHash == unbalancedMerkelRoot(stack, sibling, hasSibling)
+        );
 
         // add two stack elements
-        uint256 result = stack1 + stack2;
+        // uint256 result = stack1 + stack2;
         
-        // check if sibling is there
-        if (hasSibling) {
-            return afterHash == keccak256(abi.encodePacked(result, sibling));
-        }
-        
-        return afterHash == keccak256(abi.encodePacked(result));
+        // new stack
+        // stack = [result];
+
+        // after hash check
+        return afterHash == unbalancedMerkelRoot(stack, sibling, hasSibling);
     }
 }
