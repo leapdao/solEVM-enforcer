@@ -1,8 +1,19 @@
 pragma solidity ^0.4.24;
 
-import { IEthereumRuntime } from './EthereumRuntime.sol';
+import { EVMMemory } from "./EVMMemory.slb";
+import { EVMStack } from "./EVMStack.slb";
+import { IEthereumRuntime, EthereumRuntime } from './EthereumRuntime.sol';
 
 contract Hydrated {
+    using EVMMemory for EVMMemory.Memory;
+    using EVMStack for EVMStack.Stack;
+
+    EthereumRuntime public ethereumRuntime;
+
+    constructor (address _ethereumRuntime) public {
+        ethereumRuntime = EthereumRuntime(_ethereumRuntime);
+    }
+
     function unbalancedMerkelRoot(
         uint256[] arr, 
         bytes32 sibling, 
@@ -43,18 +54,21 @@ contract Hydrated {
         
         bytes32 sibling,
         bool hasSibling
-    ) public pure returns (bool) {
+    ) public view returns (bool) {
         require(
             beforeHash == unbalancedMerkelRoot(stack, sibling, hasSibling)
         );
 
-        // add two stack elements
-        // uint256 result = stack1 + stack2;
-        
-        // new stack
-        // stack = [result];
+        IEthereumRuntime.EVMCallContext memory callContext;
+        callContext.mem = EVMMemory.newMemory();
+        callContext.stack = EVMStack.fromArray(stack);
+
+        // execute
+        bytes memory data;
+        uint256[] memory result;
+        (,,,result,,,,,) = ethereumRuntime.executeFlat(code, data, callContext);
 
         // after hash check
-        return afterHash == unbalancedMerkelRoot(stack, sibling, hasSibling);
+        return afterHash == unbalancedMerkelRoot(result, sibling, hasSibling);
     }
 }

@@ -2,7 +2,7 @@ pragma solidity 0.4.24;
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
 
-
+import "bytes/BytesLib.sol";
 import { EVMConstants } from "./EVMConstants.sol";
 import { EVMAccounts } from "./EVMAccounts.slb";
 import { EVMStorage } from "./EVMStorage.slb";
@@ -99,7 +99,7 @@ contract IEthereumRuntime is EVMConstants {
         EVMLogs.Logs logs;
         Handlers handlers;
     }
-    
+
     struct Handlers {
         Instruction[256] ins;
         function(bytes memory input) internal pure returns (bytes memory ret, uint errno)[9] p;
@@ -131,15 +131,20 @@ contract IEthereumRuntime is EVMConstants {
         bool staticExec;
         Handlers handlers;
     }
+
+    struct EVMCallContext {
+        EVMMemory.Memory mem;
+        EVMStack.Stack stack;
+    }
     
     // Execute the EVM with the given code and call-data.
-    function execute(bytes memory code, bytes memory data) public pure returns (Result memory result);
+    // function execute(bytes memory code, bytes memory data) public pure returns (Result memory result);
     
     // Execute the EVM with the given transaction input.
-    function execute(TxInput memory input) public pure returns (Result memory result);
+    // function execute(TxInput memory input, EVMCallContext memory callContext) public pure returns (Result memory result);
     
     // Execute the EVM with the given transaction input and context.
-    function execute(TxInput memory input, Context memory context) public pure returns (Result memory result);
+    // function execute(TxInput memory input, Context memory context, EVMCallContext memory callContext) public pure returns (Result memory result);
     
 }
 
@@ -147,18 +152,27 @@ contract IEthereumRuntime is EVMConstants {
 contract EthereumRuntime is IEthereumRuntime {
     
     // Execute the EVM with the given code and call-data.
+    // function executeFlat(
+    //     bytes memory code, bytes memory data
+    // ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+    //     Result memory result = execute(code, data, blankEVMCallContext());
+    //     return (
+    //         result.errno, result.errpc, result.returnData, result.stack,
+    //         result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
+    //     );
+    // }
+
     function executeFlat(
-        bytes memory code, bytes memory data
+        bytes memory code, bytes memory data, EVMCallContext memory callContext
     ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
-        Result memory result = execute(code, data);
+        Result memory result = execute(code, data, callContext);
         return (
             result.errno, result.errpc, result.returnData, result.stack,
             result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
         );
     }
     
-    function execute(bytes memory code, bytes memory data) public pure returns (Result memory result) {
-        
+    function execute(bytes memory code, bytes memory data, EVMCallContext memory callContext) public pure returns (Result memory result) {
         TxInput memory input = TxInput(
             0,
             0,
@@ -181,23 +195,24 @@ contract EthereumRuntime is IEthereumRuntime {
             0,
             0
         );
-        return execute(input, context);
+
+        return execute(input, context, callContext);
     }
     
-    function execute(TxInput memory input) public pure returns (Result memory result) {
-        Context memory context = Context(
-            input.caller,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-        );
-        return execute(input, context);
-    }
+    // function execute(TxInput memory input) public pure returns (Result memory result) {
+    //     Context memory context = Context(
+    //         input.caller,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0,
+    //         0
+    //     );
+    //     return execute(input, context, blankEVMCallContext());
+    // }
     
-    function execute(TxInput memory input, Context memory context) public pure returns (Result memory result) {
+    function execute(TxInput memory input, Context memory context, EVMCallContext memory callContext) internal pure returns (Result memory result) {
         EVMInput memory evmInput;
         evmInput.context = context;
         evmInput.handlers = _newHandlers();
@@ -218,7 +233,7 @@ contract EthereumRuntime is IEthereumRuntime {
         evmInput.staticExec = input.staticExec;
         
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call);
+        EVM memory evm = _call(evmInput, input.staticExec ? CallType.StaticCall : CallType.Call, callContext);
         
         result.stack = evm.stack.toArray();
         result.mem = evm.mem.toArray();
@@ -230,8 +245,17 @@ contract EthereumRuntime is IEthereumRuntime {
         (result.logs, result.logsData) = evm.logs.toArray();
         return;
     }
+
+    function blankEVMCallContext() internal pure returns (EVMCallContext memory callContext) {
+        callContext.stack = EVMStack.newStack();
+        callContext.mem = EVMMemory.newMemory();
+    }
     
-    function _call(EVMInput memory evmInput, CallType callType) internal pure returns (EVM memory evm) {
+    function _call(
+        EVMInput memory evmInput, 
+        CallType callType, 
+        EVMCallContext memory callContext
+    ) internal pure returns (EVM memory evm) {
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
         if (evmInput.staticExec) {
@@ -271,9 +295,8 @@ contract EthereumRuntime is IEthereumRuntime {
                 return;
             }
             evm.code = evm.target.code;
-            
-            evm.stack = EVMStack.newStack();
-            evm.mem = EVMMemory.newMemory();
+            evm.stack = callContext.stack;
+            evm.mem = callContext.mem;
             _run(evm, 0);
         }
     }
@@ -991,7 +1014,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.staticExec = state.staticExec;
         
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.Call);
+        EVM memory retEvm = _call(input, CallType.Call, blankEVMCallContext());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
@@ -1043,7 +1066,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.staticExec = state.staticExec;
         
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.DelegateCall);
+        EVM memory retEvm = _call(input, CallType.DelegateCall, blankEVMCallContext());
         
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
@@ -1081,7 +1104,7 @@ contract EthereumRuntime is IEthereumRuntime {
         input.staticExec = true;
         
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.StaticCall);
+        EVM memory retEvm = _call(input, CallType.StaticCall, blankEVMCallContext());
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
