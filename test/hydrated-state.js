@@ -40,26 +40,26 @@ contract('Hydrated', function () {
     assert.equal(status, true);
   });
 
-  // it('should allow to prove MULT operation on-chain', async function () {
-  //   let status = await hydratedContract.proveArithmeticOperation(
-  //     '0x02', // ADD
-  //     getUnbalancedMerkleProof([5, 8, 89]),
-  //     getUnbalancedMerkleProof([40, 89]),
-  //     [5, 8],
-  //     getSibling(89),
-  //     true
-  //   );
-  //   assert.equal(status, true);
+  it('should allow to prove MULT operation on-chain', async function () {
+    let status = await hydratedContract.proveArithmeticOperation(
+      '0x02', // ADD
+      getUnbalancedMerkleProof([5, 8, 89]),
+      getUnbalancedMerkleProof([40, 89]),
+      [5, 8],
+      getSibling(89),
+      true
+    );
+    assert.equal(status, true);
 
-  //   // without sibling
-  //   status = await hydratedContract.proveArithmeticOperation(
-  //     '0x02', // ADD
-  //     getUnbalancedMerkleProof([5, 8]),
-  //     getUnbalancedMerkleProof([40]),
-  //     [5, 8],
-  //     '0x0',
-  //     true
-  //   );
-  //   assert.equal(status, true);
-  // });
+    // without sibling
+    status = await hydratedContract.proveArithmeticOperation(
+      '0x02', // ADD
+      getUnbalancedMerkleProof([5, 8]),
+      getUnbalancedMerkleProof([40]),
+      [5, 8],
+      '0x0',
+      true
+    );
+    assert.equal(status, true);
+  });
 });
