@@ -59,14 +59,10 @@ contract Hydrated {
             beforeHash == unbalancedMerkelRoot(stack, sibling, hasSibling)
         );
 
-        IEthereumRuntime.EVMCallContext memory callContext;
-        callContext.mem = EVMMemory.newMemory();
-        callContext.stack = EVMStack.fromArray(stack);
-
         // execute
         bytes memory data;
         uint256[] memory result;
-        (,,,result,,,,,) = ethereumRuntime.executeFlat(code, data, callContext);
+        (,,,result,,,,,) = ethereumRuntime.executeWithStack(code, data, stack);
 
         // after hash check
         return afterHash == unbalancedMerkelRoot(result, sibling, hasSibling);

@@ -152,19 +152,23 @@ contract IEthereumRuntime is EVMConstants {
 contract EthereumRuntime is IEthereumRuntime {
     
     // Execute the EVM with the given code and call-data.
-    // function executeFlat(
-    //     bytes memory code, bytes memory data
-    // ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
-    //     Result memory result = execute(code, data, blankEVMCallContext());
-    //     return (
-    //         result.errno, result.errpc, result.returnData, result.stack,
-    //         result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
-    //     );
-    // }
-
     function executeFlat(
-        bytes memory code, bytes memory data, EVMCallContext memory callContext
+        bytes memory code, bytes memory data
     ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+        Result memory result = execute(code, data, blankEVMCallContext());
+        return (
+            result.errno, result.errpc, result.returnData, result.stack,
+            result.mem, result.accounts, result.accountsCode, result.logs, result.logsData
+        );
+    }
+
+    function executeWithStack(
+        bytes memory code, bytes memory data, uint[] stack
+    ) public pure returns (uint, uint, bytes, uint[], bytes, uint[], bytes, uint[], bytes) {
+        IEthereumRuntime.EVMCallContext memory callContext;
+        callContext.mem = EVMMemory.newMemory();
+        callContext.stack = EVMStack.fromArray(stack);
+
         Result memory result = execute(code, data, callContext);
         return (
             result.errno, result.errpc, result.returnData, result.stack,
