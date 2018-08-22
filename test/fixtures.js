@@ -168,7 +168,6 @@ export default [
   { opcode: OP.CALLDATASIZE, data: '0x1234', result: { stack: [2], gasUsed: 2 } },
 
   // Memory and stack (MLOAD, MSTORE, MSTORE8, MSIZE)
-  
   { opcode: OP.MLOAD,
     stack: [0x01],
     memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
@@ -196,5 +195,32 @@ export default [
     result: { stack: [64], gasUsed: 2 }
   },
   
+  // Storage and stack (SSTORE, SLOAD)
+  // TODO
 
+  // Context, stack and memory type OP-codes (LOG)
+  // TODO
+  
+  // Data, stack and memory type OP-codes (CALLDATACOPY)
+  { opcode: OP.CALLDATACOPY,
+    stack: [4, 3, 1],
+    data: '0x06397872cdd21945455a7fdc7921e2db7bd8e402607cad66279e899f6ae9b1da',
+    result: {
+      memory: '0x0072cdd219000000000000000000000000000000000000000000000000000000',
+      gasUsed: 3,
+    },
+  },
+  
+  // Code, stack and memory type OP-codes (CODECOPY)
+  { opcode: [OP.GASPRICE, OP.POP, OP.CODECOPY],
+    stack: [2, 1, 1],
+    result: {
+      memory: '0x0050390000000000000000000000000000000000000000000000000000000000',
+      gasUsed: 3,
+    },
+  },
+  
+  // Return, Stack and Memory type OP-codes (RETURN, REVERT, RETURNDATACOPY)
+  // TODO
+  
 ];
