@@ -106,7 +106,7 @@ export default [
   { opcode: OP.GASLIMIT, result: { stack: [parseInt(BLOCK_GAS_LIMIT, 16)], gasUsed: 2 } },
   { opcode: OP.GASLIMIT, gasLimit: 100, result: { stack: [100], gasUsed: 2 } },
   { opcode: [OP.GASPRICE, OP.POP, OP.PC], result: { stack: [2], gasUsed: 6 } }, // PC
-  { opcode: [OP.GASPRICE, OP.POP, OP.GAS], gasLimit: 10, result: { stack: [6], gasUsed: 4 } }, // GAS
+  { opcode: OP.GAS, gasLimit: 10, result: { stack: [8], gasUsed: 2 } },
 
   // JUMP, infinite loop
   { opcode: [OP.PUSH1, '01', OP.JUMP], stack: [0], result: { stack: [], pc: 0, gasUsed: 11 } },
@@ -121,7 +121,7 @@ export default [
   //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
   
   { opcode: OP.CODESIZE, result: { stack: [1], gasUsed: 2 } },
-  { opcode: [OP.GASPRICE, OP.POP, OP.CODESIZE], result: { stack: [3], gasUsed: 6 } },
+  { opcode: [OP.GASPRICE, OP.POP, OP.CODESIZE], result: { stack: [3] } },
   { opcode: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16)], gasUsed: 3 } },
   { opcode: [OP.PUSH2, '01', '02'], pc: '0', result: { stack: [parseInt('0102', 16)], gasUsed: 3 } },
   { opcode: [OP.PUSH3, '01', '02', '03'], pc: '0', result: { stack: [parseInt('010203', 16)], gasUsed: 3 } },
