@@ -380,7 +380,14 @@ contract EthereumRuntime is EVMConstants {
 
         while (errno == NO_ERROR && pc < pcEnd) {
             uint opcode = uint(code[pc]);
-            
+            Instruction memory ins = evm.handlers.ins[opcode];
+
+             if (ins.gas > evm.gas) {
+                errno = ERROR_OUT_OF_GAS;
+                break;
+            }
+            evm.gas -= ins.gas;
+
             // Check for violation of static execution.
             if (
                 evm.staticExec && 
@@ -389,9 +396,7 @@ contract EthereumRuntime is EVMConstants {
                 errno = ERROR_ILLEGAL_WRITE_OPERATION;
                 break;
             }
-                
-            Instruction memory ins = evm.handlers.ins[opcode];
-            
+
             // Check for stack errors
             if (evm.stack.size < ins.stackIn) {
                 errno = ERROR_STACK_UNDERFLOW;
@@ -400,12 +405,6 @@ contract EthereumRuntime is EVMConstants {
                 errno = ERROR_STACK_OVERFLOW;
                 break;
             }
-
-            if (ins.gas > evm.gas) {
-                errno = ERROR_OUT_OF_GAS;
-                break;
-            }
-            evm.gas -= ins.gas;
 
             if (OP_PUSH1 <= opcode && opcode <= OP_PUSH32) {
                 evm.pc = pc;

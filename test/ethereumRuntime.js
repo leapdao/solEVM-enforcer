@@ -8,6 +8,7 @@ const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 const opcodes = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
 const toNum = arr => arr.map(e => e.toNumber());
+const toHex = arr => arr.map(e => e.toString(16));
 
 const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {   
   bytes = bytes.substring(2);
@@ -89,21 +90,28 @@ contract('Runtime', function () {
         const res = unpack(
           await rt.initAndExecute(
             code, callData,
-            [pc, 0, fixture.gasLimit || BLOCK_GAS_LIMIT],
+            [pc, 0, gasLimit],
             initialStack, initialMemory, initialAccounts, initialBalances
           )
         );
+
         if (fixture.result.stack) {
           assert.deepEqual(toNum(res.stack), fixture.result.stack);
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.memory, fixture.result.memory);
         }
-        if (fixture.result.pc) {
+        if (fixture.result.logs) {
+          assert.deepEqual(toHex(res.logs), fixture.result.logs);
+        }
+        if (fixture.result.pc !== undefined) {
           assert.deepEqual(res.pc, fixture.result.pc);
         }
-        if (fixture.result.gasUsed) {
+        if (fixture.result.gasUsed !== undefined) {
           assert.equal(res.gasRemaining, gasLimit - fixture.result.gasUsed);
+        }
+        if (fixture.result.errno !== undefined) {
+          assert.equal(res.errno, fixture.result.errno);
         }
       });
     });
