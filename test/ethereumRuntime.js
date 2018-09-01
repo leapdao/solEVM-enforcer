@@ -8,6 +8,7 @@ const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 const opcodes = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
 const toNum = arr => arr.map(e => e.toNumber());
+const toHex = arr => arr.map(e => e.toString(16));
 
 const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {   
   bytes = bytes.substring(2);
@@ -16,8 +17,8 @@ const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {
   const memory = `0x${bytes.substring(bytesOffsets[0], bytesOffsets[0] + bytesOffsets[1])}`;
   const accountsCode = `0x${bytes.substring(bytesOffsets[1], bytesOffsets[1] + bytesOffsets[2])}`;
   const logsData = `0x${bytes.substring(bytesOffsets[2], bytesOffsets[2] + bytesOffsets[3])}`;
-  const [errno, errpc, pc] = uints.map(n => n.toNumber());
-  return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData };
+  const [errno, errpc, pc, gasRemaining] = uints.map(n => n.toNumber());
+  return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData, gasRemaining };
 };
 
 contract('Runtime', function () {
@@ -85,23 +86,207 @@ contract('Runtime', function () {
         const initialAccounts = Object.keys(fixture.accounts || {});
         const initialBalances = Object.values(fixture.accounts || {});
         const callData = fixture.data || '0x';
+        const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const res = unpack(
           await rt.initAndExecute(
             code, callData,
-            [pc, 0, fixture.gasLimit || BLOCK_GAS_LIMIT],
+            [pc, 0, gasLimit],
             initialStack, initialMemory, initialAccounts, initialBalances
           )
         );
+
         if (fixture.result.stack) {
           assert.deepEqual(toNum(res.stack), fixture.result.stack);
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.memory, fixture.result.memory);
         }
-        if (fixture.result.pc) {
+        if (fixture.result.logs) {
+          assert.deepEqual(toHex(res.logs), fixture.result.logs);
+        }
+        if (fixture.result.pc !== undefined) {
           assert.deepEqual(res.pc, fixture.result.pc);
+        }
+        if (fixture.result.gasUsed !== undefined) {
+          assert.equal(res.gasRemaining, gasLimit - fixture.result.gasUsed);
+        }
+        if (fixture.result.errno !== undefined) {
+          assert.equal(res.errno, fixture.result.errno);
         }
       });
     });
+  });
+
+  it('should have enough gas', async function () {
+    const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
+    const data = '0x';
+    const gas = 9;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    // should have zero gas left
+    assert.equal(res.gasRemaining, 0);
+  });
+
+  it('should run out of gas', async function () {
+    const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
+    const data = '0x';
+    const gas = 8;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    // 13 = out of gas
+    assert.equal(res.errno, 13);
+  });
+
+  it('(OP.CALL) should run out of gas', async function () {
+    const code =
+      '0x' +
+      // gas
+      PUSH1 + 'ff' +
+      // targetAddr
+      PUSH1 + '00' +
+      // value
+      PUSH1 + '00' +
+      // inOffset
+      PUSH1 + '00' +
+      // inSize
+      PUSH1 + '00' +
+      // retOffset
+      PUSH1 + '00' +
+      // retSize
+      PUSH1 + '00' +
+      OP.CALL;
+    const data = '0x';
+    const gas = 200;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    // 13 = out of gas
+    assert.equal(res.errno, 13);
+  });
+
+  it('(OP.CALL) should not run out of gas', async function () {
+    const code =
+      '0x' +
+      // gas
+      PUSH1 + 'ff' +
+      // targetAddr
+      PUSH1 + '00' +
+      // value
+      PUSH1 + '00' +
+      // inOffset
+      PUSH1 + '00' +
+      // inSize
+      PUSH1 + '00' +
+      // retOffset
+      PUSH1 + '00' +
+      // retSize
+      PUSH1 + '00' +
+      OP.CALL;
+    const data = '0x';
+    const gas = 2000;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    assert.equal(res.errno, 0);
+  });
+
+  it('(OP.DELEGATECALL) should run out of gas', async function () {
+    const code =
+      '0x' +
+      // gas
+      PUSH1 + 'ff' +
+      // targetAddr
+      PUSH1 + '00' +
+      // value
+      PUSH1 + '00' +
+      // inOffset
+      PUSH1 + '00' +
+      // inSize
+      PUSH1 + '00' +
+      // retOffset
+      PUSH1 + '00' +
+      // retSize
+      PUSH1 + '00' +
+      OP.DELEGATECALL;
+    const data = '0x';
+    const gas = 200;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    // 13 = out of gas
+    assert.equal(res.errno, 13);
+  });
+
+  it('(OP.DELEGATECALL) should not run out of gas', async function () {
+    const code =
+      '0x' +
+      // gas
+      PUSH1 + 'ff' +
+      // targetAddr
+      PUSH1 + '00' +
+      // value
+      PUSH1 + '00' +
+      // inOffset
+      PUSH1 + '00' +
+      // inSize
+      PUSH1 + '00' +
+      // retOffset
+      PUSH1 + '00' +
+      // retSize
+      PUSH1 + '00' +
+      OP.DELEGATECALL;
+    const data = '0x';
+    const gas = 2000;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    assert.equal(res.errno, 0);
+  });
+
+  it('(OP.STATICCALL) should run out of gas', async function () {
+    const code =
+      '0x' +
+      // gas
+      PUSH1 + 'ff' +
+      // targetAddr
+      PUSH1 + '00' +
+      // value
+      PUSH1 + '00' +
+      // inOffset
+      PUSH1 + '00' +
+      // inSize
+      PUSH1 + '00' +
+      // retOffset
+      PUSH1 + '00' +
+      // retSize
+      PUSH1 + '00' +
+      OP.STATICCALL;
+    const data = '0x';
+    const gas = 200;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    // 13 = out of gas
+    assert.equal(res.errno, 13);
+  });
+
+  it('(OP.STATICCALL) should not run out of gas', async function () {
+    const code =
+      '0x' +
+      // gas
+      PUSH1 + 'ff' +
+      // targetAddr
+      PUSH1 + '00' +
+      // value
+      PUSH1 + '00' +
+      // inOffset
+      PUSH1 + '00' +
+      // inSize
+      PUSH1 + '00' +
+      // retOffset
+      PUSH1 + '00' +
+      // retSize
+      PUSH1 + '00' +
+      OP.STATICCALL;
+    const data = '0x';
+    const gas = 2000;
+
+    let res = unpack(await rt.executeAndStop(code, data, [0, 0, gas]));
+    assert.equal(res.errno, 0);
   });
 });

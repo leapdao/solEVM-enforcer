@@ -98,21 +98,51 @@ export default [
   // always 0 in current implementation
   // TODO: do we need it non-zero?
   { opcode: OP.GASPRICE, result: { stack: [0], gasUsed: 2 } },
-  { opcode: OP.BLOCKHASH, result: { stack: [], gasUsed: 20 } },
+  { opcode: OP.BLOCKHASH, stack: [0], result: { stack: [0], gasUsed: 20 } },
   { opcode: OP.COINBASE, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.TIMESTAMP, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.NUMBER, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.DIFFICULTY, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.GASLIMIT, result: { stack: [parseInt(BLOCK_GAS_LIMIT, 16)], gasUsed: 2 } },
   { opcode: OP.GASLIMIT, gasLimit: 100, result: { stack: [100], gasUsed: 2 } },
-  { opcode: [OP.GASPRICE, OP.POP, OP.PC], result: { stack: [2], gasUsed: 6 } }, // PC
-  { opcode: OP.GAS, gasLimit: 10, result: { stack: [8], gasUsed: 2 } },
+  { opcode: [OP.PC, OP.GASPRICE, OP.POP], pc: '0', result: { stack: [0], gasUsed: 6 } }, // PC
+  { opcode: [OP.GAS, OP.GASPRICE, OP.POP], pc: '0', gasLimit: 10, result: { stack: [8], gasUsed: 6 } }, // GAS
 
-  // JUMP, infinite loop
-  { opcode: [OP.PUSH1, '01', OP.JUMP], stack: [0], result: { stack: [], pc: 0, gasUsed: 11 } },
-  // JUMPI, inifite loop
-  { opcode: [OP.PUSH1, '01', OP.PUSH1, '00', OP.JUMPI], stack: [1, 0], result: { stack: [], pc: 0, gasUsed: 16 } },
-  { opcode: [OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], stack: [0, 0], result: { stack: [], pc: 5, gasUsed: 16 } },
+  // invalid JUMP
+  {
+    opcode: [OP.PUSH1, '01', OP.JUMP],
+    stack: [0],
+    result: {
+      stack: [],
+      pc: 2,
+      gasUsed: 8,
+      errno: OP.ERROR_INVALID_JUMP_DESTINATION
+    }
+  },
+  // valid JUMP
+  {
+    opcode: [OP.JUMPDEST, OP.PUSH1, '04', OP.JUMP, OP.JUMPDEST],
+    stack: [0],
+    pc: '3',
+    result: {
+      stack: [],
+      pc: 5,
+      gasUsed: 21
+    }
+  },
+  // invalid JUMPI
+  {
+    opcode: [OP.PUSH1, '01', OP.PUSH1, '00', OP.JUMPI],
+    stack: [1, 0],
+    result: {
+      stack: [],
+      pc: 4,
+      gasUsed: 10,
+      errno: OP.ERROR_INVALID_JUMP_DESTINATION
+    }
+  },
+  // valid JUMPI no-op
+  { opcode: [OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], stack: [0, 0], result: { stack: [], pc: 5, gasUsed: 10 } },
 
   // poor test
   // TODO: init state with returnData first
@@ -121,7 +151,7 @@ export default [
   //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
   
   { opcode: OP.CODESIZE, result: { stack: [1], gasUsed: 2 } },
-  { opcode: [OP.GASPRICE, OP.POP, OP.CODESIZE], result: { stack: [3] } },
+  { opcode: [OP.CODESIZE, OP.GASPRICE, OP.POP], pc: '0', result: { stack: [3], gasUsed: 6 } },
   { opcode: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16)], gasUsed: 3 } },
   { opcode: [OP.PUSH2, '01', '02'], pc: '0', result: { stack: [parseInt('0102', 16)], gasUsed: 3 } },
   { opcode: [OP.PUSH3, '01', '02', '03'], pc: '0', result: { stack: [parseInt('010203', 16)], gasUsed: 3 } },
@@ -194,13 +224,7 @@ export default [
     memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
     result: { stack: [64], gasUsed: 2 }
   },
-  
-  // Storage and stack (SSTORE, SLOAD)
-  // TODO
 
-  // Context, stack and memory type OP-codes (LOG)
-  // TODO
-  
   // Data, stack and memory type OP-codes (CALLDATACOPY)
   { opcode: OP.CALLDATACOPY,
     stack: [4, 3, 1],
@@ -219,8 +243,146 @@ export default [
       gasUsed: 3,
     },
   },
-  
+
+  // Storage and stack (SSTORE, SLOAD)
+  {
+    opcode: OP.SSTORE,
+    stack: ['0x0f572e5295c57F15886F9b263E2f6d2d6c7b5ec6', 0],
+    result: {
+      stack: [],
+      pc: 1,
+      gasUsed: 0
+    }
+  },
+  {
+    opcode: OP.SLOAD,
+    stack: [0],
+    result: {
+      stack: [0],
+      pc: 1,
+      gasUsed: 200
+    }
+  },
+
+  // Context, stack and memory type OP-codes (LOG)
+  {
+    opcode: OP.LOG0,
+    stack: [0, 0],
+    result: {
+      stack: [],
+      pc: 1,
+      logs: [
+        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0'
+      ],
+      gasUsed: 375
+    }
+  },
+  {
+    opcode: OP.LOG1,
+    stack: [0, 0, 0],
+    result: {
+      stack: [],
+      pc: 1,
+      logs: [
+        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0'
+      ],
+      gasUsed: 375 * 2
+    }
+  },
+  {
+    opcode: OP.LOG2,
+    stack: [0, 0, 0, 0],
+    result: {
+      stack: [],
+      pc: 1,
+      logs: [
+        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0'
+      ],
+      gasUsed: 375 * 3
+    }
+  },
+  {
+    opcode: OP.LOG3,
+    stack: [0, 0, 0, 0, 0],
+    result: {
+      stack: [],
+      pc: 1,
+      logs: [
+        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0'
+      ],
+      gasUsed: 375 * 4
+    }
+  },
+  {
+    opcode: OP.LOG4,
+    stack: [0, 0, 0, 0, 0, 0],
+    result: {
+      stack: [],
+      pc: 1,
+      logs: [
+        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0',
+        '0'
+      ],
+      gasUsed: 375 * 5
+    }
+  },
+
   // Return, Stack and Memory type OP-codes (RETURN, REVERT, RETURNDATACOPY)
-  // TODO
-  
+  {
+    opcode: OP.RETURN,
+    stack: [0, 0],
+    result: {
+      stack: [],
+      pc: 0,
+      gasUsed: 0
+    }
+  },
+  {
+    opcode: OP.REVERT,
+    stack: [0, 0],
+    result: {
+      stack: [],
+      errno: OP.ERROR_STATE_REVERTED,
+      pc: 0,
+      gasUsed: 0
+    }
+  },
+  {
+    opcode: OP.RETURNDATACOPY,
+    stack: [0, 0, 0],
+    result: {
+      stack: [],
+      pc: 1,
+      gasUsed: 3
+    }
+  },
 ];
