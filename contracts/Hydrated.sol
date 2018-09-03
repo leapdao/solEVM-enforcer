@@ -16,15 +16,10 @@ contract Hydrated {
 
     function unbalancedMerkelRoot(
         uint256[] arr, 
-        bytes32 sibling, 
-        bool isSibling
+        bytes32 sibling
     ) public pure returns (bytes32) {
-        bytes32 result = 0x0;
+        bytes32 result = sibling;
         uint256 i = arr.length - 1;
-        if (isSibling) {
-            result = sibling;            
-        }
-
         while (i >= 0) {
             if (result == 0x0) {
                 result = keccak256(abi.encodePacked(arr[i]));
@@ -52,11 +47,10 @@ contract Hydrated {
         // stack
         uint256[] stack,
         
-        bytes32 sibling,
-        bool hasSibling
+        bytes32 sibling
     ) public view returns (bool) {
         require(
-            beforeHash == unbalancedMerkelRoot(stack, sibling, hasSibling)
+            beforeHash == unbalancedMerkelRoot(stack, sibling)
         );
 
         // execute
@@ -65,6 +59,6 @@ contract Hydrated {
         (,,,result,,,,,) = ethereumRuntime.executeWithStack(code, data, stack);
 
         // after hash check
-        return afterHash == unbalancedMerkelRoot(result, sibling, hasSibling);
+        return afterHash == unbalancedMerkelRoot(result, sibling);
     }
 }

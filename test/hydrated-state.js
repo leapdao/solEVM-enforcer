@@ -23,8 +23,7 @@ contract('Hydrated', function () {
       getUnbalancedMerkleProof([5, 8, 12]),
       getUnbalancedMerkleProof([13, 12]),
       [5, 8],
-      getSibling(12),
-      true
+      getSibling(12)
     );
     assert.equal(status, true);
 
@@ -34,8 +33,7 @@ contract('Hydrated', function () {
       getUnbalancedMerkleProof([5, 8]),
       getUnbalancedMerkleProof([13]),
       [5, 8],
-      '0x0',
-      false
+      '0x0'
     );
     assert.equal(status, true);
 
@@ -45,8 +43,7 @@ contract('Hydrated', function () {
       getUnbalancedMerkleProof([5, 45, 78, 1234896, 45, 100033, 354372]),
       getUnbalancedMerkleProof([50, 78, 1234896, 45, 100033, 354372]),
       [5, 45],
-      getUnbalancedMerkleProof([78, 1234896, 45, 100033, 354372]),
-      true
+      getUnbalancedMerkleProof([78, 1234896, 45, 100033, 354372])
     );
     assert.equal(status, true);
   });
@@ -57,8 +54,7 @@ contract('Hydrated', function () {
       getUnbalancedMerkleProof([5, 8, 89]),
       getUnbalancedMerkleProof([40, 89]),
       [5, 8],
-      getSibling(89),
-      true
+      getSibling(89)
     );
     assert.equal(status, true);
 
@@ -68,8 +64,7 @@ contract('Hydrated', function () {
       getUnbalancedMerkleProof([5, 8]),
       getUnbalancedMerkleProof([40]),
       [5, 8],
-      '0x0',
-      false
+      '0x0'
     );
     assert.equal(status, true);
   });
