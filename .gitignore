@@ -35,3 +35,6 @@ build/
 
 # lol macs
 .DS_Store/
+
+# installed contracts
+installed_contracts
