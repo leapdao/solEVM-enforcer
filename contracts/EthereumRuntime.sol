@@ -154,9 +154,9 @@ contract EthereumRuntime is EVMConstants {
     ) public pure returns (uint[4], uint[], uint[], uint[], bytes, uint[4]) {
         uint[] memory stack;
         bytes memory mem;
-        address[] memory accounts;
-        uint[] memory balances;
-        Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, balances);
+        uint[] memory accounts;
+        bytes memory accountsCode;
+        Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, accountsCode);
         return flattenResult(result);
     }
 
@@ -166,9 +166,9 @@ contract EthereumRuntime is EVMConstants {
     // intInput[2] - gasLimit
     function initAndExecute(
         bytes memory code, bytes memory data, uint[3] memory intInput, uint[] memory stack,
-        bytes memory mem, address[] memory accounts, uint[] memory balances
+        bytes memory mem, uint[] memory accounts, bytes memory accountsCode
     ) public pure returns (uint[4], uint[], uint[], uint[], bytes, uint[4]) {
-        Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, balances);
+        Result memory result = initAndExecuteInternal(code, data, intInput, stack, mem, accounts, accountsCode);
         return flattenResult(result);
     }
 
@@ -178,18 +178,18 @@ contract EthereumRuntime is EVMConstants {
     // intInput[2] - gasLimit
     function initAndExecuteInternal(
         bytes memory code, bytes memory data, uint[3] memory intInput,
-        uint[] memory stack, bytes memory mem, address[] memory accounts, uint[] memory balances 
+        uint[] memory stack, bytes memory mem, uint[] memory accounts, bytes memory accountsCode 
     ) internal pure returns (Result memory) {
         EVMInput memory evmInput = getEVMInput(
             data, 
-            EVMAccounts.fromArray(accounts, balances),
+            _accsFromArray(accounts, accountsCode),
             intInput[2]
         );
 
         initCallerAndTarget(evmInput, code);
 
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory evm = _call(evmInput, CallType.Call, EVMCallContext(            
+        EVM memory evm = _call(evmInput, CallType.Call, EVMCallContext(
             EVMMemory.fromArray(mem),
             EVMStack.fromArray(stack),
             intInput[0],
@@ -226,8 +226,10 @@ contract EthereumRuntime is EVMConstants {
             result.returnData.length, result.mem.length,
             result.accountsCode.length, result.logsData.length
         ];
-        return ([result.errno, result.errpc, result.pc, result.gasRemaining],
-                result.stack, result.accounts, result.logs, bytesResult, bytesOffsets);
+        return (
+            [result.errno, result.errpc, result.pc, result.gasRemaining],
+            result.stack, result.accounts, result.logs, bytesResult, bytesOffsets
+        );
     }
 
     function getEVMInput(
@@ -260,6 +262,30 @@ contract EthereumRuntime is EVMConstants {
         target.balance = 0;
         target.code = code;
     }
+
+    function _accsFromArray(uint[] accountsIn, bytes memory accountsCode) internal pure returns (EVMAccounts.Accounts memory accountsOut) {
+        if (accountsIn.length == 0) {
+            return;
+        }
+        uint offset = 0;
+        while (offset < accountsIn.length) {
+            address addr = address(accountsIn[offset]);
+            EVMAccounts.Account memory acc = accountsOut.get(addr);
+            acc.balance = accountsIn[offset + 1];
+            acc.nonce = uint8(accountsIn[offset + 2]);
+            acc.destroyed = accountsIn[offset + 3] == 1;
+            uint codeOffset = accountsIn[offset + 4];
+            uint codeSize = accountsIn[offset + 5];
+            acc.code = new bytes(codeSize);
+            EVMUtils.copy(accountsCode, acc.code, codeOffset, 0, codeSize);
+            uint storageSize = accountsIn[offset + 6];
+            for (uint i = 0; i < storageSize; i++) {
+                acc.stge.store(accountsIn[offset + 7 + 2*i], accountsIn[offset + 8 + 2*i]);
+            }
+            offset += 7 + 2*storageSize;
+        }
+    }
+
 
     function blankEVMCallContext() internal pure returns (EVMCallContext memory callContext) {
         callContext.stack = EVMStack.newStack();

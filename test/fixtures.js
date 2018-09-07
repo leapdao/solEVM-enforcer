@@ -1,3 +1,4 @@
+import BigNumber from 'bignumber.js';
 import { BLOCK_GAS_LIMIT } from './helpers/constants';
 
 const OP = require('./helpers/constants');
@@ -86,7 +87,13 @@ export default [
 
   { opcode: OP.BALANCE,
     stack: ['0x4ae7b3e204fed41c82d57ecd2242470196d70d02'],
-    accounts: { '0x4ae7b3e204fed41c82d57ecd2242470196d70d02': 254 },
+    accounts: [
+      {
+        address: '0x4ae7b3e204fed41c82d57ecd2242470196d70d02',
+        balance: 254,
+        storage: [{ address: 0, value: 5 }, { address: 1, value: 6 }],
+      },
+    ],
     result: { stack: [254], gasUsed: 400 },
   },
   { opcode: OP.ADDRESS, result: { stack: [parseInt(DEFAULT_CONTRACT_ADDRESS, 16)], gasUsed: 2 } },
@@ -247,20 +254,32 @@ export default [
   // Storage and stack (SSTORE, SLOAD)
   {
     opcode: OP.SSTORE,
-    stack: ['0x0f572e5295c57F15886F9b263E2f6d2d6c7b5ec6', 0],
+    stack: [5, 0],
     result: {
       stack: [],
+      accounts: [
+        {
+          address: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+          storage: [{ address: 0, value: 5 }],
+        },
+      ],
       pc: 1,
-      gasUsed: 0
+      gasUsed: 0,
     }
   },
   {
     opcode: OP.SLOAD,
     stack: [0],
+    accounts: [
+      {
+        address: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+        storage: [{ address: 0, value: 5 }],
+      },
+    ],
     result: {
-      stack: [0],
+      stack: [5],
       pc: 1,
-      gasUsed: 200
+      gasUsed: 200,
     }
   },
 

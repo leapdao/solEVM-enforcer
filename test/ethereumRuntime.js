@@ -1,16 +1,102 @@
+import BigNumber from 'bignumber.js';
 import fixtures from './fixtures';
 
 const OP = require('./helpers/constants');
-const { PUSH1, BLOCK_GAS_LIMIT } = OP;
+const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
+
+const leftPad = (n, width) => {
+  n = n + '';
+  return n.length >= width ? n : new Array(width - n.length + 1).join(0) + n;
+};
+
+const encodeAccounts = (accounts) => {
+  accounts = accounts.map(account => {
+    return Object.assign({
+      nonce: 0,
+      balance: 0,
+      destroyed: false,
+      code: '',
+      storage: [],
+    }, account);
+  });
+
+  const accountsOut = [];
+  let accountsCode = '';
+  let codeOffset = 0;
+  for (const account of accounts) {
+    accountsOut.push(account.address);
+    accountsOut.push(account.balance);
+    accountsOut.push(account.nonce);
+    accountsOut.push(account.destroyed ? 1 : 0);
+    accountsOut.push(codeOffset / 2);
+    accountsOut.push(account.code.length / 2);
+    accountsOut.push(account.storage.length);
+    for (const entry of account.storage) {
+      accountsOut.push(entry.address);
+      accountsOut.push(entry.value);
+    }
+    codeOffset += account.code.length;
+    accountsCode += account.code;
+  }
+
+  return {
+    accounts: accountsOut,
+    accountsCode,
+  };
+};
+
+const decodeAccounts = (accsArr, accsCode = '') => {
+  if (accsCode && accsCode.length >= 2) {
+    accsCode = accsCode.substr(2);
+  }
+  const accounts = [];
+  let offset = 0;
+
+  while (offset < accsArr.length) {
+    let addr = '0x' + leftPad(new BigNumber(accsArr[offset]).toString(16), 40);
+    while (addr.length < 40) {
+      addr = '0' + addr;
+    }
+    const balance = new BigNumber(accsArr[offset + 1]);
+    const nonce = new BigNumber(accsArr[offset + 2]).toNumber();
+    const destroyed = new BigNumber(accsArr[offset + 3]).toNumber() === 1;
+    const codeIdx = new BigNumber(accsArr[offset + 4]).toNumber();
+    const codeSize = new BigNumber(accsArr[offset + 5]).toNumber();
+    const code = accsCode.substr(2 * codeIdx, 2 * codeSize);
+    const storageSize = new BigNumber(accsArr[offset + 6]).toNumber();
+    const storage = [];
+    for (let j = 0; j < storageSize; j++) {
+      const address = accsArr[offset + 7 + 2 * j].toNumber();
+      const value = accsArr[offset + 7 + 2 * j + 1].toNumber();
+      if (value !== 0) {
+        storage.push({
+          address,
+          value,
+        });
+      }
+    }
+    accounts.push({
+      address: addr,
+      balance,
+      nonce,
+      destroyed,
+      code,
+      storage,
+    });
+
+    offset += 7 + 2 * storageSize;
+  }
+  return accounts;
+};
 
 const opcodes = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
 const toNum = arr => arr.map(e => e.toNumber());
 const toHex = arr => arr.map(e => e.toString(16));
 
-const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {   
+const unpack = ([uints, stack, accounts, logs, bytes, bytesOffsets]) => {
   bytes = bytes.substring(2);
   bytesOffsets = bytesOffsets.map(o => o * 2);
   const returnData = `0x${bytes.substring(0, bytesOffsets[0])}`;
@@ -83,15 +169,14 @@ contract('Runtime', function () {
       it(opcodes[opcode], async () => {
         const initialStack = fixture.stack || [];
         const initialMemory = fixture.memory || '0x';
-        const initialAccounts = Object.keys(fixture.accounts || {});
-        const initialBalances = Object.values(fixture.accounts || {});
+        const { accounts, accountsCode } = encodeAccounts(fixture.accounts || []);
         const callData = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const res = unpack(
           await rt.initAndExecute(
             code, callData,
             [pc, 0, gasLimit],
-            initialStack, initialMemory, initialAccounts, initialBalances
+            initialStack, initialMemory, accounts, accountsCode
           )
         );
 
@@ -100,6 +185,28 @@ contract('Runtime', function () {
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.memory, fixture.result.memory);
+        }
+        if (fixture.result.accounts) {
+          fixture.result.accounts.push({
+            address: `0x${DEFAULT_CALLER}`,
+            balance: 0,
+            nonce: 0,
+            destroyed: false,
+            code: '',
+            storage: [],
+          });
+          const accs = decodeAccounts(res.accounts, res.accountsCode);
+          const accsMap = accs.reduce((m, a) => { m[a.address] = a; return m; }, {});
+          fixture.result.accounts.forEach(account => {
+            const expectedAccount = accsMap[account.address];
+            assert.isTrue(!!expectedAccount);
+            if (account.balance) {
+              assert.equal(expectedAccount.balance, account.balance);
+            }
+            if (account.storage) {
+              assert.deepEqual(expectedAccount.storage, account.storage);
+            }
+          });
         }
         if (fixture.result.logs) {
           assert.deepEqual(toHex(res.logs), fixture.result.logs);
