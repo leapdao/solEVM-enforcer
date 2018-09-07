@@ -44,15 +44,15 @@
     "eslint-plugin-standard": "^3.0.1",
     "ethereumjs-util": "^5.1.2",
     "ethjs-abi": "^0.2.1",
-    "ganache-cli": "^6.1.6",
+    "ganache-cli": "^6.1.8",
     "solhint": "^1.2.1",
     "truffle": "^4.1.13",
-    "web3-utils": "^1.0.0-beta.34"
+    "web3-utils": "^1.0.0-beta.36"
   },
   "author": "johannbarbie@me.com",
   "license": "ISC",
   "dependencies": {
     "solidity-bytes-utils": "git+https://github.com/GNSPS/solidity-bytes-utils.git",
-    "web3": "github:ethereum/web3.js#newAbiLib"
+    "web3": "^1.0.0-beta.36"
   }
 }
