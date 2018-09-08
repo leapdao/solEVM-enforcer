@@ -286,90 +286,80 @@ export default [
   // Context, stack and memory type OP-codes (LOG)
   {
     opcode: OP.LOG0,
-    stack: [0, 0],
+    stack: [4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      pc: 1,
       logs: [
-        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0'
+        {
+          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+          topics: [0, 0, 0, 0],
+          data: '0x02030405',
+        }
       ],
       gasUsed: 375
     }
   },
   {
     opcode: OP.LOG1,
-    stack: [0, 0, 0],
+    stack: [0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      pc: 1,
       logs: [
-        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0'
+        {
+          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+          topics: [0x567, 0, 0, 0],
+          data: '0x02030405',
+        }
       ],
       gasUsed: 375 * 2
     }
   },
   {
     opcode: OP.LOG2,
-    stack: [0, 0, 0, 0],
+    stack: [0x123, 0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      pc: 1,
       logs: [
-        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0'
+        {
+          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+          topics: [0x567, 0x123, 0, 0],
+          data: '0x02030405',
+        }
       ],
       gasUsed: 375 * 3
     }
   },
   {
     opcode: OP.LOG3,
-    stack: [0, 0, 0, 0, 0],
+    stack: [0x987, 0x123, 0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      pc: 1,
       logs: [
-        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0'
+        {
+          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+          topics: [0x567, 0x123, 0x987, 0],
+          data: '0x02030405',
+        }
       ],
       gasUsed: 375 * 4
     }
   },
   {
     opcode: OP.LOG4,
-    stack: [0, 0, 0, 0, 0, 0],
+    stack: [0x294, 0x987, 0x123, 0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      pc: 1,
       logs: [
-        'f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0',
-        '0'
+        {
+          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+          topics: [0x567, 0x123, 0x987, 0x294],
+          data: '0x02030405',
+        }
       ],
       gasUsed: 375 * 5
     }

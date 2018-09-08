@@ -52,7 +52,6 @@
   "author": "johannbarbie@me.com",
   "license": "ISC",
   "dependencies": {
-    "solidity-bytes-utils": "git+https://github.com/GNSPS/solidity-bytes-utils.git",
     "web3": "^1.0.0-beta.36"
   }
 }
