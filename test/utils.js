@@ -9,6 +9,15 @@ export const leftPad = (n, width) => {
   return n.length >= width ? n : new Array(width - n.length + 1).join(0) + n;
 };
 
+export const pushRange = (from, to) => Array.from(
+  { length: (to - from + 1) * 2 },
+  (_, i) => i % 2 === 0 ? 'PUSH1' : Math.floor((i / 2) + from)
+);
+
+export const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
+
+export const hexRange = (from, to) => parseInt(range(from, to).join(''), 16);
+
 export const encodeAccounts = (accounts) => {
   accounts = accounts.map(account => {
     return Object.assign({

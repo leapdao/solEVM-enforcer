@@ -1,14 +1,10 @@
-import BigNumber from 'bignumber.js';
 import { BLOCK_GAS_LIMIT } from './helpers/constants';
+import { hexRange, range } from './utils';
 
 const OP = require('./helpers/constants');
 
 const DEFAULT_CONTRACT_ADDRESS = `0x${OP.DEFAULT_CONTRACT_ADDRESS}`;
 const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
-
-const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
-
-const hexRange = (from, to) => parseInt(range(from, to).join(''), 16);
 
 const stack16 = range(1, 16);
 
