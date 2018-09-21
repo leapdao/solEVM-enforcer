@@ -107,7 +107,7 @@ export default [
   { opcode: OP.NUMBER, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.DIFFICULTY, result: { stack: [0], gasUsed: 2 } },
   { opcode: OP.GASLIMIT, result: { stack: [parseInt(BLOCK_GAS_LIMIT, 16)], gasUsed: 2 } },
-  { opcode: OP.GASLIMIT, gasLimit: 100, result: { stack: [100], gasUsed: 2 } },
+  { opcode: OP.GASLIMIT, blockGasLimit: 100, result: { stack: [100], gasUsed: 2 } },
   { opcode: [OP.PC, OP.GASPRICE, OP.POP], pc: '0', result: { stack: [0], gasUsed: 6 } }, // PC
   { opcode: [OP.GAS, OP.GASPRICE, OP.POP], pc: '0', gasLimit: 10, result: { stack: [8], gasUsed: 6 } }, // GAS
 

@@ -141,9 +141,10 @@ contract EthereumRuntime is EVMConstants {
     // Init EVM with given stack and memory and execute from the given opcode
     // intInput[0] - pcStart
     // intInput[1] - pcEnd
-    // intInput[2] - gasLimit
+    // intInput[2] - block gasLimit
+    // intInput[3] - tx gasLimit
     function execute(
-        bytes memory code, bytes memory data, uint[3] memory intInput, uint[] memory stack,
+        bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
         uint[] memory logsIn, bytes memory logsData
     ) public pure returns (uint[8], uint[], uint[], uint[], bytes) {
@@ -154,7 +155,7 @@ contract EthereumRuntime is EVMConstants {
     }
 
     function initAndCall(
-        bytes memory code, bytes memory data, uint[3] memory intInput, uint[] memory stack,
+        bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
         uint[] memory logsIn, bytes memory logsData
     ) internal pure returns (EVM memory evm) {
@@ -165,7 +166,7 @@ contract EthereumRuntime is EVMConstants {
     }
     
     function initInput(
-        bytes memory code, bytes memory data, uint[3] memory intInput, uint[] memory stack,
+        bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
         uint[] memory logsIn, bytes memory logsData
     ) internal pure returns (EVMInput memory evmInput) {
@@ -183,7 +184,7 @@ contract EthereumRuntime is EVMConstants {
             0,
             0
         );
-        evmInput.gas = intInput[2];
+        evmInput.gas = intInput[3];
         evmInput.accounts = _accsFromArray(accounts, accountsCode);
         evmInput.logs = _logsFromArray(logsIn, logsData);
 
@@ -379,7 +380,7 @@ contract EthereumRuntime is EVMConstants {
         addr = newAddress;
     }
 
-    // solhint-disable-next-line code-complexity, function-max-lines
+    // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
     function _run(EVM memory evm, uint pc, uint pcEnd) internal pure {
 
         uint pcNext = 0;
@@ -397,7 +398,7 @@ contract EthereumRuntime is EVMConstants {
             uint opcode = uint(code[pc]);
             Instruction memory ins = evm.handlers.ins[opcode];
 
-             if (ins.gas > evm.gas) {
+            if (ins.gas > evm.gas) {
                 errno = ERROR_OUT_OF_GAS;
                 break;
             }

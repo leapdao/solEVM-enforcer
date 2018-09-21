@@ -16,10 +16,12 @@ contract('Runtime', function () {
   });
 
   const executeAndStop = (code, data, params) => {
+    assert(params.length === 4);
     return rt.execute(code, data, params, [], '0x', [], '0x', [], '0x');
   };
 
   const initAndExecute = (code, data, params, stack, memory, accounts, accountsCode, logs, logsData) => {
+    assert(params.length === 4);
     return rt.execute(code, data, params, stack, memory, accounts, accountsCode, logs, logsData);
   };
 
@@ -44,19 +46,19 @@ contract('Runtime', function () {
       const callData = fixture.data || '0x';
 
       it(opcodeUnderTest, async () => {
-        // 1. export the state right before the target opcode
-        const beforeState = unpack(await executeAndStop(code, callData, [0, pc, BLOCK_GAS_LIMIT]));
-        // 2. export state right after the target opcode
-        const afterState = unpack(await executeAndStop(code, callData, [0, pc + 1, BLOCK_GAS_LIMIT]));
+        // 1. export the state right before the target opcode (this supposed to be off-chain)
+        const beforeState = unpack(await executeAndStop(code, callData, [0, pc, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]));
+        // 2. export state right after the target opcode (this supposed to be off-chain)
+        const afterState = unpack(await executeAndStop(code, callData, [0, pc + 1, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]));
         
-        // 3. init with beforeState and execute just one step (target opcode)
+        // 3. init with beforeState and execute just one step (target opcode) (this supposed to be on-chain)
         const pcStart = pc;
         // if pcStart is the last opcode then run till the end (pcEnd = 0)
         const pcEnd = pcStart === codeSize - 1 ? 0 : pcStart + 1;
         const onChainState = unpack(
           await initAndExecute(
             code, callData,
-            [pcStart, pcEnd, beforeState.gasRemaining],
+            [pcStart, pcEnd, BLOCK_GAS_LIMIT, beforeState.gasRemaining],
             beforeState.stack, beforeState.memory, beforeState.accounts, beforeState.accountsCode,
             beforeState.logs, beforeState.logsData
           )

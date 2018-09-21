@@ -16,21 +16,23 @@ contract('Runtime', function () {
   });
 
   const executeAndStop = (code, data, params) => {
+    assert(params.length === 4);
     return rt.execute(code, data, params, [], '0x', [], '0x', [], '0x');
   };
 
   const initAndExecute = (code, data, params, stack, memory, accounts, accountsCode, logs, logsData) => {
+    assert(params.length === 4);
     return rt.execute(code, data, params, stack, memory, accounts, accountsCode, logs, logsData);
   };
 
   const execute = (code, data, gasLimit) => {
-    return rt.execute(code, data, [0, 0, gasLimit], [], '0x', [], '0x', [], '0x');
+    return rt.execute(code, data, [0, 0, BLOCK_GAS_LIMIT, gasLimit], [], '0x', [], '0x', [], '0x');
   };
 
   it('should allow to add', async function () {
     const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
     const data = '0x';
-    let rv = unpack(await execute(code, data, BLOCK_GAS_LIMIT));
+    let rv = unpack(await execute(code, data, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT));
     assert.equal(rv.stack[0], 8);
     assert.deepEqual(rv.pc, 5);
   });
@@ -39,17 +41,17 @@ contract('Runtime', function () {
     it('should allow to stop at specified op-count and export the state', async function () {
       const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD + PUSH1 + '00' + OP.MSTORE;
       const data = '0x';
-      let r = unpack(await executeAndStop(code, data, [0, 2, BLOCK_GAS_LIMIT]));
+      let r = unpack(await executeAndStop(code, data, [0, 2, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [3]);
       assert.deepEqual(r.pc, 2);
       assert.deepEqual(r.memory, '0x');
 
-      r = unpack(await executeAndStop(code, data, [0, 4, BLOCK_GAS_LIMIT]));
+      r = unpack(await executeAndStop(code, data, [0, 4, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [3, 5]);
 
-      r = unpack(await executeAndStop(code, data, [0, 5, BLOCK_GAS_LIMIT]));
+      r = unpack(await executeAndStop(code, data, [0, 5, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), [8]);
-      r = unpack(await executeAndStop(code, data, [0, 8, BLOCK_GAS_LIMIT]));
+      r = unpack(await executeAndStop(code, data, [0, 8, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]));
       assert.deepEqual(toNum(r.stack), []);
       assert.deepEqual(r.pc, 8);
       assert.deepEqual(parseInt(r.memory, 16), 8);
@@ -59,9 +61,9 @@ contract('Runtime', function () {
   describe('initAndExecute', () => {
     it('can continue from non-zero program counter', async () => {
       const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
-      const res = unpack(await executeAndStop(code, '0x', [0, 4, BLOCK_GAS_LIMIT]));
+      const res = unpack(await executeAndStop(code, '0x', [0, 4, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]));
       const { stack } = unpack(
-        await initAndExecute(code, '0x', [4, 0, BLOCK_GAS_LIMIT], res.stack, res.memory, [], '0x', [], '0x')
+        await initAndExecute(code, '0x', [4, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT], res.stack, res.memory, [], '0x', [], '0x')
       );
       assert.deepEqual(toNum(stack), [8]);
     });
@@ -84,13 +86,14 @@ contract('Runtime', function () {
         const initialMemory = fixture.memory || '0x';
         const { accounts, accountsCode } = encodeAccounts(fixture.accounts || []);
         const callData = fixture.data || '0x';
-        const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
+        const blockGasLimit = fixture.blockGasLimit || BLOCK_GAS_LIMIT;
+        const gasLimit = fixture.gasLimit || blockGasLimit;
         const logs = fixture.logs || [];
         const logsData = fixture.logsData || '0x';
         const res = unpack(
           await initAndExecute(
             code, callData,
-            [pc, 0, gasLimit],
+            [pc, 0, blockGasLimit, gasLimit],
             initialStack, initialMemory, accounts, accountsCode, logs, logsData
           )
         );
@@ -144,7 +147,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 9;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     // should have zero gas left
     assert.equal(res.gasRemaining, 0);
   });
@@ -154,7 +157,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 8;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
@@ -180,7 +183,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 200;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
@@ -206,7 +209,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 2000;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     assert.equal(res.errno, 0);
   });
 
@@ -231,7 +234,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 200;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
@@ -257,7 +260,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 2000;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     assert.equal(res.errno, 0);
   });
 
@@ -282,7 +285,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 200;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
@@ -308,7 +311,7 @@ contract('Runtime', function () {
     const data = '0x';
     const gas = 2000;
 
-    let res = unpack(await executeAndStop(code, data, [0, 0, gas]));
+    let res = unpack(await executeAndStop(code, data, [0, 0, BLOCK_GAS_LIMIT, gas]));
     assert.equal(res.errno, 0);
   });
 });
