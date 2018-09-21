@@ -30,9 +30,9 @@ export default [
   { opcode: OP.SGT, stack: ['3', '2'], result: { stack: [0], gasUsed: 3 } },
   { opcode: OP.EQ, stack: ['3', '2'], result: { stack: [0], gasUsed: 3 } },
   { opcode: OP.ISZERO, stack: ['2'], result: { stack: [0], gasUsed: 3 } },
-  { opcode: OP.AND, stack: [0x11, 0x10], result: { stack: [parseInt('0x10', 16)], gasUsed: 3 } },
-  { opcode: OP.OR, stack: [0x101, 0x100], result: { stack: [parseInt('0x101', 16)], gasUsed: 3 } },
-  { opcode: OP.XOR, stack: [0x101, 0x100], result: { stack: [parseInt('0x1', 16)], gasUsed: 3 } },
+  { opcode: OP.AND, stack: [0xfd, 0xfc], result: { stack: [parseInt('0xfc', 16)], gasUsed: 3 } },
+  { opcode: OP.OR, stack: [0xfd, 0xfc], result: { stack: [parseInt('0xfd', 16)], gasUsed: 3 } },
+  { opcode: OP.XOR, stack: [0xfd, 0xff], result: { stack: [2], gasUsed: 3 } },
   {
     opcode: OP.NOT,
     stack: ['0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe'],
