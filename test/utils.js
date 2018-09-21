@@ -1,5 +1,7 @@
 import BigNumber from 'bignumber.js';
-const { PUSH1 } = require('./helpers/constants');
+const OP = require('./helpers/constants');
+const { PUSH1 } = OP;
+
 export const toNum = arr => arr.map(e => e.toNumber());
 
 export const toHex = arr => arr.map(e => e.toString(16));
@@ -17,6 +19,8 @@ export const pushRange = (from, to) => Array.from(
 export const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
 
 export const hexRange = (from, to) => parseInt(range(from, to).join(''), 16);
+
+export const opcodeNames = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
 export const encodeAccounts = (accounts) => {
   accounts = accounts.map(account => {

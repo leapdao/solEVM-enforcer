@@ -1,12 +1,10 @@
-import { toNum, encodeAccounts, decodeAccounts, decodeLogs, unpack } from './utils';
+import { toNum, encodeAccounts, decodeAccounts, decodeLogs, unpack, opcodeNames } from './utils';
 import fixtures from './fixtures';
 
 const OP = require('./helpers/constants');
 const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
-
-const opcodes = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
 contract('Runtime', function () {
   let rt;
@@ -81,7 +79,7 @@ contract('Runtime', function () {
         pc = fixture.pc || 0;
         code = `0x${opcode}`;
       }
-      it(opcodes[opcode], async () => {
+      it(opcodeNames[opcode], async () => {
         const initialStack = fixture.stack || [];
         const initialMemory = fixture.memory || '0x';
         const { accounts, accountsCode } = encodeAccounts(fixture.accounts || []);

@@ -1,12 +1,10 @@
-import { toNum, unpack } from './utils';
+import { toNum, unpack, opcodeNames } from './utils';
 import onChainFixtures from './onChain.fixtures';
 
 const OP = require('./helpers/constants');
 const { BLOCK_GAS_LIMIT } = OP;
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
-
-const opcodes = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
 contract('Runtime', function () {
   let rt;
@@ -37,7 +35,7 @@ contract('Runtime', function () {
       code = `0x${code.join('')}`;
       const codeSize = (code.length - 2) / 2;
       const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
-      const opcodeUnderTest = opcodes[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
+      const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
       return { code, codeSize, pc, opcodeUnderTest };
     };
 
