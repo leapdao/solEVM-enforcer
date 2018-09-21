@@ -138,3 +138,21 @@ export const unpack = ([uints, stack, accounts, logs, bytes]) => {
   const [errno, errpc, pc, gasRemaining] = uints.slice(0, 4).map(n => n.toNumber());
   return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData, gasRemaining };
 };
+
+export const getCode = (fixture) => {
+  let code;
+  if (!fixture.join) {
+    code = fixture.code || [];
+    if (!code.join) { // wrap single opcode
+      code = [code];
+    }
+  } else {
+    code = fixture;
+  }
+
+  code = `0x${code.join('')}`;
+  const codeSize = (code.length - 2) / 2;
+  const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
+  const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
+  return { code, codeSize, pc, opcodeUnderTest };
+};
