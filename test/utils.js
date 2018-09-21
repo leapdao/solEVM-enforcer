@@ -1,17 +1,17 @@
 import BigNumber from 'bignumber.js';
-
+const { PUSH1 } = require('./helpers/constants');
 export const toNum = arr => arr.map(e => e.toNumber());
 
 export const toHex = arr => arr.map(e => e.toString(16));
 
 export const leftPad = (n, width) => {
-  n = n + '';
+  n = '' + n;
   return n.length >= width ? n : new Array(width - n.length + 1).join(0) + n;
 };
 
 export const pushRange = (from, to) => Array.from(
   { length: (to - from + 1) * 2 },
-  (_, i) => i % 2 === 0 ? 'PUSH1' : Math.floor((i / 2) + from)
+  (_, i) => i % 2 === 0 ? PUSH1 : leftPad(Math.floor((i / 2) + from), 2)
 );
 
 export const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
