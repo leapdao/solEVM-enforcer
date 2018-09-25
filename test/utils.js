@@ -1,13 +1,26 @@
 import BigNumber from 'bignumber.js';
+const OP = require('./helpers/constants');
+const { PUSH1 } = OP;
 
 export const toNum = arr => arr.map(e => e.toNumber());
 
 export const toHex = arr => arr.map(e => e.toString(16));
 
 export const leftPad = (n, width) => {
-  n = n + '';
+  n = '' + n;
   return n.length >= width ? n : new Array(width - n.length + 1).join(0) + n;
 };
+
+export const pushRange = (from, to) => Array.from(
+  { length: (to - from + 1) * 2 },
+  (_, i) => i % 2 === 0 ? PUSH1 : leftPad(Math.floor((i / 2) + from), 2)
+);
+
+export const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
+
+export const hexRange = (from, to) => parseInt(range(from, to).join(''), 16);
+
+export const opcodeNames = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
 export const encodeAccounts = (accounts) => {
   accounts = accounts.map(account => {
@@ -124,4 +137,22 @@ export const unpack = ([uints, stack, accounts, logs, bytes]) => {
   const logsData = `0x${bytes.substring(bytesOffsets[2], bytesOffsets[2] + bytesOffsets[3])}`;
   const [errno, errpc, pc, gasRemaining] = uints.slice(0, 4).map(n => n.toNumber());
   return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData, gasRemaining };
+};
+
+export const getCode = (fixture) => {
+  let code;
+  if (!fixture.join) {
+    code = fixture.code || [];
+    if (!code.join) { // wrap single opcode
+      code = [code];
+    }
+  } else {
+    code = fixture;
+  }
+
+  code = `0x${code.join('')}`;
+  const codeSize = (code.length - 2) / 2;
+  const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
+  const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
+  return { code, codeSize, pc, opcodeUnderTest };
 };
