@@ -52,6 +52,7 @@
   "author": "johannbarbie@me.com",
   "license": "ISC",
   "dependencies": {
+    "openzeppelin-solidity": "^1.12.0",
     "web3": "^1.0.0-beta.36"
   }
 }
