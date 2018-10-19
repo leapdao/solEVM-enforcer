@@ -1,14 +1,32 @@
-# Solidity EVM and Runtime (PoC)
+# EVM Enforcer
 
-This is a simple Ethereum runtime written in Solidity. The runtime contract allows you to execute evm bytecode with calldata and various other parameters. It is meant to be Truebit-style computation verification games for off-chain execution. Check the [architecture docs](/docs/Architecture.md) for details.
+![EVM Enforcer](https://i.imgur.com/V9EGql2.png)
 
-This is a fork of [solevm](https://github.com/Ohalo-Ltd/solevm) by [Andreas Olofsson](https://github.com/androlo).
+The **EVM Enforcer** is a computation verification engine that allows on-chain enforcement of off-chain EVM execution. 
 
-Discussions in this [Discord channel](https://discord.gg/7bfD6eB).
+![Process Diagram](https://i.imgur.com/o1FRMqp.png)
 
-There is a regular call going on currently every Monday at 13:00 UTC in [hangouts](https://hangouts.google.com/hangouts/_/calendar/ODJkajBpczc0NHJxNWd0MnAybjJmNTY5cWtAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ.6j7d7c6k2hgl8o3ka9oljcpk0g).
+Anyone who solved some off-chain execution can register a result with the *Enforcer contract*. A challenge period starts during which challengers can open disputes over the presented results. Disputes are delegated to the *Verifier contract* where solver and challenger play an interactive execution verification game. If the challenger wins, the execution results are deleted and the solver looses a bond. If the solver is able to defend the execution results throughout the challenge period, the result is accepted.
 
-### Setup
+## FAQ
+
+- **What is the relationship to solEVM?**
+The EVM enforcer is built on [Andreas Olofsson](https://github.com/androlo)'s [solEVM](https://github.com/Ohalo-Ltd/solevm). Thank you Andreas :clap: !
+- **How is this different than Truebit?**
+[Truebit](http://truebit.io)'s interactive computation verification game uses a [WebAssembly](https://webassembly.org/) VM. We allow to run EVM bytecode. 
+- **What do you use this for?**
+We use this to enforce the correctness of transaction in [Plasma Leap](https://ethresear.ch/t/plasma-leap-a-state-enabled-computing-model-for-plasma/3539).
+
+## Contributions
+
+You are very welcome to contribute by:
+- Picking `beginner-friendly` issues from the backlog.
+- Joining the  Discord channel to ask questions.
+- Participating in the weekly hangouts every Tuesday at 13:00 UTC.
+
+Please make sure to read the contribution guidelines.
+
+## Setup
 
 Currently there are only tests using truffle. You can run the tests like this:
 
@@ -18,7 +36,7 @@ npm install
 npm test
 ```
 
-### Runtime
+## Runtime
 
 First of all, the `EthereumRuntime` code is designed to run on a constantinople net, with all constantinople features. The `genesis.json` file in the root folder can be used to configure the geth EVM (through the `--prestate` option).
 
