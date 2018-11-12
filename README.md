@@ -22,7 +22,7 @@ We use this to enforce the correctness of transaction in [Plasma Leap](https://e
 You are very welcome to contribute by:
 - Picking `beginner-friendly` issues from the backlog.
 - Joining the [Discord channel](https://discord.gg/7bfD6eB) to ask questions.
-- Participating in the [bi-weekly hangouts](https://hackmd.io/Kn0hwBA7Tvm6mfacCH1rIw?both) every Tuesday at 8:00 UTC.
+- Participating in the [bi-weekly hangouts](https://hackmd.io/Kn0hwBA7Tvm6mfacCH1rIw?both).
 
 Please make sure to read the contribution guidelines.
 
