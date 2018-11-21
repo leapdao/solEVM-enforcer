@@ -1,4 +1,4 @@
-import { toNum, getCode } from './utils';
+import { toNum, getCode, deployContract } from './utils';
 
 import onChainFixtures from './onChain.fixtures';
 import Runtime from './helpers/runtimeAdapter';
@@ -12,7 +12,7 @@ contract('Runtime', function () {
   let rt;
   
   before(async () => {
-    rt = new Runtime(await EthereumRuntime.new());
+    rt = new Runtime(await deployContract(EthereumRuntime));
   });
 
   describe('execute - stop - execute one step - compare', () => {
@@ -33,17 +33,16 @@ contract('Runtime', function () {
         const onChainState = await rt.initAndExecute(
           code, callData,
           [pcStart, pcEnd, BLOCK_GAS_LIMIT, beforeState.gasRemaining],
-          beforeState.stack, beforeState.memory, beforeState.accounts, beforeState.accountsCode,
-          beforeState.logs, beforeState.logsData,
+          beforeState.stack, beforeState.mem, beforeState.accounts, beforeState.accountsCode,
+          beforeState.logHash,
         );
 
         // 4. check that on-chain state is the same as off-chain
         assert.deepEqual(toNum(onChainState.stack), toNum(afterState.stack), 'Stack');
-        assert.equal(onChainState.memory, afterState.memory, 'Memory');
+        assert.equal(onChainState.mem, afterState.mem, 'Memory');
         assert.deepEqual(onChainState.accounts, afterState.accounts, 'Accounts');
         assert.equal(onChainState.accountsCode, afterState.accountsCode, 'Accounts code');
-        assert.deepEqual(onChainState.logs, afterState.logs, 'Logs');
-        assert.equal(onChainState.logsData, afterState.logsData, 'Logs data');
+        assert.equal(onChainState.logHash, afterState.logHash, 'Log hash');
       });
     });
   });

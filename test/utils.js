@@ -1,8 +1,12 @@
-import BigNumber from 'bignumber.js';
 const OP = require('./helpers/constants');
+const ethers = require('ethers');
 const { PUSH1 } = OP;
 
+export const toBN = require('ethers').utils.bigNumberify;
+
 export const toNum = arr => arr.map(e => e.toNumber());
+
+export const toStr = arr => arr.map(e => e.toString());
 
 export const toHex = arr => arr.map(e => e.toString(16));
 
@@ -16,9 +20,9 @@ export const pushRange = (from, to) => Array.from(
   (_, i) => i % 2 === 0 ? PUSH1 : leftPad(Math.floor((i / 2) + from), 2)
 );
 
-export const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => i + from);
+export const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => (i + from).toString());
 
-export const hexRange = (from, to) => parseInt(range(from, to).join(''), 16);
+export const hexRange = (from, to) => toBN('0x' + range(from, to).join('')).toString();
 
 export const opcodeNames = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
@@ -66,14 +70,14 @@ export const decodeAccounts = (accsArr, accsCode = '') => {
   let offset = 0;
 
   while (offset < accsArr.length) {
-    let addr = '0x' + leftPad(new BigNumber(accsArr[offset]).toString(16), 40);
-    const balance = new BigNumber(accsArr[offset + 1]);
-    const nonce = new BigNumber(accsArr[offset + 2]).toNumber();
-    const destroyed = new BigNumber(accsArr[offset + 3]).toNumber() === 1;
-    const codeIdx = new BigNumber(accsArr[offset + 4]).toNumber();
-    const codeSize = new BigNumber(accsArr[offset + 5]).toNumber();
+    let addr = toBN(accsArr[offset]).toHexString();
+    const balance = toBN(accsArr[offset + 1]);
+    const nonce = toBN(accsArr[offset + 2]).toNumber();
+    const destroyed = toBN(accsArr[offset + 3]).toNumber() === 1;
+    const codeIdx = toBN(accsArr[offset + 4]).toNumber();
+    const codeSize = toBN(accsArr[offset + 5]).toNumber();
     const code = accsCode.substr(2 * codeIdx, 2 * codeSize);
-    const storageSize = new BigNumber(accsArr[offset + 6]).toNumber();
+    const storageSize = toBN(accsArr[offset + 6]).toNumber();
     const storage = [];
     for (let j = 0; j < storageSize; j++) {
       const address = accsArr[offset + 7 + 2 * j].toNumber();
@@ -108,14 +112,14 @@ export const decodeLogs = (logsArr, logsCode = '') => {
   let offset = 0;
 
   while (offset < logsArr.length) {
-    let addr = '0x' + leftPad(new BigNumber(logsArr[offset]).toString(16), 40);
+    let addr = toBN(logsArr[offset]).toHexString();
     const topics = [];
     topics.push(logsArr[offset + 1].toNumber());
     topics.push(logsArr[offset + 2].toNumber());
     topics.push(logsArr[offset + 3].toNumber());
     topics.push(logsArr[offset + 4].toNumber());
-    const dataIdx = new BigNumber(logsArr[offset + 5]).toNumber();
-    const dataSize = new BigNumber(logsArr[offset + 6]).toNumber();
+    const dataIdx = toBN(logsArr[offset + 5]).toNumber();
+    const dataSize = toBN(logsArr[offset + 6]).toNumber();
     const data = '0x' + logsCode.substr(2 * dataIdx, 2 * dataSize);
 
     logs.push({
@@ -126,17 +130,6 @@ export const decodeLogs = (logsArr, logsCode = '') => {
     offset += 7;
   }
   return logs;
-};
-
-export const unpack = ([uints, stack, accounts, logs, bytes]) => {
-  bytes = bytes.substring(2);
-  const bytesOffsets = uints.slice(4).map(o => o * 2);
-  const returnData = `0x${bytes.substring(0, bytesOffsets[0])}`;
-  const memory = `0x${bytes.substring(bytesOffsets[0], bytesOffsets[0] + bytesOffsets[1])}`;
-  const accountsCode = `0x${bytes.substring(bytesOffsets[1], bytesOffsets[1] + bytesOffsets[2])}`;
-  const logsData = `0x${bytes.substring(bytesOffsets[2], bytesOffsets[2] + bytesOffsets[3])}`;
-  const [errno, errpc, pc, gasRemaining] = uints.slice(0, 4).map(n => n.toNumber());
-  return { errno, errpc, pc, returnData, stack, memory, accounts, accountsCode, logs, logsData, gasRemaining };
 };
 
 export const getCode = (fixture) => {
@@ -156,3 +149,29 @@ export const getCode = (fixture) => {
   const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
   return { code, codeSize, pc, opcodeUnderTest };
 };
+
+export const wallets = [];
+
+const provider = new ethers.providers.Web3Provider(web3.currentProvider);
+
+for (var i = 0; i < 10; i++) {
+  const privateKey = '0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b750120' + i;
+  const wallet = new ethers.Wallet(privateKey, provider);
+  wallets.push(wallet);
+}
+
+export const txOverrides = {
+    gasLimit: 0xffffffff,
+};
+
+export async function deployContract(truffleContract, ...args) {
+  let _factory = new ethers.ContractFactory(
+    truffleContract.abi,
+    truffleContract.bytecode,
+    wallets[0]
+  );
+  const contract = await _factory.deploy(...args, txOverrides);
+
+  await contract.deployed();
+  return contract;
+}
