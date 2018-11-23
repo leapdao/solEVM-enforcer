@@ -161,10 +161,8 @@ contract SampleVerifier is Ownable, IVerifier {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.left.step == dispute.right.step - 1, "must find a specific step");
-        // TODO when ethRuntime accept number of steps
-        //      we will require the number of steps to be 1
-        //      if not, we will need to have special treatment for JUMP
-        // require(params[1] == 1, "must be one step");
+        // only allow to run 1 step
+        require(params[1] == 1, "must be one step");
 
         // TODO actual procedure:
         // - calculate code root from code and codeProof, code pos is pcStart
