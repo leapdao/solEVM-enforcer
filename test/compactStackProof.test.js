@@ -33,7 +33,7 @@ contract('TestCompactStackProof', function () {
       0, // hash sibling
       getHash(fullNextStack, 0)
     );
-    assert(result.logs[0].args.result == true, 'stack proof is incorrect');
+    assert(result == true, 'stack proof is incorrect');
   });
 
   it('can prove operation with partial stack', async function () {
@@ -49,6 +49,38 @@ contract('TestCompactStackProof', function () {
       getHash(fullPrevStack.slice(0, 3), 0),
       getHash(fullNextStack, 0)
     );
-    assert(result.logs[0].args.result == true, 'stack proof is incorrect');
+    assert(result == true, 'stack proof is incorrect');
+  });
+
+  it('can prove invalid stack result', async function () {
+    let fullPrevStack = [1, 1, 2, 3, 5];
+    let fullNextStack = [1, 1, 2, 9];
+    let result = await stackVerifier.verify(
+      '0x' + ADD,
+      '0x',
+      [0, 1, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
+      fullPrevStack.slice(3, 5),
+      '0x',
+      getHash(fullPrevStack, 0),
+      getHash(fullPrevStack.slice(0, 3), 0),
+      getHash(fullNextStack, 0)
+    );
+    assert(result == false, 'stack proof is incorrect');
+  });
+
+  it('can prove invalid prev stack sibling', async function () {
+    let fullPrevStack = [1, 1, 2, 3, 5];
+    let fullNextStack = [1, 1, 3, 8];
+    let result = await stackVerifier.verify(
+      '0x' + ADD,
+      '0x',
+      [0, 1, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
+      fullPrevStack.slice(3, 5),
+      '0x',
+      getHash(fullPrevStack, 0),
+      getHash([1, 1, 3], 0),
+      getHash(fullNextStack, 0)
+    );
+    assert(result == false, 'stack proof is incorrect');
   });
 });

@@ -10,8 +10,6 @@ contract CompactStackProofMock {
     EthereumRuntime public ethRuntime;
     using SimpleHash for uint[];
 
-    event Verification(bytes32 nextStackHash, bytes32 returnStackHash, uint[] nextStack, bool result);
-
     constructor(address _ethRuntime) public {
         ethRuntime = EthereumRuntime(_ethRuntime);
     }
@@ -25,7 +23,7 @@ contract CompactStackProofMock {
         bytes32 prevStackHash,
         bytes32 stackHashSibling,
         bytes32 nextStackHash
-    ) public returns (bool) {
+    ) public view returns (bool) {
         // verify input stack hash
         if (stack.toHash(stackHashSibling) != prevStackHash) {
             return false;
@@ -37,8 +35,6 @@ contract CompactStackProofMock {
         (, nextStack, , , ) = ethRuntime.execute(code, data, intInput, stack, mem, emptyArr, "", emptyArr, "");
 
         bytes32 resultStackHash = nextStack.toHash(stackHashSibling);
-        bool result = resultStackHash == nextStackHash;
-        emit Verification(resultStackHash, nextStackHash, nextStack, result);
-        return result;
+        return resultStackHash == nextStackHash;
     }
 }
