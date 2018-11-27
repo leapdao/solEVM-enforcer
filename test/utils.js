@@ -147,7 +147,7 @@ export const getCode = (fixture) => {
   const codeSize = (code.length - 2) / 2;
   const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
   const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
-  return { code, codeSize, pc, opcodeUnderTest };
+  return { code, codeSize, pc: ~~pc, opcodeUnderTest };
 };
 
 export const wallets = [];
