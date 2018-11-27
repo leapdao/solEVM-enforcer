@@ -1,4 +1,4 @@
-import { toNum, getCode, deployContract } from './utils';
+import { toStr, getCode, deployContract } from './utils';
 
 import onChainFixtures from './onChain.fixtures';
 import Runtime from './helpers/runtimeAdapter';
@@ -38,7 +38,7 @@ contract('Runtime', function () {
         );
 
         // 4. check that on-chain state is the same as off-chain
-        assert.deepEqual(toNum(onChainState.stack), toNum(afterState.stack), 'Stack');
+        assert.deepEqual(toStr(onChainState.stack), toStr(afterState.stack), 'Stack');
         assert.equal(onChainState.mem, afterState.mem, 'Memory');
         assert.deepEqual(onChainState.accounts, afterState.accounts, 'Accounts');
         assert.equal(onChainState.accountsCode, afterState.accountsCode, 'Accounts code');
