@@ -1,4 +1,4 @@
-import { range, hexRange,toNum, toStr, encodeAccounts, decodeAccounts, decodeLogs, getCode, deployContract } from './utils';
+import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract } from './utils';
 import fixtures from './fixtures';
 import Runtime from './helpers/runtimeAdapter';
 
@@ -68,7 +68,7 @@ contract('Runtime', function () {
           initialMemory,
           accounts,
           accountsCode,
-          logHash
+          logHash,
         ];
         const res = await rt.initAndExecute(...callArgs);
 
