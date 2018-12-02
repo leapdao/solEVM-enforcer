@@ -63,9 +63,8 @@ contract EthereumRuntime is EVMConstants {
         bytes mem;
         uint[] accounts;
         bytes accountsCode;
-        uint[] logs;
-        bytes logsData;
         uint gasRemaining;
+        bytes32 logHash;
     }
     
     // ************* Only used internally *************
@@ -84,7 +83,7 @@ contract EthereumRuntime is EVMConstants {
         address target;
         Context context;
         EVMAccounts.Accounts accounts;
-        EVMLogs.Logs logs;
+        bytes32 logHash;
         Handlers handlers;
         bool staticExec;
         
@@ -102,7 +101,7 @@ contract EthereumRuntime is EVMConstants {
         address target;
         Context context;
         EVMAccounts.Accounts accounts;
-        EVMLogs.Logs logs;
+        bytes32 logHash;
         Handlers handlers;
     }
     
@@ -122,7 +121,7 @@ contract EthereumRuntime is EVMConstants {
         uint errpc;
         
         EVMAccounts.Accounts accounts;
-        EVMLogs.Logs logs;
+        bytes32 logHash;
         Context context;
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
@@ -146,21 +145,21 @@ contract EthereumRuntime is EVMConstants {
     function execute(
         bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
-        uint[] memory logsIn, bytes memory logsData
-    ) public pure returns (uint[8], uint[], uint[], uint[], bytes) {
+        bytes32 logHash
+    ) public pure returns (Result) {
         // solhint-disable-next-line avoid-low-level-calls
         return flattenResult(
-            initAndCall(code, data, intInput, stack, mem, accounts, accountsCode, logsIn, logsData)
+            initAndCall(code, data, intInput, stack, mem, accounts, accountsCode, logHash)
         );
     }
 
     function initAndCall(
         bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
-        uint[] memory logsIn, bytes memory logsData
+        bytes32 logHash
     ) internal pure returns (EVM memory evm) {
         return _call(
-            initInput(code, data, intInput, stack, mem, accounts, accountsCode, logsIn, logsData), 
+            initInput(code, data, intInput, stack, mem, accounts, accountsCode, logHash),
             CallType.Call
         );
     }
@@ -168,7 +167,7 @@ contract EthereumRuntime is EVMConstants {
     function initInput(
         bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
-        uint[] memory logsIn, bytes memory logsData
+        bytes32 logHash
     ) internal pure returns (EVMInput memory evmInput) {
         evmInput.data = data;
         evmInput.handlers = _newHandlers();
@@ -186,7 +185,7 @@ contract EthereumRuntime is EVMConstants {
         );
         evmInput.gas = intInput[3];
         evmInput.accounts = _accsFromArray(accounts, accountsCode);
-        evmInput.logs = _logsFromArray(logsIn, logsData);
+        evmInput.logHash = logHash;
 
         EVMAccounts.Account memory caller = evmInput.accounts.get(DEFAULT_CALLER);
         caller.nonce = uint8(1);
@@ -200,9 +199,7 @@ contract EthereumRuntime is EVMConstants {
         evmInput.mem = EVMMemory.fromArray(mem);
     }
 
-    function flattenResult(EVM memory evm) internal pure returns (
-        uint[8], uint[], uint[], uint[], bytes
-    ) {
+    function flattenResult(EVM memory evm) internal pure returns (Result) {
         Result memory result;
         result.stack = evm.stack.toArray();
         result.mem = evm.mem.toArray();
@@ -212,24 +209,10 @@ contract EthereumRuntime is EVMConstants {
         result.pc = evm.pc;
         // TODO handle accounts that result from a failed transaction.
         (result.accounts, result.accountsCode) = evm.accounts.toArray();
-        (result.logs, result.logsData) = evm.logs.toArray();
         result.gasRemaining = evm.gas;
-        
-        bytes memory bytesResult = concat(
-            result.returnData, 
-            concat(
-                result.mem,
-                concat(result.accountsCode, result.logsData)
-            )
-        );
-        return (
-            [
-                result.errno, result.errpc, result.pc, result.gasRemaining,
-                result.returnData.length, result.mem.length,
-                result.accountsCode.length, result.logsData.length
-            ],
-            result.stack, result.accounts, result.logs, bytesResult
-        );
+        result.logHash = evm.logHash;
+
+        return result;
     }
 
     function _accsFromArray(uint[] accountsIn, bytes memory accountsCode) internal pure returns (EVMAccounts.Accounts memory accountsOut) {
@@ -279,12 +262,11 @@ contract EthereumRuntime is EVMConstants {
     function _call(EVMInput memory evmInput, CallType callType) internal pure returns (EVM memory evm) {
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
+        evm.logHash = evmInput.logHash;
         if (evmInput.staticExec) {
             evm.accounts = evmInput.accounts;
-            evm.logs = evmInput.logs;
         } else {
             evm.accounts = evmInput.accounts.copy();
-            evm.logs = evmInput.logs.copy();
         }
         evm.value = evmInput.value;
         evm.gas = evmInput.gas;
@@ -334,7 +316,7 @@ contract EthereumRuntime is EVMConstants {
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
         evm.accounts = evmInput.accounts.copy();
-        evm.logs = evmInput.logs.copy();
+        evm.logHash = evmInput.logHash;
         evm.value = evmInput.value;
         evm.gas = evmInput.gas;
         evm.caller = evm.accounts.get(evmInput.caller);
@@ -1007,7 +989,15 @@ contract EthereumRuntime is EVMConstants {
         for (uint i = 0; i < state.n; i++) {
             log.topics[i] = state.stack.pop();
         }
-        state.logs.add(log);
+
+        state.logHash = keccak256(
+            abi.encodePacked(
+                state.logHash,
+                log.account,
+                log.topics,
+                log.data
+            )
+        );
     }
     
     // 0xfX
@@ -1022,7 +1012,7 @@ contract EthereumRuntime is EVMConstants {
         input.caller = state.target.addr;
         input.context = state.context;
         input.accounts = state.accounts;
-        input.logs = state.logs;
+        input.logHash = state.logHash;
         input.handlers = state.handlers;
 
         EVM memory retEvm;
@@ -1035,7 +1025,7 @@ contract EthereumRuntime is EVMConstants {
             state.accounts = retEvm.accounts;
             state.caller = state.accounts.get(state.caller.addr);
             state.target = state.accounts.get(state.target.addr);
-            state.logs = retEvm.logs;
+            state.logHash = retEvm.logHash;
         }
         state.gas = retEvm.gas;
     }
@@ -1069,7 +1059,7 @@ contract EthereumRuntime is EVMConstants {
 
         input.context = state.context;
         input.accounts = state.accounts;
-        input.logs = state.logs;
+        input.logHash = state.logHash;
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
@@ -1086,7 +1076,7 @@ contract EthereumRuntime is EVMConstants {
             state.accounts = retEvm.accounts;
             state.caller = state.accounts.get(state.caller.addr);
             state.target = state.accounts.get(state.target.addr);
-            state.logs = retEvm.logs;
+            state.logHash = retEvm.logHash;
         }
         state.gas -= input.gas - retEvm.gas;
     }
@@ -1130,7 +1120,7 @@ contract EthereumRuntime is EVMConstants {
         input.caller = state.caller.addr;
         input.context = state.context;
         input.accounts = state.accounts;
-        input.logs = state.logs;
+        input.logHash = state.logHash;
         input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
@@ -1147,7 +1137,7 @@ contract EthereumRuntime is EVMConstants {
             state.accounts = retEvm.accounts;
             state.caller = state.accounts.get(state.caller.addr);
             state.target = state.accounts.get(state.target.addr);
-            state.logs = retEvm.logs;
+            state.logHash = retEvm.logHash;
         }
         state.target.code = oldCode;
         state.gas -= input.gas - retEvm.gas;
@@ -1175,7 +1165,7 @@ contract EthereumRuntime is EVMConstants {
 
         input.context = state.context;
         input.accounts = state.accounts;
-        input.logs = state.logs;
+        input.logHash = state.logHash;
         input.handlers = state.handlers;
         input.staticExec = true;
 
@@ -1188,6 +1178,7 @@ contract EthereumRuntime is EVMConstants {
             state.stack.push(1);
             state.mem.storeBytesAndPadWithZeroes(retEvm.returnData, 0, retOffset, retSize);
             state.lastRet = retEvm.returnData;
+            state.logHash = retEvm.logHash;
         }
         state.gas -= input.gas - retEvm.gas;
     }

@@ -1,4 +1,4 @@
-import { toNum, encodeAccounts, decodeAccounts, decodeLogs, getCode } from './utils';
+import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract } from './utils';
 import fixtures from './fixtures';
 import Runtime from './helpers/runtimeAdapter';
 
@@ -9,9 +9,9 @@ const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 
 contract('Runtime', function () {
   let rt;
-  
+
   before(async () => {
-    rt = new Runtime(await EthereumRuntime.new());
+    rt = new Runtime(await deployContract(EthereumRuntime));
   });
 
   describe('executeAndStop', () => {
@@ -20,8 +20,8 @@ contract('Runtime', function () {
       const data = '0x';
       let r = await rt.executeAndStop(code, data, [0, 2, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
       assert.deepEqual(toNum(r.stack), [3]);
-      assert.deepEqual(r.pc, 2);
-      assert.deepEqual(r.memory, '0x');
+      assert.equal(r.pc, 2);
+      assert.equal(r.mem, '0x');
 
       r = await rt.executeAndStop(code, data, [0, 4, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
       assert.deepEqual(toNum(r.stack), [3, 5]);
@@ -30,8 +30,8 @@ contract('Runtime', function () {
       assert.deepEqual(toNum(r.stack), [8]);
       r = await rt.executeAndStop(code, data, [0, 8, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
       assert.deepEqual(toNum(r.stack), []);
-      assert.deepEqual(r.pc, 8);
-      assert.deepEqual(parseInt(r.memory, 16), 8);
+      assert.equal(r.pc, 8);
+      assert.equal(parseInt(r.mem, 16), 8);
     });
   });
 
@@ -40,7 +40,11 @@ contract('Runtime', function () {
       const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
       const res = await rt.executeAndStop(code, '0x', [0, 4, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
       const { stack } = await rt.initAndExecute(
-        code, '0x', [4, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT], res.stack, res.memory, [], '0x', [], '0x'
+        code,
+        '0x',
+        [4, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
+        res.stack,
+        res.mem
       );
       assert.deepEqual(toNum(stack), [8]);
     });
@@ -55,19 +59,24 @@ contract('Runtime', function () {
         const callData = fixture.data || '0x';
         const blockGasLimit = fixture.blockGasLimit || BLOCK_GAS_LIMIT;
         const gasLimit = fixture.gasLimit || blockGasLimit;
-        const logs = fixture.logs || [];
-        const logsData = fixture.logsData || '0x';
-        const res = await rt.initAndExecute(
-          code, callData,
+        const logHash = fixture.logHash;
+        const callArgs = [
+          code,
+          callData,
           [pc, 0, blockGasLimit, gasLimit],
-          initialStack, initialMemory, accounts, accountsCode, logs, logsData,
-        );
+          initialStack,
+          initialMemory,
+          accounts,
+          accountsCode,
+          logHash,
+        ];
+        const res = await rt.initAndExecute(...callArgs);
 
         if (fixture.result.stack) {
-          assert.deepEqual(toNum(res.stack), fixture.result.stack);
+          assert.deepEqual(toStr(res.stack), fixture.result.stack);
         }
         if (fixture.result.memory) {
-          assert.deepEqual(res.memory, fixture.result.memory);
+          assert.deepEqual(res.mem, fixture.result.memory);
         }
         if (fixture.result.accounts) {
           fixture.result.accounts.push({
@@ -91,17 +100,17 @@ contract('Runtime', function () {
             }
           });
         }
-        if (fixture.result.logs) {
-          assert.deepEqual(decodeLogs(res.logs, res.logsData), fixture.result.logs);
+        if (fixture.result.logHash) {
+          assert.equal(res.logHash, fixture.result.logHash, 'logHash');
         }
         if (fixture.result.pc !== undefined) {
-          assert.deepEqual(res.pc, fixture.result.pc);
+          assert.equal(res.pc, fixture.result.pc, 'pc');
         }
         if (fixture.result.gasUsed !== undefined) {
-          assert.equal(res.gasRemaining, gasLimit - fixture.result.gasUsed);
+          assert.equal(res.gasRemaining, gasLimit - fixture.result.gasUsed, 'gasUsed');
         }
         if (fixture.result.errno !== undefined) {
-          assert.equal(res.errno, fixture.result.errno);
+          assert.equal(res.errno, fixture.result.errno, 'errno');
         }
       });
     });

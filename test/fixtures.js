@@ -1,5 +1,5 @@
 import { BLOCK_GAS_LIMIT } from './helpers/constants';
-import { hexRange, range } from './utils';
+import { hexRange, range, toBN } from './utils';
 
 const OP = require('./helpers/constants');
 
@@ -11,73 +11,73 @@ const stack16 = range(1, 16);
 export default [
 
   // 0x - arithmetic ops
-  { code: OP.ADD, stack: ['3', '5'], result: { stack: [8], gasUsed: 3 } },
-  { code: OP.MUL, stack: ['3', '5'], result: { stack: [15], gasUsed: 5 } },
-  { code: OP.SUB, stack: ['3', '5'], result: { stack: [2], gasUsed: 3 } },
-  { code: OP.DIV, stack: ['3', '6'], result: { stack: [2], gasUsed: 5 } },
-  { code: OP.SDIV, stack: ['3', '6'], result: { stack: [2], gasUsed: 5 } },
-  { code: OP.MOD, stack: ['3', '7'], result: { stack: [1], gasUsed: 5 } },
-  { code: OP.SMOD, stack: ['3', '8'], result: { stack: [2], gasUsed: 5 } },
-  { code: OP.ADDMOD, stack: ['5', '3', '5'], result: { stack: [3], gasUsed: 8 } },
-  { code: OP.MULMOD, stack: ['4', '3', '6'], result: { stack: [2], gasUsed: 8 } },
-  { code: OP.EXP, stack: ['3', '5'], result: { stack: [125], gasUsed: 10 } },
-  { code: OP.SIGNEXTEND, stack: ['3', '2'], result: { stack: [3], gasUsed: 5 } },
+  { code: OP.ADD, stack: ['3', '5'], result: { stack: ['8'], gasUsed: 3 } },
+  { code: OP.MUL, stack: ['3', '5'], result: { stack: ['15'], gasUsed: 5 } },
+  { code: OP.SUB, stack: ['3', '5'], result: { stack: ['2'], gasUsed: 3 } },
+  { code: OP.DIV, stack: ['3', '6'], result: { stack: ['2'], gasUsed: 5 } },
+  { code: OP.SDIV, stack: ['3', '6'], result: { stack: ['2'], gasUsed: 5 } },
+  { code: OP.MOD, stack: ['3', '7'], result: { stack: ['1'], gasUsed: 5 } },
+  { code: OP.SMOD, stack: ['3', '8'], result: { stack: ['2'], gasUsed: 5 } },
+  { code: OP.ADDMOD, stack: ['5', '3', '5'], result: { stack: ['3'], gasUsed: 8 } },
+  { code: OP.MULMOD, stack: ['4', '3', '6'], result: { stack: ['2'], gasUsed: 8 } },
+  { code: OP.EXP, stack: ['3', '5'], result: { stack: ['125'], gasUsed: 10 } },
+  { code: OP.SIGNEXTEND, stack: ['3', '2'], result: { stack: ['3'], gasUsed: 5 } },
 
   // 1x - Comparison & bitwise logic
-  { code: OP.LT, stack: ['5', '3', '2'], result: { stack: [5, 1], gasUsed: 3 } },
-  { code: OP.GT, stack: ['3', '2'], result: { stack: [0], gasUsed: 3 } },
-  { code: OP.SLT, stack: ['3', '2'], result: { stack: [1], gasUsed: 3 } },
-  { code: OP.SGT, stack: ['3', '2'], result: { stack: [0], gasUsed: 3 } },
-  { code: OP.EQ, stack: ['3', '2'], result: { stack: [0], gasUsed: 3 } },
-  { code: OP.ISZERO, stack: ['2'], result: { stack: [0], gasUsed: 3 } },
-  { code: OP.AND, stack: [0xfd, 0xfc], result: { stack: [parseInt('0xfc', 16)], gasUsed: 3 } },
-  { code: OP.OR, stack: [0xfd, 0xfc], result: { stack: [parseInt('0xfd', 16)], gasUsed: 3 } },
-  { code: OP.XOR, stack: [0xfd, 0xff], result: { stack: [2], gasUsed: 3 } },
+  { code: OP.LT, stack: ['5', '3', '2'], result: { stack: ['5', '1'], gasUsed: 3 } },
+  { code: OP.GT, stack: ['3', '2'], result: { stack: ['0'], gasUsed: 3 } },
+  { code: OP.SLT, stack: ['3', '2'], result: { stack: ['1'], gasUsed: 3 } },
+  { code: OP.SGT, stack: ['3', '2'], result: { stack: ['0'], gasUsed: 3 } },
+  { code: OP.EQ, stack: ['3', '2'], result: { stack: ['0'], gasUsed: 3 } },
+  { code: OP.ISZERO, stack: ['2'], result: { stack: ['0'], gasUsed: 3 } },
+  { code: OP.AND, stack: [0xfd, 0xfc], result: { stack: [parseInt('0xfc', 16).toString()], gasUsed: 3 } },
+  { code: OP.OR, stack: [0xfd, 0xfc], result: { stack: [parseInt('0xfd', 16).toString()], gasUsed: 3 } },
+  { code: OP.XOR, stack: [0xfd, 0xff], result: { stack: ['2'], gasUsed: 3 } },
   {
     code: OP.NOT,
     stack: ['0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe'],
-    result: { stack: [1], gasUsed: 3 },
+    result: { stack: ['1'], gasUsed: 3 },
   },
-  { code: OP.BYTE, stack: ['3', '2'], result: { stack: [0], gasUsed: 3 } },
+  { code: OP.BYTE, stack: ['3', '2'], result: { stack: ['0'], gasUsed: 3 } },
   // TODO: need to compile for Constantinople
   // { code: OP.SHL, stack: [0x0001, 2], result: { stack: [parseInt('0x01', 16)] } },
   // { code: OP.SHR, stack: [0x1000, 2], result: { stack: [parseInt('0x001', 16)] } },
-  // { code: OP.SAR, stack: [0x1000, 2], result: { stack: [1] } },
-  { code: OP.POP, stack: ['2', '3'], result: { stack: [2], gasUsed: 2 } },
+  // { code: OP.SAR, stack: [0x1000, 2], result: { stack: ['1'] } },
+  { code: OP.POP, stack: ['2', '3'], result: { stack: ['2'], gasUsed: 2 } },
   // 8x Duplication
-  { code: OP.DUP1, stack: ['2'], result: { stack: [2, 2], gasUsed: 3 } },
-  { code: OP.DUP2, stack: stack16, result: { stack: [...stack16, 15], gasUsed: 3 } },
-  { code: OP.DUP3, stack: stack16, result: { stack: [...stack16, 14], gasUsed: 3 } },
-  { code: OP.DUP4, stack: stack16, result: { stack: [...stack16, 13], gasUsed: 3 } },
-  { code: OP.DUP5, stack: stack16, result: { stack: [...stack16, 12], gasUsed: 3 } },
-  { code: OP.DUP6, stack: stack16, result: { stack: [...stack16, 11], gasUsed: 3 } },
-  { code: OP.DUP7, stack: stack16, result: { stack: [...stack16, 10], gasUsed: 3 } },
-  { code: OP.DUP8, stack: stack16, result: { stack: [...stack16, 9], gasUsed: 3 } },
-  { code: OP.DUP9, stack: stack16, result: { stack: [...stack16, 8], gasUsed: 3 } },
-  { code: OP.DUP10, stack: stack16, result: { stack: [...stack16, 7], gasUsed: 3 } },
-  { code: OP.DUP11, stack: stack16, result: { stack: [...stack16, 6], gasUsed: 3 } },
-  { code: OP.DUP12, stack: stack16, result: { stack: [...stack16, 5], gasUsed: 3 } },
-  { code: OP.DUP13, stack: stack16, result: { stack: [...stack16, 4], gasUsed: 3 } },
-  { code: OP.DUP14, stack: stack16, result: { stack: [...stack16, 3], gasUsed: 3 } },
-  { code: OP.DUP15, stack: stack16, result: { stack: [...stack16, 2], gasUsed: 3 } },
-  { code: OP.DUP16, stack: stack16, result: { stack: [...stack16, 1], gasUsed: 3 } },
+  { code: OP.DUP1, stack: ['2'], result: { stack: ['2', '2'], gasUsed: 3 } },
+  { code: OP.DUP2, stack: stack16, result: { stack: [...stack16, '15'], gasUsed: 3 } },
+  { code: OP.DUP3, stack: stack16, result: { stack: [...stack16, '14'], gasUsed: 3 } },
+  { code: OP.DUP4, stack: stack16, result: { stack: [...stack16, '13'], gasUsed: 3 } },
+  { code: OP.DUP5, stack: stack16, result: { stack: [...stack16, '12'], gasUsed: 3 } },
+  { code: OP.DUP6, stack: stack16, result: { stack: [...stack16, '11'], gasUsed: 3 } },
+  { code: OP.DUP7, stack: stack16, result: { stack: [...stack16, '10'], gasUsed: 3 } },
+  { code: OP.DUP8, stack: stack16, result: { stack: [...stack16, '9'], gasUsed: 3 } },
+  { code: OP.DUP9, stack: stack16, result: { stack: [...stack16, '8'], gasUsed: 3 } },
+  { code: OP.DUP10, stack: stack16, result: { stack: [...stack16, '7'], gasUsed: 3 } },
+  { code: OP.DUP11, stack: stack16, result: { stack: [...stack16, '6'], gasUsed: 3 } },
+  { code: OP.DUP12, stack: stack16, result: { stack: [...stack16, '5'], gasUsed: 3 } },
+  { code: OP.DUP13, stack: stack16, result: { stack: [...stack16, '4'], gasUsed: 3 } },
+  { code: OP.DUP14, stack: stack16, result: { stack: [...stack16, '3'], gasUsed: 3 } },
+  { code: OP.DUP15, stack: stack16, result: { stack: [...stack16, '2'], gasUsed: 3 } },
+  { code: OP.DUP16, stack: stack16, result: { stack: [...stack16, '1'], gasUsed: 3 } },
   // 9x Exchange
-  { code: OP.SWAP1, stack: ['3', '2'], result: { stack: [2, 3], gasUsed: 3 } },
-  { code: OP.SWAP2, stack: range(1, 3), result: { stack: [3, ...range(2, 2), 1], gasUsed: 3 } },
-  { code: OP.SWAP3, stack: range(1, 4), result: { stack: [4, ...range(2, 3), 1], gasUsed: 3 } },
-  { code: OP.SWAP4, stack: range(1, 5), result: { stack: [5, ...range(2, 4), 1], gasUsed: 3 } },
-  { code: OP.SWAP5, stack: range(1, 6), result: { stack: [6, ...range(2, 5), 1], gasUsed: 3 } },
-  { code: OP.SWAP6, stack: range(1, 7), result: { stack: [7, ...range(2, 6), 1], gasUsed: 3 } },
-  { code: OP.SWAP7, stack: range(1, 8), result: { stack: [8, ...range(2, 7), 1], gasUsed: 3 } },
-  { code: OP.SWAP8, stack: range(1, 9), result: { stack: [9, ...range(2, 8), 1], gasUsed: 3 } },
-  { code: OP.SWAP9, stack: range(1, 10), result: { stack: [10, ...range(2, 9), 1], gasUsed: 3 } },
-  { code: OP.SWAP10, stack: range(1, 11), result: { stack: [11, ...range(2, 10), 1], gasUsed: 3 } },
-  { code: OP.SWAP11, stack: range(1, 12), result: { stack: [12, ...range(2, 11), 1], gasUsed: 3 } },
-  { code: OP.SWAP12, stack: range(1, 13), result: { stack: [13, ...range(2, 12), 1], gasUsed: 3 } },
-  { code: OP.SWAP13, stack: range(1, 14), result: { stack: [14, ...range(2, 13), 1], gasUsed: 3 } },
-  { code: OP.SWAP14, stack: range(1, 15), result: { stack: [15, ...range(2, 14), 1], gasUsed: 3 } },
-  { code: OP.SWAP15, stack: range(1, 16), result: { stack: [16, ...range(2, 15), 1], gasUsed: 3 } },
-  { code: OP.SWAP16, stack: range(1, 17), result: { stack: [17, ...range(2, 16), 1], gasUsed: 3 } },
+  { code: OP.SWAP1, stack: ['3', '2'], result: { stack: ['2', '3'], gasUsed: 3 } },
+  { code: OP.SWAP2, stack: range(1, 3), result: { stack: ['3', ...range(2, 2), '1'], gasUsed: 3 } },
+  { code: OP.SWAP3, stack: range(1, 4), result: { stack: ['4', ...range(2, 3), '1'], gasUsed: 3 } },
+  { code: OP.SWAP4, stack: range(1, 5), result: { stack: ['5', ...range(2, 4), '1'], gasUsed: 3 } },
+  { code: OP.SWAP5, stack: range(1, 6), result: { stack: ['6', ...range(2, 5), '1'], gasUsed: 3 } },
+  { code: OP.SWAP6, stack: range(1, 7), result: { stack: ['7', ...range(2, 6), '1'], gasUsed: 3 } },
+  { code: OP.SWAP7, stack: range(1, 8), result: { stack: ['8', ...range(2, 7), '1'], gasUsed: 3 } },
+  { code: OP.SWAP8, stack: range(1, 9), result: { stack: ['9', ...range(2, 8), '1'], gasUsed: 3 } },
+  { code: OP.SWAP9, stack: range(1, 10), result: { stack: ['10', ...range(2, 9), '1'], gasUsed: 3 } },
+  { code: OP.SWAP10, stack: range(1, 11), result: { stack: ['11', ...range(2, 10), '1'], gasUsed: 3 } },
+  { code: OP.SWAP11, stack: range(1, 12), result: { stack: ['12', ...range(2, 11), '1'], gasUsed: 3 } },
+  { code: OP.SWAP12, stack: range(1, 13), result: { stack: ['13', ...range(2, 12), '1'], gasUsed: 3 } },
+  { code: OP.SWAP13, stack: range(1, 14), result: { stack: ['14', ...range(2, 13), '1'], gasUsed: 3 } },
+  { code: OP.SWAP14, stack: range(1, 15), result: { stack: ['15', ...range(2, 14), '1'], gasUsed: 3 } },
+  { code: OP.SWAP15, stack: range(1, 16), result: { stack: ['16', ...range(2, 15), '1'], gasUsed: 3 } },
+  { code: OP.SWAP16, stack: range(1, 17), result: { stack: ['17', ...range(2, 16), '1'], gasUsed: 3 } },
 
   // Context and stack opcodes
 
@@ -90,31 +90,31 @@ export default [
         storage: [{ address: 0, value: 5 }, { address: 1, value: 6 }],
       },
     ],
-    result: { stack: [254], gasUsed: 400 },
+    result: { stack: ['254'], gasUsed: 400 },
   },
-  { code: OP.ADDRESS, result: { stack: [parseInt(DEFAULT_CONTRACT_ADDRESS, 16)], gasUsed: 2 } },
-  { code: OP.ORIGIN, result: { stack: [parseInt(DEFAULT_CALLER_ADDRESS, 16)], gasUsed: 2 } },
-  { code: OP.CALLER, result: { stack: [parseInt(DEFAULT_CALLER_ADDRESS, 16)], gasUsed: 2 } },
+  { code: OP.ADDRESS, result: { stack: [toBN(DEFAULT_CONTRACT_ADDRESS).toString()], gasUsed: 2 } },
+  { code: OP.ORIGIN, result: { stack: [toBN(DEFAULT_CALLER_ADDRESS).toString()], gasUsed: 2 } },
+  { code: OP.CALLER, result: { stack: [toBN(DEFAULT_CALLER_ADDRESS).toString()], gasUsed: 2 } },
   // always 0 in current implementation
   // TODO: do we need it non-zero?
-  { code: OP.CALLVALUE, result: { stack: [0], gasUsed: 2 } },
+  { code: OP.CALLVALUE, result: { stack: ['0'], gasUsed: 2 } },
   // always 0 in current implementation
   // TODO: do we need it non-zero?
-  { code: OP.GASPRICE, result: { stack: [0], gasUsed: 2 } },
-  { code: OP.BLOCKHASH, stack: [0], result: { stack: [0], gasUsed: 20 } },
-  { code: OP.COINBASE, result: { stack: [0], gasUsed: 2 } },
-  { code: OP.TIMESTAMP, result: { stack: [0], gasUsed: 2 } },
-  { code: OP.NUMBER, result: { stack: [0], gasUsed: 2 } },
-  { code: OP.DIFFICULTY, result: { stack: [0], gasUsed: 2 } },
-  { code: OP.GASLIMIT, result: { stack: [parseInt(BLOCK_GAS_LIMIT, 16)], gasUsed: 2 } },
-  { code: OP.GASLIMIT, blockGasLimit: 100, result: { stack: [100], gasUsed: 2 } },
-  { code: [OP.PC, OP.GASPRICE, OP.POP], pc: '0', result: { stack: [0], gasUsed: 6 } }, // PC
-  { code: [OP.GAS, OP.GASPRICE, OP.POP], pc: '0', gasLimit: 10, result: { stack: [8], gasUsed: 6 } }, // GAS
+  { code: OP.GASPRICE, result: { stack: ['0'], gasUsed: 2 } },
+  { code: OP.BLOCKHASH, stack: ['0'], result: { stack: ['0'], gasUsed: 20 } },
+  { code: OP.COINBASE, result: { stack: ['0'], gasUsed: 2 } },
+  { code: OP.TIMESTAMP, result: { stack: ['0'], gasUsed: 2 } },
+  { code: OP.NUMBER, result: { stack: ['0'], gasUsed: 2 } },
+  { code: OP.DIFFICULTY, result: { stack: ['0'], gasUsed: 2 } },
+  { code: OP.GASLIMIT, result: { stack: [toBN(BLOCK_GAS_LIMIT).toString()], gasUsed: 2 } },
+  { code: OP.GASLIMIT, blockGasLimit: 100, result: { stack: ['100'], gasUsed: 2 } },
+  { code: [OP.PC, OP.GASPRICE, OP.POP], pc: '0', result: { stack: ['0'], gasUsed: 6 } }, // PC
+  { code: [OP.GAS, OP.GASPRICE, OP.POP], pc: '0', gasLimit: 10, result: { stack: ['8'], gasUsed: 6 } }, // GAS
 
   // invalid JUMP
   {
     code: [OP.PUSH1, '01', OP.JUMP],
-    stack: [0],
+    stack: ['0'],
     result: {
       stack: [],
       pc: 2,
@@ -125,7 +125,7 @@ export default [
   // valid JUMP
   {
     code: [OP.JUMPDEST, OP.PUSH1, '04', OP.JUMP, OP.JUMPDEST],
-    stack: [0],
+    stack: ['0'],
     pc: '3',
     result: {
       stack: [],
@@ -149,15 +149,15 @@ export default [
 
   // poor test
   // TODO: init state with returnData first
-  { code: OP.RETURNDATASIZE, result: { stack: [0], gasUsed: 2 } },
+  { code: OP.RETURNDATASIZE, result: { stack: ['0'], gasUsed: 2 } },
 
   //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
   
-  { code: OP.CODESIZE, result: { stack: [1], gasUsed: 2 } },
-  { code: [OP.CODESIZE, OP.GASPRICE, OP.POP], pc: '0', result: { stack: [3], gasUsed: 6 } },
-  { code: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16)], gasUsed: 3 } },
-  { code: [OP.PUSH2, '01', '02'], pc: '0', result: { stack: [parseInt('0102', 16)], gasUsed: 3 } },
-  { code: [OP.PUSH3, '01', '02', '03'], pc: '0', result: { stack: [parseInt('010203', 16)], gasUsed: 3 } },
+  { code: OP.CODESIZE, result: { stack: ['1'], gasUsed: 2 } },
+  { code: [OP.CODESIZE, OP.GASPRICE, OP.POP], pc: '0', result: { stack: ['3'], gasUsed: 6 } },
+  { code: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16).toString()], gasUsed: 3 } },
+  { code: [OP.PUSH2, '01', '02'], pc: '0', result: { stack: [parseInt('0102', 16).toString()], gasUsed: 3 } },
+  { code: [OP.PUSH3, '01', '02', '03'], pc: '0', result: { stack: [parseInt('010203', 16).toString()], gasUsed: 3 } },
   { code: [OP.PUSH4, ...range(10, 13)], pc: '0', result: { stack: [hexRange(10, 13)], gasUsed: 3 } },
   { code: [OP.PUSH5, ...range(10, 14)], pc: '0', result: { stack: [hexRange(10, 14)], gasUsed: 3 } },
   { code: [OP.PUSH6, ...range(10, 15)], pc: '0', result: { stack: [hexRange(10, 15)], gasUsed: 3 } },
@@ -191,21 +191,21 @@ export default [
   // Data and stack opcodes
   
   { code: OP.CALLDATALOAD,
-    stack: [1],
+    stack: ['1'],
     data: '0x123456',
     result: {
-      stack: [parseInt('0x3456000000000000000000000000000000000000000000000000000000000000', 16)],
+      stack: [toBN('0x3456000000000000000000000000000000000000000000000000000000000000').toString()],
       gasUsed: 3
     },
   },
-  { code: OP.CALLDATASIZE, data: '0x1234', result: { stack: [2], gasUsed: 2 } },
+  { code: OP.CALLDATASIZE, data: '0x1234', result: { stack: ['2'], gasUsed: 2 } },
 
   // Memory and stack (MLOAD, MSTORE, MSTORE8, MSIZE)
   { code: OP.MLOAD,
     stack: [0x01],
     memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
     result: {
-      stack: [parseInt('0x0000000000000000000000000000000000000000000000000000000000006677', 16)],
+      stack: [toBN('0x0000000000000000000000000000000000000000000000000000000000006677').toString()],
       gasUsed: 3
     },
   },
@@ -225,7 +225,7 @@ export default [
   },
   { code: OP.MSIZE,
     memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
-    result: { stack: [64], gasUsed: 2 }
+    result: { stack: ['64'], gasUsed: 2 }
   },
 
   // Data, stack and memory type OP-codes (CALLDATACOPY)
@@ -237,7 +237,7 @@ export default [
       gasUsed: 3,
     },
   },
-  
+
   // Code, stack and memory type OP-codes (CODECOPY)
   { code: [OP.GASPRICE, OP.POP, OP.CODECOPY],
     stack: [2, 1, 1],
@@ -255,7 +255,7 @@ export default [
       stack: [],
       accounts: [
         {
-          address: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+          address: DEFAULT_CONTRACT_ADDRESS,
           storage: [{ address: 0, value: 5 }],
         },
       ],
@@ -265,15 +265,15 @@ export default [
   },
   {
     code: OP.SLOAD,
-    stack: [0],
+    stack: ['0'],
     accounts: [
       {
-        address: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+        address: DEFAULT_CONTRACT_ADDRESS,
         storage: [{ address: 0, value: 5 }],
       },
     ],
     result: {
-      stack: [5],
+      stack: ['5'],
       pc: 1,
       gasUsed: 200,
     }
@@ -286,13 +286,7 @@ export default [
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      logs: [
-        {
-          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-          topics: [0, 0, 0, 0],
-          data: '0x02030405',
-        }
-      ],
+      logHash: '0x73d2c8d7164fd32313bc49407c85be488239dda257c390b3fb8c4b78ae7e5d90',
       gasUsed: 375
     }
   },
@@ -302,13 +296,7 @@ export default [
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      logs: [
-        {
-          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-          topics: [0x567, 0, 0, 0],
-          data: '0x02030405',
-        }
-      ],
+      logHash: '0x8a3fc8f56f0d1d1b858ce6753e8e950ab6cec2652736744c0603c3ff05c4716b',
       gasUsed: 375 * 2
     }
   },
@@ -318,13 +306,7 @@ export default [
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      logs: [
-        {
-          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-          topics: [0x567, 0x123, 0, 0],
-          data: '0x02030405',
-        }
-      ],
+      logHash: '0xc2152d58ac22809607a34167a0289fd8f40f695364b49cc870f198fc6bdf9b09',
       gasUsed: 375 * 3
     }
   },
@@ -334,13 +316,7 @@ export default [
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      logs: [
-        {
-          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-          topics: [0x567, 0x123, 0x987, 0],
-          data: '0x02030405',
-        }
-      ],
+      logHash: '0xb7e7d2bc2c72f5ee94013d38b2cc7d125bae556227c46b4f7e12a657585e1b37',
       gasUsed: 375 * 4
     }
   },
@@ -350,13 +326,64 @@ export default [
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: [],
-      logs: [
-        {
-          account: '0x0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
-          topics: [0x567, 0x123, 0x987, 0x294],
-          data: '0x02030405',
-        }
-      ],
+      logHash: '0xcb56c22daa081416d6024fa5415236dfe4e5be1a903ee3fad83cd66a3bbb1dca',
+      gasUsed: 375 * 5
+    }
+  },
+
+  // Check logHash
+  {
+    code: OP.LOG0,
+    stack: [4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
+    logHash: '0x73d2c8d7164fd32313bc49407c85be488239dda257c390b3fb8c4b78ae7e5d90',
+    result: {
+      stack: [],
+      logHash: '0x3890e1cc9f39d08777e250e082c7642985cdfcc08ce34593dd6ee80870871d8a',
+      gasUsed: 375
+    }
+  },
+  {
+    code: OP.LOG1,
+    stack: [0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
+    logHash: '0x8a3fc8f56f0d1d1b858ce6753e8e950ab6cec2652736744c0603c3ff05c4716b',
+    result: {
+      stack: [],
+      logHash: '0x153e61e8bae37db12468fbfdbb040a394d0d131169c2c453db9d5ea93b4aba11',
+      gasUsed: 375 * 2
+    }
+  },
+  {
+    code: OP.LOG2,
+    stack: [0x123, 0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
+    logHash: '0xc2152d58ac22809607a34167a0289fd8f40f695364b49cc870f198fc6bdf9b09',
+    result: {
+      stack: [],
+      logHash: '0x14422ad14c72f4738362ca0e5c9c01c0311fd96247efa06b0cccc2939fe32278',
+      gasUsed: 375 * 3
+    }
+  },
+  {
+    code: OP.LOG3,
+    stack: [0x987, 0x123, 0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
+    logHash: '0xb7e7d2bc2c72f5ee94013d38b2cc7d125bae556227c46b4f7e12a657585e1b37',
+    result: {
+      stack: [],
+      logHash: '0x426e18c50d3adc9b7281858e6386bd5b27e60bb4310ee4ce69f00816f916dcb7',
+      gasUsed: 375 * 4
+    }
+  },
+  {
+    code: OP.LOG4,
+    stack: [0x294, 0x987, 0x123, 0x567, 4, 2],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
+    logHash: '0xcb56c22daa081416d6024fa5415236dfe4e5be1a903ee3fad83cd66a3bbb1dca',
+    result: {
+      stack: [],
+      logHash: '0x83d7464c358e068fb006f770433a511f79431ebc618ff4f528be7f250adb46b4',
       gasUsed: 375 * 5
     }
   },
