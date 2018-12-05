@@ -25,7 +25,7 @@ contract TestEVMMemory {
         Assert.equal(mem.cap, ALLOC_SIZE, "mem.cap");
 
         uint fMem = MemOps.freeMemPtr();
-        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE, fMem, "freeMemPtr");
+        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE + 64, fMem, "freeMemPtr");
 
         for(uint i = 0; i < ALLOC_SIZE; i++) {
             uint pos = mem.dataPtr + i*WORD_SIZE;
@@ -46,7 +46,7 @@ contract TestEVMMemory {
         Assert.equal(mem.cap, 128, "memory capacity");
 
         uint fMem = MemOps.freeMemPtr();
-        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE, fMem, "free memory pointer");
+        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE + 64, fMem, "free memory pointer");
 
         for(uint i = 0; i < 128; i++) {
             uint pos = mem.dataPtr + i*WORD_SIZE;
@@ -204,7 +204,7 @@ contract TestEVMMemory {
         Assert.equal(mem.size, 1513, "");
         Assert.equal(mem.cap, 2048, "");
         uint fMem = MemOps.freeMemPtr();
-        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE, fMem, "free memory pointer");
+        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE + 64, fMem, "free memory pointer");
     }
 
     function getRootHash() public view returns (uint) {
