@@ -52,7 +52,8 @@ contract Enforcer {
     require(msg.value == bondAmount);
     require(executions[_executionId].endHash != _endHash);
     bonds[msg.sender] += bondAmount;
-    verifier.initGame(_executionId, _endHash, executions[_executionId].solver, msg.sender);
+    // TODO pass correct computation hash
+    verifier.initGame(_executionId, _endHash, 1, _endHash, 1, executions[_executionId].solver, msg.sender);
   }
 
   // receive result from Verifier contract
