@@ -368,15 +368,12 @@ contract EthereumRuntime is EVMConstants {
         uint pcNext = 0;
         uint errno = NO_ERROR;
         bytes memory code = evm.code;
-        if (pcEnd == 0) {
-            pcEnd = code.length;
-        }
 
         if (evm.gas > evm.context.gasLimit) {
             errno = ERROR_OUT_OF_GAS;
         }
 
-        while (errno == NO_ERROR && pc < code.length && pc != pcEnd) {
+        while (errno == NO_ERROR && pc < code.length && (pcEnd == 0 || pc != pcEnd)) {
             uint opcode = uint(code[pc]);
             Instruction memory ins = evm.handlers.ins[opcode];
 
