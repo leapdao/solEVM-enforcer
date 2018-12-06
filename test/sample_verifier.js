@@ -30,12 +30,35 @@ contract('SampleVerifier', () => {
   it("should allow enforcer to initGame", async () => {
     // fake enforcer
     await verifier.setEnforcer(wallets[0].address);
+    let execId = ethers.utils.formatBytes32String("1");
     await verifier.initGame(
-      ethers.utils.formatBytes32String("1"),
+      execId,
       ethers.utils.formatBytes32String("execHashsolver"), 10,
       ethers.utils.formatBytes32String("execHashChallenger"), 10,
       wallets[0].address,
       wallets[1].address
     );
+    let dispute = await verifier.disputes(execId);
   })
-})
+
+  it("should have correct game flow", async () => {
+    let execId = ethers.utils.formatBytes32String("1");
+    before(async () => {
+      await verifier.setEnforcer(wallets[0].address);
+      await verifier.initGame(
+        execId,
+        ethers.utils.formatBytes32String("execHashSolver"), 10,
+        ethers.utils.formatBytes32String("execHashChallenger"), 10,
+        wallets[0].address,
+        wallets[1].address
+      );
+    });
+
+    it("should allow solver to submit initial proofs", async () => {
+      let sampleProof = ethers.utils.formatBytes32String("proof");
+      await verifier.solverProofs(execId, [sampleProof], [sampleProof]);
+      assert(await verifier.disputes(execId)[7], "SolverTurn");
+    });
+  });
+});
+
