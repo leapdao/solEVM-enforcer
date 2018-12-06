@@ -1,4 +1,4 @@
-# EVM Enforcer
+# EVM Enforcer [![Build Status](https://travis-ci.org/leapdao/solEVM-enforcer.svg?branch=master)](https://travis-ci.org/leapdao/solEVM-enforcer)
 
 ![EVM Enforcer](https://i.imgur.com/V9EGql2.png)
 
