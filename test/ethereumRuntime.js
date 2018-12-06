@@ -33,6 +33,28 @@ contract('Runtime', function () {
       assert.equal(r.pc, 8);
       assert.equal(parseInt(r.mem, 16), 8);
     });
+
+    it('should work with JUMPs', async () => {
+      //    codepointers: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A, B, C
+      // execution order: 0, 1, 2, 8, 9, A, B, 3, 4, 5, 6, 7, C
+      const code = [
+        OP.PUSH1, '08', OP.JUMP, // jump to 0x08
+        OP.JUMPDEST, OP.GASLIMIT, OP.PUSH1, '0C', OP.JUMP, // 0x03. Jump to 0x0c
+        OP.JUMPDEST, OP.PUSH1, '03', OP.JUMP, // 0x08. Jump to 0x03
+        OP.JUMPDEST, // 0x0c
+      ];
+      const data = '0x';
+
+      const executeTill = async (stopAt) =>
+        (await rt.executeAndStop(
+          `0x${code.join('')}`, data, [0, stopAt, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]
+        )).pc;
+      
+      assert.equal(await executeTill(2), 2);
+      assert.equal(await executeTill(3), 3);
+      assert.equal(await executeTill(5), 5);
+      assert.equal(await executeTill(12), 12);
+    });
   });
 
   describe('initAndExecute', () => {
