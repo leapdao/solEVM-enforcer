@@ -4,9 +4,11 @@ pragma experimental ABIEncoderV2;
 import "./IEnforcer.sol";
 import "./IVerifier.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "./MerkleProof.slb";
 
 
-library CompactExecution {
+// solhint-disable-next-line max-states-count
+contract SampleVerifier is Ownable, IVerifier {
     struct StateHash {
         bytes32 hash;
         uint256 step;
@@ -16,27 +18,24 @@ library CompactExecution {
         bytes32 merkleRoot;
         uint256 stepCount;
     }
-}
 
-
-contract SampleVerifier is Ownable, IVerifier {
+    struct Dispute {
+        address solver;
+        address challenger;
+        ComputationHash solverComputationHash;
+        ComputationHash challengerComputationHash;
+        StateHash left;
+        StateHash right;
+        uint256 timeout; // currently is block number
+        States state;
+        Results result;
+    }
 
     enum Results { SolverCorrect, ChallengerCorrect, Undecided }
     enum States { Initialised, SolverTurn, ChallengerTurn, FoundDiff, Ended }
 
     event DisputeInitialised(address solver, address challenger, bytes32 executionId, uint256 timeout);
 
-    struct Dispute {
-        address solver;
-        address challenger;
-        CompactExecution.ComputationHash solverComputationHash;
-        CompactExecution.ComputationHash challengerComputationHash;
-        CompactExecution.StateHash left;
-        CompactExecution.StateHash right;
-        uint256 timeout; // currently is block number
-        States state;
-        Results result;
-    }
 
     address public owner;
     uint256 public timeoutDuration;
@@ -80,10 +79,10 @@ contract SampleVerifier is Ownable, IVerifier {
         disputes[_executionId] = Dispute(
             _solver,
             _challenger,
-            CompactExecution.ComputationHash(_solverHashRoot, _solverStep),
-            CompactExecution.ComputationHash(_challengerHashRoot, _challengerStep),
-            CompactExecution.StateHash("", 0),
-            CompactExecution.StateHash("", 0),
+            ComputationHash(_solverHashRoot, _solverStep),
+            ComputationHash(_challengerHashRoot, _challengerStep),
+            StateHash("", 0),
+            StateHash("", 0),
             block.number + timeoutDuration,
             States.Initialised,
             Results.Undecided
@@ -130,13 +129,16 @@ contract SampleVerifier is Ownable, IVerifier {
     function solverProofs(
         bytes32 disputeId,
         bytes32[] startProofs,
-        bytes32[] endProofs
+        bytes32 startHash,
+        bytes32[] endProofs,
+        bytes32 endHash
     ) public onlySolver(disputeId) onlyInitialised(disputeId) onlyPlaying(disputeId) {
+
         Dispute storage dispute = disputes[disputeId];
-        // TODO check proofs
-        if (true) {
-            dispute.left = CompactExecution.StateHash(startProofs[0], 0);
-            dispute.right = CompactExecution.StateHash(endProofs[0], dispute.solverComputationHash.stepCount);
+        if (MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0) &&
+            MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.stepCount)) {
+            dispute.left = StateHash(startHash, 0);
+            dispute.right = StateHash(endHash, dispute.solverComputationHash.stepCount);
             dispute.state = States.SolverTurn;
         } else {
             // solver lost immediately
