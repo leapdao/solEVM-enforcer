@@ -3,6 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./IEnforcer.sol";
 import "./IVerifier.sol";
+import "./IEthereumRuntime.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./MerkleProof.slb";
 
@@ -41,6 +42,7 @@ contract SampleVerifier is Ownable, IVerifier {
     uint256 public timeoutDuration;
 
     IEnforcer public enforcer;
+    IEthereumRuntime public ethRuntime;
 
     mapping (bytes32 => Dispute) public disputes;
 
@@ -91,11 +93,23 @@ contract SampleVerifier is Ownable, IVerifier {
         emit DisputeInitialised(_solver, _challenger, _executionId, disputes[_executionId].timeout);
     }
 
+    function setRuntime(address _ethruntime) public onlyOwner() {
+        ethRuntime = IEthereumRuntime(_ethruntime);
+    }
+
     /**
       * @dev game not timeout yet
       */
     modifier onlyPlaying(bytes32 disputeId) {
         require(disputes[disputeId].timeout >= block.number, "game timed out");
+        _;
+    }
+
+    /**
+      * @dev only run when a game in Initialised state
+      */
+    modifier onlyInitialised(bytes32 disputeId) {
+        require(disputes[disputeId].state == States.Initialised, "game not initialised");
         _;
     }
 
@@ -148,4 +162,52 @@ contract SampleVerifier is Ownable, IVerifier {
         }
     }
 
+    /**
+      * @dev run once found the different step of a dispute
+      */
+    function detailExecution(
+        bytes32 disputeId,
+        bytes code,
+        bytes32[] codeProof,
+        uint256[] params,
+        bytes32[] stack,
+        bytes32 stackHash,
+        bytes32 mem,
+        uint256 memPos,
+        bytes32[] memProof,
+        bytes32 logHash
+    ) public onlyFoundDiff(disputeId) onlyPlaying(disputeId) {
+        Dispute storage dispute = disputes[disputeId];
+
+        require(dispute.left.step == dispute.right.step - 1, "must find a specific step");
+
+        // calculate code root from code and codeProof, code pos is pcStart
+        code;
+        codeProof;
+        // calculate stack hash from stack and stackHash
+        stack;
+        stackHash;
+        // calculate mem hash root from mem and proof
+        mem;
+        memPos;
+        memProof;
+        // CompactMemory
+        // verify left state
+        params[1] = 1; // run 1 step, should not take this value into hash function
+        // since we may not be able to verify blockhash, should we skip that?
+        // TODO data
+        // TODO account
+        logHash;
+
+        IEthereumRuntime.Result result = ethRuntime.execute(code, "", params, stack, mem, [], "", logHash);
+
+        // Hash result to check with right
+        if (true) {
+            dispute.result = Results.SolverCorrect;
+        } else {
+            dispute.result = Results.ChallengerCorrect;
+        }
+        dispute.state = States.Ended;
+        enforcer.result(disputeId, true, dispute.challenger);
+    }
 }
