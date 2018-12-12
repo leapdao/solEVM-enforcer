@@ -9,6 +9,7 @@ import { EVMMemory } from "./EVMMemory.slb";
 import { EVMStack } from "./EVMStack.slb";
 import { EVMLogs } from "./EVMLogs.slb";
 import { EVMUtils } from "./EVMUtils.slb";
+import { IEthereumRuntime } from "./IEthereumRuntime.sol";
 
 
 contract EthereumRuntime is EVMConstants, IEthereumRuntime {

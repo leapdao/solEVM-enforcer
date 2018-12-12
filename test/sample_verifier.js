@@ -69,6 +69,10 @@ contract('SampleVerifier', () => {
   });
 
   it("should end dispute when solver submit incorrect initial proofs", async () => {
+    await veriifer.setEnforcer(wallets[0].address);
+  });
+
+  it("should allow anyone to trigger timeout of a dispute correctly", async () => {
 
   });
 });

@@ -1,0 +1,50 @@
+pragma experimental ABIEncoderV2;
+pragma solidity 0.4.24;
+
+import {EVMStack} from "./EVMStack.slb";
+
+
+library Hash {
+    bytes32 constant public EMPTY_HASH = "0";
+
+    /**
+      This function will return hash of a stack
+        The function comes with a sibling param, which corresponds to hash of the rest of the stack
+            or 0 if the whole stack is supplied
+      */
+    function toHash(EVMStack.Stack memory self, bytes32 sibling) internal pure returns (bytes32) {
+        if (self.size == 0) {
+            return 0;
+        }
+
+        bytes32 hash = sibling;
+        uint slot = self.dataPtr;
+        bytes32 el;
+        for (uint i = 0; i < self.size; i++) {
+            assembly {
+                el := mload(slot)
+            }
+            slot = slot + 32;
+            hash = keccak256(abi.encodePacked(hash, el));
+        }
+
+        return hash;
+    }
+
+    /**
+      This function will return the hash of an array
+          The function also comes with a sibling param similar to the version for Stack
+      */
+    function toHash(uint256[] memory self, bytes32 sibling) internal pure returns (bytes32) {
+        if (self.length == 0) {
+            return 0;
+        }
+
+        bytes32 hash = sibling;
+        for (uint i = 0; i < self.length; i++) {
+            hash = keccak256(abi.encodePacked(hash, self[i]));
+        }
+
+        return hash;
+    }
+}

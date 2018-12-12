@@ -6,6 +6,7 @@ import "./IVerifier.sol";
 import "./IEthereumRuntime.sol";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./MerkleProof.slb";
+import "./Hash.slb";
 
 
 // solhint-disable-next-line max-states-count
@@ -46,6 +47,8 @@ contract SampleVerifier is Ownable, IVerifier {
 
     mapping (bytes32 => Dispute) public disputes;
 
+    using Hash for uint256[];
+
     constructor(uint256 _timeout) public {
         owner = msg.sender;
         timeoutDuration = _timeout;
@@ -85,7 +88,7 @@ contract SampleVerifier is Ownable, IVerifier {
             ComputationHash(_challengerHashRoot, _challengerStep),
             StateHash("", 0),
             StateHash("", 0),
-            block.number + timeoutDuration,
+            getTimeout(),
             States.Initialised,
             Results.Undecided
         );
@@ -116,8 +119,8 @@ contract SampleVerifier is Ownable, IVerifier {
     /**
       * @dev only run when a game in Initialised state
       */
-    modifier onlyInitialised(bytes32 disputeId) {
-        require(disputes[disputeId].state == States.Initialised, "game not initialised");
+    modifier onlyFoundDiff(bytes32 disputeId) {
+        require(disputes[disputeId].state == States.FoundDiff, "game not found diff");
         _;
     }
 
@@ -154,6 +157,7 @@ contract SampleVerifier is Ownable, IVerifier {
             dispute.left = StateHash(startHash, 0);
             dispute.right = StateHash(endHash, dispute.solverComputationHash.stepCount);
             dispute.state = States.SolverTurn;
+            dispute.timeout = getTimeout();
         } else {
             // solver lost immediately
             dispute.state = States.Ended;
@@ -163,18 +167,27 @@ contract SampleVerifier is Ownable, IVerifier {
     }
 
     /**
+      * @dev this function only for test
+      */
+    function setState(bytes32 disputeId, States _state) public onlyOwner() {
+        disputes[disputeId].state = _state;
+    }
+
+    /**
       * @dev run once found the different step of a dispute
       */
     function detailExecution(
         bytes32 disputeId,
         bytes code,
-        bytes32[] codeProof,
-        uint256[] params,
-        bytes32[] stack,
-        bytes32 stackHash,
-        bytes32 mem,
-        uint256 memPos,
-        bytes32[] memProof,
+        // bytes32[] codeProof,
+        bytes data,
+        uint256[4] params,
+        uint256[] stack,
+        bytes mem,
+        // uint256 memPos,
+        // bytes32[] memProof,
+        uint256[] accounts,
+        bytes accountsCode,
         bytes32 logHash
     ) public onlyFoundDiff(disputeId) onlyPlaying(disputeId) {
         Dispute storage dispute = disputes[disputeId];
@@ -182,24 +195,15 @@ contract SampleVerifier is Ownable, IVerifier {
         require(dispute.left.step == dispute.right.step - 1, "must find a specific step");
 
         // calculate code root from code and codeProof, code pos is pcStart
-        code;
-        codeProof;
+        // code is actually more complicated to workwith
+        // we may need 1 byte + 32 bytes of code to run 1 opcode
         // calculate stack hash from stack and stackHash
-        stack;
-        stackHash;
         // calculate mem hash root from mem and proof
-        mem;
-        memPos;
-        memProof;
         // CompactMemory
         // verify left state
         params[1] = 1; // run 1 step, should not take this value into hash function
-        // since we may not be able to verify blockhash, should we skip that?
-        // TODO data
-        // TODO account
-        logHash;
 
-        IEthereumRuntime.Result result = ethRuntime.execute(code, "", params, stack, mem, [], "", logHash);
+        IEthereumRuntime.Result memory result = ethRuntime.execute(code, data, params, stack, mem, accounts, accountsCode, logHash);
 
         // Hash result to check with right
         if (true) {
@@ -209,5 +213,38 @@ contract SampleVerifier is Ownable, IVerifier {
         }
         dispute.state = States.Ended;
         enforcer.result(disputeId, true, dispute.challenger);
+    }
+
+    /**
+      * @dev can be called by anyone after the dispute is over
+      *   Solver are considered lost if the dispute is timed out in any of:
+      *     Initialised SolverTurn FoundDiff
+      *   Challenger is considered lost if the dispute is timed out in
+      *     ChallengerTurn
+      */
+    function claimTimeout(bytes32 disputeId) public {
+        Dispute storage dispute = disputes[disputeId];
+
+        require(dispute.state != States.Ended, "already notifier enforcer");
+        require(dispute.timeout <= block.number, "not timed out yet");
+
+        bool res;
+        if (dispute.state == States.ChallengerTurn) {
+            // consider solver correct
+            dispute.result = Results.SolverCorrect;
+            res = true;
+        } else { // Initialised SolverTurn FoundDiff
+            dispute.result = Results.ChallengerCorrect;
+            res = false;
+        }
+        dispute.state = States.Ended;
+        enforcer.result(disputeId, res, dispute.challenger);
+    }
+
+    /**
+      * @dev refresh timeout of dispute
+      */
+    function getTimeout() internal view returns (uint) {
+        block.number + timeoutDuration;
     }
 }
