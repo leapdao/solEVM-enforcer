@@ -1,8 +1,10 @@
+import assertRevert from './helpers/assertRevert.js';
 import chai from 'chai';
 import { deployContract, wallets } from './utils.js';
 import { ethers } from 'ethers';
 
-const Verifier = artifacts.require("./SampleVerifier.sol");
+const Verifier = artifacts.require("./SampleVerifierMock");
+// const Verifier = artifacts.require("./SampleVerifier");
 const Enforcer = artifacts.require("./Enforcer");
 
 const should = chai
@@ -12,10 +14,10 @@ const should = chai
 let verifier;
 let enforcer;
 
-contract('SampleVerifier', () => {
+contract('SampleVerifierMock', () => {
   before(async () => {
     verifier = await deployContract(Verifier, 100);
-    enforcer = await deployContract(Enforcer, verifier.address, 0, 100);
+    enforcer = await deployContract(Enforcer, verifier.address, 100, 100);
     await verifier.setEnforcer(enforcer.address);
   });
 
@@ -46,8 +48,6 @@ contract('SampleVerifier', () => {
   })
 
   it("should have correct game flow", async () => {
-    // fake enforcer
-    await verifier.setEnforcer(wallets[0].address);
     let execId = ethers.utils.formatBytes32String("2");
     let sampleState = ethers.utils.formatBytes32String("state");
     let sampleProof = ethers.utils.solidityKeccak256(
@@ -69,11 +69,59 @@ contract('SampleVerifier', () => {
   });
 
   it("should end dispute when solver submit incorrect initial proofs", async () => {
-    await veriifer.setEnforcer(wallets[0].address);
+  });
+
+  it("should allow modification of timeout in mock", async () => {
+    let execId = ethers.utils.formatBytes32String("4");
+    let sampleState = ethers.utils.formatBytes32String("state");
+    let sampleProof = ethers.utils.solidityKeccak256(
+      ['bytes32', 'bytes32'],
+      [sampleState, sampleState]
+    );
+
+    await verifier.initGame(
+      execId,
+      sampleProof, 2,
+      sampleState, 2,
+      wallets[0].address,
+      wallets[1].address
+    );
+
+    await verifier.setTimeout(
+      execId,
+      1 // already timed out
+    );
+    let dispute = await verifier.disputes(execId);
+    assert(dispute[6], 1, "timeout not set");
   });
 
   it("should allow anyone to trigger timeout of a dispute correctly", async () => {
+    let execId = ethers.utils.formatBytes32String("5");
+    let sampleState = ethers.utils.formatBytes32String("state");
+    let sampleProof = ethers.utils.solidityKeccak256(
+      ['bytes32', 'bytes32'],
+      [sampleState, sampleState]
+    );
 
+    await verifier.initGame(
+      execId,
+      sampleProof, 2,
+      sampleState, 2,
+      wallets[0].address,
+      wallets[1].address
+    );
+
+    assertRevert(verifier.claimTimeout(execId));
+
+    await verifier.setTimeout(
+      execId,
+      1 // already timed out
+    );
+
+    await verifier.claimTimeout(execId);
+    let dispute = await verifier.disputes(execId);
+    assert(dispute[7], 4, "state not Ended");
+    assert(dispute[8], 1, "result not ChallengerCorrect");
   });
 });
 

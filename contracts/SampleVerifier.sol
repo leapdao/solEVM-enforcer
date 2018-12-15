@@ -167,13 +167,6 @@ contract SampleVerifier is Ownable, IVerifier {
     }
 
     /**
-      * @dev this function only for test
-      */
-    function setState(bytes32 disputeId, States _state) public onlyOwner() {
-        disputes[disputeId].state = _state;
-    }
-
-    /**
       * @dev run once found the different step of a dispute
       */
     function detailExecution(
@@ -203,7 +196,7 @@ contract SampleVerifier is Ownable, IVerifier {
         // verify left state
         params[1] = 1; // run 1 step, should not take this value into hash function
 
-        IEthereumRuntime.Result memory result = ethRuntime.execute(code, data, params, stack, mem, accounts, accountsCode, logHash);
+        // IEthereumRuntime.Result memory result = ethRuntime.execute(code, data, params, stack, mem, accounts, accountsCode, logHash);
 
         // Hash result to check with right
         if (true) {
@@ -225,8 +218,9 @@ contract SampleVerifier is Ownable, IVerifier {
     function claimTimeout(bytes32 disputeId) public {
         Dispute storage dispute = disputes[disputeId];
 
+        require(dispute.timeout > 0, "dispute not exit");
         require(dispute.state != States.Ended, "already notifier enforcer");
-        require(dispute.timeout <= block.number, "not timed out yet");
+        require(dispute.timeout < block.number, "not timed out yet");
 
         bool res;
         if (dispute.state == States.ChallengerTurn) {
@@ -238,13 +232,13 @@ contract SampleVerifier is Ownable, IVerifier {
             res = false;
         }
         dispute.state = States.Ended;
-        enforcer.result(disputeId, res, dispute.challenger);
+        // enforcer.result(disputeId, res, dispute.challenger);
     }
 
     /**
       * @dev refresh timeout of dispute
       */
-    function getTimeout() internal view returns (uint) {
-        block.number + timeoutDuration;
+    function getTimeout() internal view returns (uint256) {
+        return block.number + timeoutDuration;
     }
 }
