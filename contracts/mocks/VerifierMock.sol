@@ -37,7 +37,7 @@ contract VerifierMock is Ownable, IVerifier {
     _;
   }
 
-  function initGame(bytes32 _executionId, bytes32 _endHash, address _solver, address _challenger) onlyEnforcer() public {
+  function initGame(bytes32 _executionId, bytes32 _endHash, uint256 _solverStep, bytes32 _challengerEndHash, uint256 _challengerStep, address _solver, address _challenger) onlyEnforcer() public {
     bytes32 disputeId = keccak256(abi.encodePacked(_executionId, _solver, _challenger));
     require(disputes[disputeId].lastQueryBlock == 0);
     emit DisputeStart(disputeId);
