@@ -196,10 +196,10 @@ contract SampleVerifier is Ownable, IVerifier {
         // verify left state
         params[1] = 1; // run 1 step, should not take this value into hash function
 
-        // IEthereumRuntime.Result memory result = ethRuntime.execute(code, data, params, stack, mem, accounts, accountsCode, logHash);
+        bytes32 resultHash = ethRuntime.executeHash(code, data, params, stack, mem, accounts, accountsCode, logHash);
 
         // Hash result to check with right
-        if (true) {
+        if (resultHash == dispute.right.hash) {
             dispute.result = Results.SolverCorrect;
         } else {
             dispute.result = Results.ChallengerCorrect;
