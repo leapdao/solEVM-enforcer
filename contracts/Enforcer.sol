@@ -14,6 +14,7 @@ contract Enforcer {
     struct Execution {
         uint256 startBlock;
         bytes32 endHash;
+        uint256 step;
         address solver;
     }
 
@@ -37,25 +38,27 @@ contract Enforcer {
         bondAmount = _bondAmount;
     }
 
-    // register a new execution 
-    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash) public payable returns(bytes32 executionId) {
+    // register a new execution
+    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _step)
+        public payable returns(bytes32 executionId)
+    {
         require(msg.value == bondAmount);
         executionId = keccak256(abi.encodePacked(_code, _callData));
         require(executions[executionId].startBlock == 0);
-        executions[executionId] = Execution(block.number, _endHash, msg.sender);
+        executions[executionId] = Execution(block.number, _endHash, _step, msg.sender);
         bonds[msg.sender] += bondAmount;
         emit Registered(executionId, msg.sender, _code, _callData);
     }
 
     // starts a new dispute
-    function dispute(bytes32 _executionId, bytes32 _endHash) public payable {
-        require(executions[_executionId].startBlock != 0);
-        require(executions[_executionId].startBlock + challengePeriod > block.number);
+    function dispute(bytes32 _executionId, bytes32 _endHash, uint256 _step) public payable {
+        Execution storage execution = executions[_executionId];
+        require(execution.startBlock != 0);
+        require(execution.startBlock + challengePeriod > block.number);
         require(msg.value == bondAmount);
-        require(executions[_executionId].endHash != _endHash);
+        require(execution.endHash != _endHash || execution.step != _step);
         bonds[msg.sender] += bondAmount;
-        // TODO pass correct computation step
-        verifier.initGame(_executionId, executions[_executionId].endHash, 1, _endHash, 1, msg.sender);
+        verifier.initGame(_executionId, execution.endHash, execution.step, _endHash, _step, msg.sender);
     }
 
     // receive result from Verifier contract
