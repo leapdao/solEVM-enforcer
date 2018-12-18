@@ -22,6 +22,7 @@ contract SampleVerifier is Ownable, IVerifier {
     }
 
     struct Dispute {
+        bytes32 executionId;
         address solver;
         address challenger;
         ComputationHash solverComputationHash;
@@ -36,7 +37,7 @@ contract SampleVerifier is Ownable, IVerifier {
     enum Results { SolverCorrect, ChallengerCorrect, Undecided }
     enum States { Initialised, SolverTurn, ChallengerTurn, FoundDiff, Ended }
 
-    event DisputeInitialised(address solver, address challenger, bytes32 executionId, uint256 timeout);
+    event DisputeInitialised(bytes32 indexed disputeId, address solver, address challenger, bytes32 indexed executionId, uint256 timeout);
 
 
     address public owner;
@@ -78,10 +79,12 @@ contract SampleVerifier is Ownable, IVerifier {
         address _solver,
         address _challenger
     ) public onlyEnforcer() {
-        require(disputes[_executionId].timeout == 0, "already init");
+        bytes32 disputeId = keccak256(abi.encodePacked(_executionId, _solver, _challenger));
+        require(disputes[disputeId].timeout == 0, "already init");
         require(_solverHashRoot != _challengerHashRoot, "nothing to challenge");
 
-        disputes[_executionId] = Dispute(
+        disputes[disputeId] = Dispute(
+            _executionId,
             _solver,
             _challenger,
             ComputationHash(_solverHashRoot, _solverStep),
@@ -93,7 +96,7 @@ contract SampleVerifier is Ownable, IVerifier {
             Results.Undecided
         );
 
-        emit DisputeInitialised(_solver, _challenger, _executionId, disputes[_executionId].timeout);
+        emit DisputeInitialised(disputeId, _solver, _challenger, _executionId, disputes[disputeId].timeout);
     }
 
     function setRuntime(address _ethruntime) public onlyOwner() {
