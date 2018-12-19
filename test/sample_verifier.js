@@ -14,6 +14,19 @@ const should = chai
 let verifier;
 let enforcer;
 
+let sampleState = ethers.utils.formatBytes32String("state");
+let sampleState2 = ethers.utils.formatBytes32String("state2");
+let sampleProof = ethers.utils.solidityKeccak256(
+  ['bytes32', 'bytes32'],
+  [sampleState, sampleState]
+);
+
+let sampleProof2 = ethers.utils.solidityKeccak256(
+  ['bytes32', 'bytes32'],
+  [sampleState2, sampleState2]
+);
+
+
 contract('SampleVerifierMock', () => {
   /*
    * Dispute:
@@ -44,6 +57,10 @@ contract('SampleVerifierMock', () => {
     return (await tx.wait()).events[0].topics[1];
   }
 
+  let generateExecId = () => {
+    return ethers.utils.formatBytes32String(Date.now().toString());
+  }
+
   before(async () => {
     verifier = await deployContract(Verifier, 100);
     enforcer = await deployContract(Enforcer, verifier.address, 100, 100);
@@ -61,7 +78,7 @@ contract('SampleVerifierMock', () => {
   it("should allow enforcer to initGame", async () => {
     // fake enforcer
     await verifier.setEnforcer(wallets[0].address);
-    let execId = ethers.utils.formatBytes32String("1");
+    let execId = generateExecId();
     let tx = await verifier.initGame(
       execId,
       ethers.utils.formatBytes32String("execHashsolver"), 10,
@@ -70,7 +87,6 @@ contract('SampleVerifierMock', () => {
       wallets[1].address
     );
     const disputeId = await getDisputeIdFromEvent(tx);
-    console.log('DisputeId', disputeId);
     let dispute = await parseDispute(disputeId);
     assert.equal(dispute.solver, wallets[0].address, "solver address incorrect");
     assert.equal(dispute.challenger, wallets[1].address, "challenger address incorrect");
@@ -79,17 +95,11 @@ contract('SampleVerifierMock', () => {
   });
 
   it("should have correct game flow", async () => {
-    let execId = ethers.utils.formatBytes32String("2");
-    let sampleState = ethers.utils.formatBytes32String("state");
-    let sampleProof = ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32'],
-      [sampleState, sampleState]
-    );
-
+    let execId = generateExecId();
     let tx = await verifier.initGame(
       execId,
       sampleProof, 2,
-      sampleState, 2,
+      sampleProof2, 2,
       wallets[0].address,
       wallets[1].address
     );
@@ -101,20 +111,22 @@ contract('SampleVerifierMock', () => {
   });
 
   it("should end dispute when solver submit incorrect initial proofs", async () => {
-  });
-
-  it("should allow modification of timeout in mock", async () => {
-    let execId = ethers.utils.formatBytes32String("4");
-    let sampleState = ethers.utils.formatBytes32String("state");
-    let sampleProof = ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32'],
-      [sampleState, sampleState]
-    );
-
+    let execId = generateExecId();
     let tx = await verifier.initGame(
       execId,
       sampleProof, 2,
-      sampleState, 2,
+      sampleProof2, 2,
+      wallets[0].address,
+      wallets[1].address
+    )
+  });
+
+  it("should allow modification of timeout in mock", async () => {
+    let execId = generateExecId();
+    let tx = await verifier.initGame(
+      execId,
+      sampleProof, 2,
+      sampleProof2, 2,
       wallets[0].address,
       wallets[1].address
     );
@@ -128,17 +140,11 @@ contract('SampleVerifierMock', () => {
   });
 
   it("should allow anyone to trigger timeout of a dispute correctly", async () => {
-    let execId = ethers.utils.formatBytes32String("5");
-    let sampleState = ethers.utils.formatBytes32String("state");
-    let sampleProof = ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32'],
-      [sampleState, sampleState]
-    );
-
+    let execId = generateExecId();
     let tx = await verifier.initGame(
       execId,
       sampleProof, 2,
-      sampleState, 2,
+      sampleProof2, 2,
       wallets[0].address,
       wallets[1].address
     );
