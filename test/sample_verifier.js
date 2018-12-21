@@ -1,6 +1,6 @@
 import assertRevert from './helpers/assertRevert.js';
 import chai from 'chai';
-import { deployContract, wallets } from './utils.js';
+import { deployContract, wallets, txOverrides } from './utils.js';
 import { ethers } from 'ethers';
 
 const Verifier = artifacts.require("./SampleVerifierMock");
@@ -78,15 +78,14 @@ contract('SampleVerifierMock', () => {
   it("should allow enforcer to initGame", async () => {
     // fake enforcer
     await verifier.setEnforcer(wallets[0].address);
-    let execId = generateExecId();
     let tx = await verifier.initGame(
-      execId,
+      generateExecId(),
       ethers.utils.formatBytes32String("execHashsolver"), 10,
       ethers.utils.formatBytes32String("execHashChallenger"), 10,
       wallets[0].address,
       wallets[1].address
     );
-    const disputeId = await getDisputeIdFromEvent(tx);
+    let disputeId = await getDisputeIdFromEvent(tx);
     let dispute = await parseDispute(disputeId);
     assert.equal(dispute.solver, wallets[0].address, "solver address incorrect");
     assert.equal(dispute.challenger, wallets[1].address, "challenger address incorrect");
@@ -95,9 +94,8 @@ contract('SampleVerifierMock', () => {
   });
 
   it("should have correct game flow", async () => {
-    let execId = generateExecId();
     let tx = await verifier.initGame(
-      execId,
+      generateExecId(),
       sampleProof, 2,
       sampleProof2, 2,
       wallets[0].address,
@@ -107,30 +105,35 @@ contract('SampleVerifierMock', () => {
     let dispute = await parseDispute(disputeId);
     await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState], sampleState);
     dispute = await parseDispute(disputeId);
-    assert.equal(await dispute.state, 1, "state not SolverTurn");
+    assert.equal(dispute.state, 1, "state not SolverTurn");
   });
 
   it("should end dispute when solver submit incorrect initial proofs", async () => {
-    let execId = generateExecId();
+    // TODO use enforcer
     let tx = await verifier.initGame(
-      execId,
-      sampleProof, 2,
-      sampleProof2, 2,
-      wallets[0].address,
-      wallets[1].address
-    )
-  });
-
-  it("should allow modification of timeout in mock", async () => {
-    let execId = generateExecId();
-    let tx = await verifier.initGame(
-      execId,
+      generateExecId(),
       sampleProof, 2,
       sampleProof2, 2,
       wallets[0].address,
       wallets[1].address
     );
-    const disputeId = await getDisputeIdFromEvent(tx);
+    let disputeId = await getDisputeIdFromEvent(tx);
+
+    await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2);
+    let dispute = await parseDispute(disputeId);
+    assert.equal(dispute.state, 4, "state not ended");
+    assert.equal(dispute.result, 1, "result not challenger correct");
+  });
+
+  it("should allow modification of timeout in mock", async () => {
+    let tx = await verifier.initGame(
+      generateExecId(),
+      sampleProof, 2,
+      sampleProof2, 2,
+      wallets[0].address,
+      wallets[1].address
+    );
+    let disputeId = await getDisputeIdFromEvent(tx);
     await verifier.setTimeout(
       disputeId,
       1 // already timed out
@@ -140,15 +143,14 @@ contract('SampleVerifierMock', () => {
   });
 
   it("should allow anyone to trigger timeout of a dispute correctly", async () => {
-    let execId = generateExecId();
     let tx = await verifier.initGame(
-      execId,
+      generateExecId(),
       sampleProof, 2,
       sampleProof2, 2,
       wallets[0].address,
       wallets[1].address
     );
-    const disputeId = await getDisputeIdFromEvent(tx);
+    let disputeId = await getDisputeIdFromEvent(tx);
 
     assertRevert(verifier.claimTimeout(disputeId));
 
