@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 
 const Verifier = artifacts.require("./SampleVerifierMock");
 // const Verifier = artifacts.require("./SampleVerifier");
-const Enforcer = artifacts.require("./Enforcer");
+const Enforcer = artifacts.require("./EnforcerMock");
 
 const should = chai
   .use(require('chai-as-promised'))
@@ -63,7 +63,7 @@ contract('SampleVerifierMock', () => {
 
   before(async () => {
     verifier = await deployContract(Verifier, 100);
-    enforcer = await deployContract(Enforcer, verifier.address, 100, 100);
+    enforcer = await deployContract(Enforcer);
     await verifier.setEnforcer(enforcer.address);
   });
 
@@ -108,21 +108,42 @@ contract('SampleVerifierMock', () => {
     assert.equal(dispute.state, 1, "state not SolverTurn");
   });
 
-  it("should end dispute when solver submit incorrect initial proofs", async () => {
-    // TODO use enforcer
-    let tx = await verifier.initGame(
-      generateExecId(),
-      sampleProof, 2,
-      sampleProof2, 2,
-      wallets[0].address,
-      wallets[1].address
-    );
-    let disputeId = await getDisputeIdFromEvent(tx);
+  describe("When solver submit initial proofs", async () => {
+    it("should end with incorrect initial proofs", async () => {
+      let tx = await verifier.initGame(
+        generateExecId(),
+        sampleProof, 2,
+        sampleProof2, 2,
+        wallets[0].address,
+        wallets[1].address
+      );
+      let disputeId = await getDisputeIdFromEvent(tx);
+      // change enforcer to EnforcerMock address
+      await verifier.setEnforcer(enforcer.address);
+      await verifier.solverProofs(disputeId, [sampleState2], sampleState2, [sampleState], sampleState);
+      await verifier.setEnforcer(wallets[0].address);
+      let dispute = await parseDispute(disputeId);
+      assert.equal(dispute.state, 4, "state not ended");
+      assert.equal(dispute.result, 1, "result not challenger correct");
+    });
 
-    await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2);
-    let dispute = await parseDispute(disputeId);
-    assert.equal(dispute.state, 4, "state not ended");
-    assert.equal(dispute.result, 1, "result not challenger correct");
+    it("should end with incorrect end proofs", async () => {
+      let tx = await verifier.initGame(
+        generateExecId(),
+        sampleProof, 2,
+        sampleProof2, 2,
+        wallets[0].address,
+        wallets[1].address
+      );
+      let disputeId = await getDisputeIdFromEvent(tx);
+      // change enforcer to EnforcerMock address
+      await verifier.setEnforcer(enforcer.address);
+      await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2);
+      await verifier.setEnforcer(wallets[0].address);
+      let dispute = await parseDispute(disputeId);
+      assert.equal(dispute.state, 4, "state not ended");
+      assert.equal(dispute.result, 1, "result not challenger correct");
+    });
   });
 
   it("should allow modification of timeout in mock", async () => {

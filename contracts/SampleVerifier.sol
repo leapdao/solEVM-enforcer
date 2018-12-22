@@ -156,16 +156,16 @@ contract SampleVerifier is Ownable, IVerifier {
 
         Dispute storage dispute = disputes[disputeId];
         if (MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0) &&
-            MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.stepCount)) {
+            MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.stepCount - 1)) {
             dispute.left = StateHash(startHash, 0);
-            dispute.right = StateHash(endHash, dispute.solverComputationHash.stepCount);
+            dispute.right = StateHash(endHash, dispute.solverComputationHash.stepCount - 1);
             dispute.state = States.SolverTurn;
             dispute.timeout = getTimeout();
         } else {
             // solver lost immediately
             dispute.state = States.Ended;
             dispute.result = Results.ChallengerCorrect;
-            enforcer.result(disputeId, false, dispute.challenger);
+            enforcer.result(dispute.executionId, false, dispute.challenger);
         }
     }
 
