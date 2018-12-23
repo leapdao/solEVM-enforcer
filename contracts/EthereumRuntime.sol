@@ -499,25 +499,25 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
     
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_MODEXP(EVM memory) internal pure returns (bytes memory ret, uint errno) {
+    function handlePreC_MODEXP(EVM memory) internal pure returns (bytes memory, uint errno) {
         // TODO
         errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECADD(EVM memory) internal pure returns (bytes memory ret, uint errno) {
+    function handlePreC_ECADD(EVM memory) internal pure returns (bytes memory, uint errno) {
         // TODO
         errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECMUL(EVM memory) internal pure returns (bytes memory ret, uint errno) {
+    function handlePreC_ECMUL(EVM memory) internal pure returns (bytes memory, uint errno) {
         // TODO
         errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECPAIRING(EVM memory) internal pure returns (bytes memory ret, uint errno) {
+    function handlePreC_ECPAIRING(EVM memory) internal pure returns (bytes memory, uint errno) {
         // TODO
         errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
