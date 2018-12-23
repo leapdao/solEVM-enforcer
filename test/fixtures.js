@@ -281,7 +281,7 @@ export default [
       accounts: [
         {
           address: DEFAULT_CONTRACT_ADDRESS,
-          storage: [{ address: 0, value: 0 }],
+          storage: [],
         },
       ],
       pc: 2,
@@ -696,7 +696,7 @@ export default [
       accounts: [
         {
           address: DEFAULT_CONTRACT_ADDRESS,
-          storage: [{ address: 0, value: 0 }],
+          storage: [],
         },
       ],
       pc: 3,
