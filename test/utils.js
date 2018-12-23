@@ -63,21 +63,20 @@ export const encodeAccounts = (accounts) => {
 };
 
 export const decodeAccounts = (accsArr, accsCode = '') => {
-  if (accsCode && accsCode.length >= 2) {
-    accsCode = accsCode.substr(2);
-  }
+  accsCode = accsCode.replace('0x', '');
+
   const accounts = [];
   let offset = 0;
 
   while (offset < accsArr.length) {
-    let addr = toBN(accsArr[offset]).toHexString();
-    const balance = toBN(accsArr[offset + 1]);
-    const nonce = toBN(accsArr[offset + 2]).toNumber();
-    const destroyed = toBN(accsArr[offset + 3]).toNumber() === 1;
-    const codeIdx = toBN(accsArr[offset + 4]).toNumber();
-    const codeSize = toBN(accsArr[offset + 5]).toNumber();
+    let addr = accsArr[offset].toHexString();
+    const balance = accsArr[offset + 1].toHexString();
+    const nonce = accsArr[offset + 2].toNumber();
+    const destroyed = accsArr[offset + 3].toNumber() === 1;
+    const codeIdx = accsArr[offset + 4].toNumber();
+    const codeSize = accsArr[offset + 5].toNumber();
     const code = accsCode.substr(2 * codeIdx, 2 * codeSize);
-    const storageSize = toBN(accsArr[offset + 6]).toNumber();
+    const storageSize = accsArr[offset + 6].toNumber();
     const storage = [];
     for (let j = 0; j < storageSize; j++) {
       const address = accsArr[offset + 7 + 2 * j].toNumber();

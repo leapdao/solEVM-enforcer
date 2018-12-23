@@ -177,4 +177,4 @@ export const REVERT = 'fd';
 export const INVALID = 'fe';
 export const SELFDESTRUCT = 'ff';
 
-export const BLOCK_GAS_LIMIT = '0xfffffffffffff';
+export const BLOCK_GAS_LIMIT = '0x0fffffffffffff';
