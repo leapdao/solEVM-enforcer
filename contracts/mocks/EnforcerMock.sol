@@ -1,5 +1,5 @@
 pragma solidity ^0.4.24;
-import "./IEnforcer.sol";
+import "../IEnforcer.sol";
 
 
 // Dummy contract to test verifier
