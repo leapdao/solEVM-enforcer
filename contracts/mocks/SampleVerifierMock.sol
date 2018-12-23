@@ -5,6 +5,7 @@ import { SampleVerifier } from "../SampleVerifier.sol";
 
 contract SampleVerifierMock is SampleVerifier {
 
+    // solhint-disable-next-line no-empty-blocks
     constructor(uint256 _timeout) public SampleVerifier(_timeout) {}
 
     /**

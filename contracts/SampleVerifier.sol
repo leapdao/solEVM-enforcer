@@ -235,7 +235,7 @@ contract SampleVerifier is Ownable, IVerifier {
             res = false;
         }
         dispute.state = States.Ended;
-        // enforcer.result(disputeId, res, dispute.challenger);
+        enforcer.result(disputeId, res, dispute.challenger);
     }
 
     /**
