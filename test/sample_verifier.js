@@ -130,7 +130,7 @@ contract('SampleVerifierMock', () => {
       await verifier.solverProofs(disputeId, [sampleState2], sampleState2, [sampleState], sampleState);
       await verifier.setEnforcer(wallets[0].address);
       let dispute = await parseDispute(disputeId);
-      assert.equal(dispute.state, 4, 'state not ended');
+      assert.equal(dispute.state, DisputeState.Ended, 'state not ended');
       assert.equal(dispute.result, 1, 'result not challenger correct');
     });
 
@@ -148,7 +148,7 @@ contract('SampleVerifierMock', () => {
       await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2);
       await verifier.setEnforcer(wallets[0].address);
       let dispute = await parseDispute(disputeId);
-      assert.equal(dispute.state, 4, 'state not ended');
+      assert.equal(dispute.state, DisputeState.Ended, 'state not ended');
       assert.equal(dispute.result, 1, 'result not challenger correct');
     });
   });
@@ -167,7 +167,7 @@ contract('SampleVerifierMock', () => {
       1 // already timed out
     );
     let dispute = await parseDispute(disputeId);
-    assert(dispute.timeout, 1, 'timeout not set');
+    assert.equal(dispute.timeout, 1, 'timeout not set');
   });
 
   describe('when timed out', async () => {
@@ -199,9 +199,35 @@ contract('SampleVerifierMock', () => {
         await verifier.claimTimeout(disputeId);
         await verifier.setEnforcer(wallets[0].address);
         let dispute = await parseDispute(disputeId);
-        assert(dispute.state, 4, 'state not Ended');
-        assert(dispute.result, 1, 'result not ChallengerCorrect');
+        assert.equal(dispute.state, DisputeState.Ended, 'state not Ended');
+        assert.equal(dispute.result, 1, 'result not ChallengerCorrect');
       });
+    });
+
+    it('can trigger timeout and solver is considered correct when state is ChallengerTurn', async () => {
+      let tx = await verifier.initGame(
+        generateExecId(),
+        sampleProof, 2,
+        sampleProof2, 2,
+        wallets[0].address,
+        wallets[1].address
+      );
+      let disputeId = await getDisputeIdFromEvent(tx);
+
+      assertRevert(verifier.claimTimeout(disputeId));
+
+      await verifier.setState(disputeId, DisputeState.ChallengerTurn);
+      await verifier.setTimeout(
+        disputeId,
+        1 // already timed out
+      );
+
+      await verifier.setEnforcer(enforcer.address);
+      await verifier.claimTimeout(disputeId);
+      await verifier.setEnforcer(wallets[0].address);
+      let dispute = await parseDispute(disputeId);
+      assert.equal(dispute.state, DisputeState.Ended, 'state not Ended');
+      assert.equal(dispute.result, 0, 'state not SolverCorrect');
     });
   });
 });
