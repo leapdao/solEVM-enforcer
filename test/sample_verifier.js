@@ -2,10 +2,13 @@ import assertRevert from './helpers/assertRevert.js';
 import chai from 'chai';
 import { deployContract, wallets } from './utils.js';
 import { ethers } from 'ethers';
+import { BLOCK_GAS_LIMIT } from './helpers/constants.js';
 
+const OP = require('./helpers/constants');
 const Verifier = artifacts.require('./SampleVerifierMock');
 // const Verifier = artifacts.require('./SampleVerifier');
 const Enforcer = artifacts.require('./EnforcerMock');
+const EthRuntime = artifacts.require('./EthereumRuntime');
 
 const should = chai
   .use(require('chai-as-promised'))
@@ -21,6 +24,7 @@ const DisputeState = {
 
 let verifier;
 let enforcer;
+let ethRuntime;
 
 let sampleState = ethers.utils.formatBytes32String('state');
 let sampleState2 = ethers.utils.formatBytes32String('state2');
@@ -71,7 +75,9 @@ contract('SampleVerifierMock', () => {
   before(async () => {
     verifier = await deployContract(Verifier, 100);
     enforcer = await deployContract(Enforcer);
+    ethRuntime = await deployContract(EthRuntime);
     await verifier.setEnforcer(enforcer.address);
+    await verifier.setRuntime(ethRuntime.address);
   });
 
   it('should have timeout set', async () => {
@@ -228,6 +234,89 @@ contract('SampleVerifierMock', () => {
       let dispute = await parseDispute(disputeId);
       assert.equal(dispute.state, DisputeState.Ended, 'state not Ended');
       assert.equal(dispute.result, 0, 'state not SolverCorrect');
+    });
+  });
+
+  /*
+   * This dummy hash function is only for demonstration purpose
+   * A real hash function will be used after the hashing method is decided
+   * TODO replace hash function
+   */
+  function getHash (arr) {
+    let hash = ethers.utils.defaultAbiCoder.encode(['uint256'], [0]);
+    let encodePacked;
+    for (let index = 0; index < arr.length; index++) {
+      let element = ethers.utils.defaultAbiCoder.encode(['uint256'], [arr[index]]);
+      encodePacked = ethers.utils.defaultAbiCoder.encode(['bytes32', 'bytes32'], [hash, element]);
+      hash = ethers.utils.keccak256(encodePacked);
+    }
+    console.log(arr, hash);
+    return hash;
+  }
+
+  describe('when FoundDiff', async () => {
+    const code = '0x' + OP.PUSH1 + '03' + OP.PUSH1 + '05' + OP.ADD;
+    let stack = [];
+    let mem = '0x';
+
+    let solverHash = getHash([8]);
+    let solverStep = 3;
+    let challengerHash = getHash([9]);
+    let challengerStep = 3;
+    let disputeId;
+
+    beforeEach('setup dispute', async () => {
+      let tx = await verifier.initGame(
+        generateExecId(),
+        solverHash, solverStep,
+        challengerHash, challengerStep,
+        wallets[0].address,
+        wallets[1].address
+      );
+      disputeId = await getDisputeIdFromEvent(tx);
+      await verifier.setState(disputeId, DisputeState.FoundDiff);
+      await verifier.setLeft(disputeId, getHash([5, 3]), 4);
+      await verifier.setRight(disputeId, getHash([8]), 5);
+      await verifier.setEnforcer(enforcer.address);
+    });
+
+    afterEach('clean up', async () => {
+      await verifier.setEnforcer(wallets[0].address);
+    });
+
+    it('should allow solver to submit correct state and win', async () => {
+      await verifier.detailExecution(
+        disputeId,
+        code,
+        '0x',
+        [4, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
+        [5, 3],
+        '0x',
+        [],
+        '0x',
+        '0x0000000000000000000000000000000000000000000000000000000000000000'
+      );
+      let dispute = await parseDispute(disputeId);
+      assert.equal(dispute.state, DisputeState.Ended, 'dispute not Ended');
+      assert.equal(dispute.result, 0, 'solver not win');
+    });
+
+    it('should allow solver to submit incorrect state and lose', async () => {
+      await verifier.setLeft(disputeId, getHash([5, 4]), 4);
+      await verifier.detailExecution(
+        disputeId,
+        code,
+        '0x',
+        [4, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
+        [5, 4],
+        '0x',
+        [],
+        '0x',
+        '0x0000000000000000000000000000000000000000000000000000000000000000'
+      );
+      let dispute = await parseDispute(disputeId);
+      assert.equal(dispute.state, DisputeState.Ended, 'dispute not Ended');
+      assert.equal(dispute.result, 1, 'solver not lose');
     });
   });
 });

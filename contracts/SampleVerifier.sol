@@ -38,6 +38,7 @@ contract SampleVerifier is Ownable, IVerifier {
     enum States { Initialised, SolverTurn, ChallengerTurn, FoundDiff, Ended }
 
     event DisputeInitialised(bytes32 indexed disputeId, address solver, address challenger, bytes32 indexed executionId, uint256 timeout);
+    event DisputeResolve(bytes32 hash);
 
 
     address public owner;
@@ -197,11 +198,16 @@ contract SampleVerifier is Ownable, IVerifier {
         // calculate mem hash root from mem and proof
         // CompactMemory
         // verify left state
-        params[1] = 1; // run 1 step, should not take this value into hash function
+        require(stack.toHash(0) == dispute.left.hash, "state hash not match");
 
+        // as solidity 0.4.24 does not support Struct as returned data,
+        //   I put the hashing job to an extended ethereum runtime
+        //   This will be remove once Struct is available
         bytes32 resultHash = ethRuntime.executeHash(code, data, params, stack, mem, accounts, accountsCode, logHash);
+        // This is only for testing purpose, will be removed
+        emit DisputeResolve(resultHash);
 
-        // Hash result to check with right
+        // verify right state
         if (resultHash == dispute.right.hash) {
             dispute.result = Results.SolverCorrect;
         } else {
