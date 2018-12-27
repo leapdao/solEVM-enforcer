@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.25;
 
 import "./ICallback.sol";
 import "./IVerifier.sol";
@@ -35,7 +35,7 @@ contract Enforcer {
     bondAmount = _bondAmount;
   }
 
-  // register a new execution 
+  // register a new execution
   function register(bytes _code, bytes _callData, bytes32 _endHash) payable public returns(bytes32 executionId) {
     require(msg.value == bondAmount);
     executionId = keccak256(abi.encodePacked(_code, _callData));

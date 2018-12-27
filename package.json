@@ -45,12 +45,13 @@
     "ethers": "^4.0.13",
     "ethjs-abi": "^0.2.1",
     "ganache-cli": "=6.1.8",
-    "solhint": "^1.2.1",
-    "truffle": "^4.1.14"
+    "solhint": "^1.2.1"
   },
   "author": "johannbarbie@me.com",
   "license": "ISC",
   "dependencies": {
-    "openzeppelin-solidity": "^1.12.0"
+    "openzeppelin-solidity": "^1.12.0",
+    "solc": "0.4.25",
+    "truffle": "^4.1.14"
   }
 }

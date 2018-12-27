@@ -1,4 +1,4 @@
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 pragma experimental ABIEncoderV2;
 
 import "./IEnforcer.sol";
@@ -200,7 +200,7 @@ contract SampleVerifier is Ownable, IVerifier {
         // verify left state
         require(stack.toHash(0) == dispute.left.hash, "state hash not match");
 
-        // as solidity 0.4.24 does not support Struct as returned data,
+        // as solidity 0.4.25 does not support Struct as returned data,
         //   I put the hashing job to an extended ethereum runtime
         //   This will be remove once Struct is available
         bytes32 resultHash = ethRuntime.executeHash(code, data, params, stack, mem, accounts, accountsCode, logHash);
