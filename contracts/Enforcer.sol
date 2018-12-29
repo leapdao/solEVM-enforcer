@@ -72,7 +72,7 @@ contract Enforcer {
             // delete execution
             delete executions[_executionId];
         }
-        (bool success,) = address(0).send(bondAmount);
+        bool success = address(0).send(bondAmount);
         require(success == true);
     }
 
