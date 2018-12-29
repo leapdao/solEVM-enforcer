@@ -160,10 +160,10 @@ for (var i = 0; i < 10; i++) {
 }
 
 export const txOverrides = {
-    gasLimit: 0xffffffff,
+  gasLimit: 0xffffffff,
 };
 
-export async function deployContract(truffleContract, ...args) {
+export async function deployContract (truffleContract, ...args) {
   let _factory = new ethers.ContractFactory(
     truffleContract.abi,
     truffleContract.bytecode,

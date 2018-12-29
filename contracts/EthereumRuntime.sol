@@ -95,6 +95,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     
     struct Handlers {
         Instruction[256] ins;
+        // solhint-disable-next-line space-after-comma
         function(EVM memory /* input */) internal pure returns (bytes memory /* ret */, uint /* errno */)[9] p;
     }
     
@@ -146,6 +147,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
         bytes32 logHash
     ) internal pure returns (EVM memory evm) {
+        // solhint-disable-next-line avoid-low-level-calls
         return _call(
             initInput(code, data, intInput, stack, mem, accounts, accountsCode, logHash),
             CallType.Call
@@ -228,6 +230,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         }
     }
 
+    // solhint-disable-next-line code-complexity
     function _call(EVMInput memory evmInput, CallType callType) internal pure returns (EVM memory evm) {
         evm.context = evmInput.context;
         evm.handlers = evmInput.handlers;
@@ -449,7 +452,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         }
         state.gas -= GAS_ECRECOVER;
 
-        uint hash = state.data.length < 32 ? 0: EVMUtils.toUint(state.data, 0, 32);
+        uint hash = state.data.length < 32 ? 0 : EVMUtils.toUint(state.data, 0, 32);
         uint v = state.data.length < 64 ? 0 : uint8(EVMUtils.toUint(state.data, 32, 32));
         uint r = state.data.length < 96 ? 0 : EVMUtils.toUint(state.data, 64, 32);
         uint s = state.data.length < 128 ? 0 : EVMUtils.toUint(state.data, 96, 32);
@@ -1192,6 +1195,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         return ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
     
+    // solhint-disable-next-line function-max-lines
     function handleCALL(EVM memory state) internal pure returns (uint) {
         EVMInput memory input;
 
@@ -1698,6 +1702,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         handlers.p[8] = handlePreC_ECPAIRING;
     }
 
+    // solhint-disable-next-line function-max-lines
     function concat(bytes memory _preBytes, bytes memory _postBytes) internal pure returns (bytes memory) {
         bytes memory tempBytes;
 
@@ -1761,8 +1766,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             // 32. If the sum of the length of the two arrays is zero then add 
             // one before rounding down to leave a blank 32 bytes (the length block with 0).
             mstore(0x40, and(
-              add(add(end, iszero(add(length, mload(_preBytes)))), 31),
-              not(31) // Round down to the nearest 32 bytes.
+                add(add(end, iszero(add(length, mload(_preBytes)))), 31),
+                not(31) // Round down to the nearest 32 bytes.
             ))
         }
 

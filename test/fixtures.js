@@ -23,7 +23,11 @@ export default [
   { code: OP.EXP, stack: ['0xffff', '1'], result: { gasUsed: 110 } },
   { code: OP.EXP, stack: ['0xffffff', '1'], result: { gasUsed: 160 } },
   { code: OP.EXP, stack: ['0xffffffff', '1'], result: { gasUsed: 210 } },
-  { code: OP.EXP, stack: ['0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', '1'], result: { gasUsed: 1610 } },
+  {
+    code: OP.EXP,
+    stack: ['0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', '1'],
+    result: { gasUsed: 1610 },
+  },
   { code: OP.SIGNEXTEND, stack: ['3', '2'], result: { stack: ['3'], gasUsed: 5 } },
 
   // 1x - Comparison & bitwise logic
@@ -122,8 +126,8 @@ export default [
       stack: [],
       pc: 2,
       gasUsed: 8,
-      errno: OP.ERROR_INVALID_JUMP_DESTINATION
-    }
+      errno: OP.ERROR_INVALID_JUMP_DESTINATION,
+    },
   },
   {
     description: 'valid JUMP',
@@ -133,8 +137,8 @@ export default [
     result: {
       stack: [],
       pc: 5,
-      gasUsed: 21
-    }
+      gasUsed: 21,
+    },
   },
   {
     description: 'invalid JUMPI',
@@ -144,8 +148,8 @@ export default [
       stack: [],
       pc: 4,
       gasUsed: 10,
-      errno: OP.ERROR_INVALID_JUMP_DESTINATION
-    }
+      errno: OP.ERROR_INVALID_JUMP_DESTINATION,
+    },
   },
   {
     description: 'valid JUMPI no-op',
@@ -206,7 +210,7 @@ export default [
     data: '0x123456',
     result: {
       stack: [toBN('0x3456000000000000000000000000000000000000000000000000000000000000').toString()],
-      gasUsed: 3
+      gasUsed: 3,
     },
   },
   { code: OP.CALLDATASIZE, data: '0x1234', result: { stack: ['2'], gasUsed: 2 } },
@@ -214,29 +218,32 @@ export default [
   // Memory and stack (MLOAD, MSTORE, MSTORE8, MSIZE)
   { code: OP.MLOAD,
     stack: [0x01],
-    memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
+    memory: '0x00000000000000000000000000000000000000000000000000000000000000' +
+            '667700000000000000000000000000000000000000000000000000000000000000',
     result: {
       stack: [toBN('0x0000000000000000000000000000000000000000000000000000000000006677').toString()],
-      gasUsed: 3
+      gasUsed: 3,
     },
   },
   { code: OP.MSTORE,
     stack: [parseInt('0x5567', 16), 1],
     result: {
-      memory: '0x00000000000000000000000000000000000000000000000000000000000000556700000000000000000000000000000000000000000000000000000000000000',
-      gasUsed: 9
+      memory: '0x00000000000000000000000000000000000000000000000000000000000000' +
+              '556700000000000000000000000000000000000000000000000000000000000000',
+      gasUsed: 9,
     },
   },
   { code: OP.MSTORE8,
     stack: [parseInt('0x5567', 16), 1],
     result: {
       memory: '0x0067000000000000000000000000000000000000000000000000000000000000',
-      gasUsed: 6
+      gasUsed: 6,
     },
   },
   { code: OP.MSIZE,
-    memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
-    result: { stack: ['64'], gasUsed: 2 }
+    memory: '0x00000000000000000000000000000000000000000000000000000000000000' +
+            '667700000000000000000000000000000000000000000000000000000000000000',
+    result: { stack: ['64'], gasUsed: 2 },
   },
 
   // Data, stack and memory type OP-codes (CALLDATACOPY)
@@ -270,7 +277,7 @@ export default [
       ],
       pc: 1,
       gasUsed: 20000,
-    }
+    },
   },
   {
     code: [OP.SSTORE, OP.SSTORE],
@@ -286,7 +293,7 @@ export default [
       ],
       pc: 2,
       gasUsed: 25000,
-    }
+    },
   },
   {
     code: OP.SLOAD,
@@ -301,7 +308,7 @@ export default [
       stack: ['5'],
       pc: 1,
       gasUsed: 200,
-    }
+    },
   },
 
   // Context, stack and memory type OP-codes (LOG)
@@ -313,7 +320,7 @@ export default [
       stack: [],
       logHash: '0x73d2c8d7164fd32313bc49407c85be488239dda257c390b3fb8c4b78ae7e5d90',
       gasUsed: 407,
-    }
+    },
   },
   {
     code: OP.LOG1,
@@ -323,7 +330,7 @@ export default [
       stack: [],
       logHash: '0x8a3fc8f56f0d1d1b858ce6753e8e950ab6cec2652736744c0603c3ff05c4716b',
       gasUsed: 782,
-    }
+    },
   },
   {
     code: OP.LOG2,
@@ -333,7 +340,7 @@ export default [
       stack: [],
       logHash: '0xc2152d58ac22809607a34167a0289fd8f40f695364b49cc870f198fc6bdf9b09',
       gasUsed: 1157,
-    }
+    },
   },
   {
     code: OP.LOG3,
@@ -343,7 +350,7 @@ export default [
       stack: [],
       logHash: '0xb7e7d2bc2c72f5ee94013d38b2cc7d125bae556227c46b4f7e12a657585e1b37',
       gasUsed: 1532,
-    }
+    },
   },
   {
     code: OP.LOG4,
@@ -353,7 +360,7 @@ export default [
       stack: [],
       logHash: '0xcb56c22daa081416d6024fa5415236dfe4e5be1a903ee3fad83cd66a3bbb1dca',
       gasUsed: 1907,
-    }
+    },
   },
 
   // Check logHash
@@ -366,7 +373,7 @@ export default [
       stack: [],
       logHash: '0x3890e1cc9f39d08777e250e082c7642985cdfcc08ce34593dd6ee80870871d8a',
       gasUsed: 407,
-    }
+    },
   },
   {
     code: OP.LOG1,
@@ -377,7 +384,7 @@ export default [
       stack: [],
       logHash: '0x153e61e8bae37db12468fbfdbb040a394d0d131169c2c453db9d5ea93b4aba11',
       gasUsed: 782,
-    }
+    },
   },
   {
     code: OP.LOG2,
@@ -388,7 +395,7 @@ export default [
       stack: [],
       logHash: '0x14422ad14c72f4738362ca0e5c9c01c0311fd96247efa06b0cccc2939fe32278',
       gasUsed: 1157,
-    }
+    },
   },
   {
     code: OP.LOG3,
@@ -399,7 +406,7 @@ export default [
       stack: [],
       logHash: '0x426e18c50d3adc9b7281858e6386bd5b27e60bb4310ee4ce69f00816f916dcb7',
       gasUsed: 1532,
-    }
+    },
   },
   {
     code: OP.LOG4,
@@ -410,7 +417,7 @@ export default [
       stack: [],
       logHash: '0x83d7464c358e068fb006f770433a511f79431ebc618ff4f528be7f250adb46b4',
       gasUsed: 1907,
-    }
+    },
   },
 
   // Return, Stack and Memory type OP-codes (RETURN, REVERT, RETURNDATACOPY)
@@ -420,8 +427,8 @@ export default [
     result: {
       stack: [],
       pc: 0,
-      gasUsed: 0
-    }
+      gasUsed: 0,
+    },
   },
   {
     code: OP.REVERT,
@@ -430,8 +437,8 @@ export default [
       stack: [],
       errno: OP.ERROR_STATE_REVERTED,
       pc: 0,
-      gasUsed: 0
-    }
+      gasUsed: 0,
+    },
   },
   {
     code: OP.RETURNDATACOPY,
@@ -439,8 +446,8 @@ export default [
     result: {
       stack: [],
       pc: 1,
-      gasUsed: 3
-    }
+      gasUsed: 3,
+    },
   },
   {
     code: OP.SHA3,
@@ -448,7 +455,7 @@ export default [
     result: {
       stack: ['89477152217924674838424037953991966239322087453347756267410168184682657981552'],
       gasUsed: 30,
-    }
+    },
   },
   {
     code: OP.SHA3,
@@ -457,16 +464,17 @@ export default [
     result: {
       stack: ['51079273531545631271186254190825661466610319062327825936014390943984294837068'],
       gasUsed: 36,
-    }
+    },
   },
   {
     code: OP.SHA3,
     stack: ['33', '1'],
-    memory: '0x01020304050607080910111213141516171819202122232425262728293031320102030405060708091011121314151617181920212223242526272829303132',
+    memory: '0x01020304050607080910111213141516171819202122232425262728293031' +
+            '320102030405060708091011121314151617181920212223242526272829303132',
     result: {
       stack: ['42547598288241533357066651653958571462069256745040824873964792010086985876747'],
       gasUsed: 42,
-    }
+    },
   },
   {
     code: [OP.MSTORE, OP.MSTORE, OP.MSTORE, OP.MSTORE],
@@ -701,7 +709,7 @@ export default [
       ],
       pc: 3,
       gasUsed: 30000,
-    }
+    },
   },
   {
     description: 'CALLDATACOPY expanding memory',
@@ -717,7 +725,7 @@ export default [
     code: OP.RETURN,
     stack: [4, 0],
     result: {
-      gasUsed: 3
-    }
+      gasUsed: 3,
+    },
   },
 ];

@@ -1,7 +1,6 @@
 import EVMInvalid from './helpers/EVMInvalid';
 
 const EVMStackMock = artifacts.require('EVMStackMock.sol');
-const should = require('chai').use(require('chai-as-promised')).should();
 
 contract('TestEVMStack', function () {
   let stack;

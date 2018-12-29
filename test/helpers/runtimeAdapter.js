@@ -5,16 +5,16 @@ export default class RuntimeAdapter {
     this.runtimeContract = runtimeContract;
   }
 
-  buildArgs(code, data, params, stack, memory, accounts, accountsCode, logHash) {
+  buildArgs (code, data, params, stack, memory, accounts, accountsCode, logHash) {
     return [
-        code,
-        data,
-        params || [0, 0, BLOCK_GAS_LIMIT, gasLimit],
-        stack || [],
-        memory || '0x',
-        accounts || [],
-        accountsCode || '0x',
-        logHash || '0x0000000000000000000000000000000000000000000000000000000000000000'
+      code,
+      data,
+      params || [0, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
+      stack || [],
+      memory || '0x',
+      accounts || [],
+      accountsCode || '0x',
+      logHash || '0x0000000000000000000000000000000000000000000000000000000000000000',
     ];
   }
 
