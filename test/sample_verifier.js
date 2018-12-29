@@ -3,6 +3,7 @@ import chai from 'chai';
 import { deployContract, wallets } from './utils.js';
 import { ethers } from 'ethers';
 import { BLOCK_GAS_LIMIT } from './helpers/constants.js';
+import { hashUint256Array } from './helpers/hash.js';
 
 const OP = require('./helpers/constants');
 const Verifier = artifacts.require('./SampleVerifierMock');
@@ -106,23 +107,9 @@ contract('SampleVerifierMock', () => {
     assert.equal(dispute.result, 2, 'result not Undecided');
   });
 
-  it('should have correct game flow', async () => {
-    let tx = await verifier.initGame(
-      generateExecId(),
-      sampleProof, 2,
-      sampleProof2, 2,
-      wallets[0].address,
-      wallets[1].address
-    );
-    let disputeId = await getDisputeIdFromEvent(tx);
-    let dispute = await parseDispute(disputeId);
-    await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState], sampleState);
-    dispute = await parseDispute(disputeId);
-    assert.equal(dispute.state, 1, 'state not SolverTurn');
-  });
-
-  describe('When solver submit initial proofs', async () => {
-    it('should end with incorrect initial proofs', async () => {
+  describe('when Initialised', async () => {
+    let disputeId;
+    beforeEach('setup dispute', async () => {
       let tx = await verifier.initGame(
         generateExecId(),
         sampleProof, 2,
@@ -130,7 +117,17 @@ contract('SampleVerifierMock', () => {
         wallets[0].address,
         wallets[1].address
       );
-      let disputeId = await getDisputeIdFromEvent(tx);
+      disputeId = await getDisputeIdFromEvent(tx);
+    });
+
+    it('should change dispute state to SolverTurn if correct proofs', async () => {
+      let dispute = await parseDispute(disputeId);
+      await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState], sampleState);
+      dispute = await parseDispute(disputeId);
+      assert.equal(dispute.state, 1, 'state not SolverTurn');
+    });
+
+    it('should end with incorrect initial proofs', async () => {
       // change enforcer to EnforcerMock address
       await verifier.setEnforcer(enforcer.address);
       await verifier.solverProofs(disputeId, [sampleState2], sampleState2, [sampleState], sampleState);
@@ -141,14 +138,6 @@ contract('SampleVerifierMock', () => {
     });
 
     it('should end with incorrect end proofs', async () => {
-      let tx = await verifier.initGame(
-        generateExecId(),
-        sampleProof, 2,
-        sampleProof2, 2,
-        wallets[0].address,
-        wallets[1].address
-      );
-      let disputeId = await getDisputeIdFromEvent(tx);
       // change enforcer to EnforcerMock address
       await verifier.setEnforcer(enforcer.address);
       await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2);
@@ -237,31 +226,15 @@ contract('SampleVerifierMock', () => {
     });
   });
 
-  /*
-   * This dummy hash function is only for demonstration purpose
-   * A real hash function will be used after the hashing method is decided
-   * TODO replace hash function
-   */
-  function getHash (arr) {
-    let hash = ethers.utils.defaultAbiCoder.encode(['uint256'], [0]);
-    let encodePacked;
-    for (let index = 0; index < arr.length; index++) {
-      let element = ethers.utils.defaultAbiCoder.encode(['uint256'], [arr[index]]);
-      encodePacked = ethers.utils.defaultAbiCoder.encode(['bytes32', 'bytes32'], [hash, element]);
-      hash = ethers.utils.keccak256(encodePacked);
-    }
-    console.log(arr, hash);
-    return hash;
-  }
-
   describe('when FoundDiff', async () => {
     const code = '0x' + OP.PUSH1 + '03' + OP.PUSH1 + '05' + OP.ADD;
     let stack = [];
     let mem = '0x';
 
-    let solverHash = getHash([8]);
+    // TODO use state hash function
+    let solverHash = hashUint256Array([8], 0);
     let solverStep = 3;
-    let challengerHash = getHash([9]);
+    let challengerHash = hashUint256Array([9], 0);
     let challengerStep = 3;
     let disputeId;
 
@@ -275,8 +248,8 @@ contract('SampleVerifierMock', () => {
       );
       disputeId = await getDisputeIdFromEvent(tx);
       await verifier.setState(disputeId, DisputeState.FoundDiff);
-      await verifier.setLeft(disputeId, getHash([5, 3]), 4);
-      await verifier.setRight(disputeId, getHash([8]), 5);
+      await verifier.setLeft(disputeId, hashUint256Array([5, 3], 0), 4);
+      await verifier.setRight(disputeId, hashUint256Array([8], 0), 5);
       await verifier.setEnforcer(enforcer.address);
     });
 
@@ -302,7 +275,7 @@ contract('SampleVerifierMock', () => {
     });
 
     it('should allow solver to submit incorrect state and lose', async () => {
-      await verifier.setLeft(disputeId, getHash([5, 4]), 4);
+      await verifier.setLeft(disputeId, hashUint256Array([5, 4], 0), 4);
       await verifier.detailExecution(
         disputeId,
         code,

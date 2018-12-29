@@ -15,9 +15,17 @@ library MerkleProof {
         while (i < proof.length) {
             // TODO need SafeMath?
             if (position % 2 == 0) {
-                computedHash = keccak256(abi.encodePacked(computedHash, proof[i]));
+                assembly {
+                    mstore(0, computedHash)
+                    mstore(0x20, mload(add(add(proof, 0x20), mul(i, 0x20))))
+                    computedHash := keccak256(0, 0x40)
+                }
             } else {
-                computedHash = keccak256(abi.encodePacked(proof[i], computedHash));
+                assembly {
+                    mstore(0, mload(add(add(proof, 0x20), mul(i, 0x20))))
+                    mstore(0x20, computedHash)
+                    computedHash := keccak256(0, 0x40)
+                }
             }
             position = position / 2;
             i = i + 1;

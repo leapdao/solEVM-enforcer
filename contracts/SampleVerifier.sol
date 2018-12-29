@@ -38,8 +38,6 @@ contract SampleVerifier is Ownable, IVerifier {
     enum States { Initialised, SolverTurn, ChallengerTurn, FoundDiff, Ended }
 
     event DisputeInitialised(bytes32 indexed disputeId, address solver, address challenger, bytes32 indexed executionId, uint256 timeout);
-    event DisputeResolve(bytes32 hash);
-
 
     address public owner;
     uint256 public timeoutDuration;
@@ -129,22 +127,6 @@ contract SampleVerifier is Ownable, IVerifier {
     }
 
     /**
-      * @dev only allow solver
-      */
-    modifier onlySolver(bytes32 disputeId) {
-        require(disputes[disputeId].solver == msg.sender, "sender not solver");
-        _;
-    }
-
-    /**
-      * @dev only allow challenger
-      */
-    modifier onlyChallenger(bytes32 disputeId) {
-        require(disputes[disputeId].challenger == msg.sender, "sender not challenger");
-        _;
-    }
-
-    /**
       * @dev solver submits initial execution state proofs
       */
     function solverProofs(
@@ -153,7 +135,7 @@ contract SampleVerifier is Ownable, IVerifier {
         bytes32 startHash,
         bytes32[] endProofs,
         bytes32 endHash
-    ) public onlySolver(disputeId) onlyInitialised(disputeId) onlyPlaying(disputeId) {
+    ) public onlyInitialised(disputeId) onlyPlaying(disputeId) {
 
         Dispute storage dispute = disputes[disputeId];
         if (MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0) &&
@@ -180,6 +162,7 @@ contract SampleVerifier is Ownable, IVerifier {
         bytes data,
         uint256[4] params,
         uint256[] stack,
+        // uint256[] stackSiblingHash,
         bytes mem,
         // uint256 memPos,
         // bytes32[] memProof,
@@ -190,24 +173,26 @@ contract SampleVerifier is Ownable, IVerifier {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.left.step == dispute.right.step - 1, "must find a specific step");
+        // TODO when ethRuntime accept number of steps
+        //      we will require the number of steps to be 1
+        //      if not, we will need to have special treatment for JUMP
+        // require(params[1] == 1, "must be one step");
 
-        // calculate code root from code and codeProof, code pos is pcStart
-        // code is actually more complicated to workwith
-        // we may need 1 byte + 32 bytes of code to run 1 opcode
-        // calculate stack hash from stack and stackHash
-        // calculate mem hash root from mem and proof
-        // CompactMemory
-        // verify left state
+        // TODO actual procedure:
+        // - calculate code root from code and codeProof, code pos is pcStart
+        //      code is actually more complicated to workwith
+        //      we may need 1 byte + 32 bytes of code to run 1 opcode
+        // - calculate stack hash from stack and stackSiblingHash
+        // - calculate mem hash root from mem, memPos and memProof
+        // - combine to actual state hash to verify left state
         require(stack.toHash(0) == dispute.left.hash, "state hash not match");
 
         // as solidity 0.4.25 does not support Struct as returned data,
         //   I put the hashing job to an extended ethereum runtime
         //   This will be remove once Struct is available
         bytes32 resultHash = ethRuntime.executeHash(code, data, params, stack, mem, accounts, accountsCode, logHash);
-        // This is only for testing purpose, will be removed
-        emit DisputeResolve(resultHash);
 
-        // verify right state
+        // TODO use actual state hash to verify right state
         if (resultHash == dispute.right.hash) {
             dispute.result = Results.SolverCorrect;
         } else {
