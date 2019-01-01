@@ -1,5 +1,6 @@
 pragma solidity 0.4.25;
 pragma experimental ABIEncoderV2;
+pragma experimental "v0.5.0";
 
 import "./IEnforcer.sol";
 import "./IVerifier.sol";
@@ -139,6 +140,7 @@ contract SampleVerifier is Ownable, IVerifier {
 
         Dispute storage dispute = disputes[disputeId];
         require(MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0), "start state proof not correct");
+        // solhint-disable-next-line max-line-length
         require(MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.stepCount - 1), "end state proof not correct");
 
         dispute.left = StateHash(startHash, 0);
@@ -182,10 +184,9 @@ contract SampleVerifier is Ownable, IVerifier {
         // - combine to actual state hash to verify left state
         require(stack.toHash(0) == dispute.left.hash, "state hash not match");
 
-        // as solidity 0.4.25 does not support Struct as returned data,
-        //   I put the hashing job to an extended ethereum runtime
-        //   This will be remove once Struct is available
-        bytes32 resultHash = ethRuntime.executeHash(code, data, params, stack, mem, accounts, accountsCode, logHash);
+        IEthereumRuntime.Result memory result = ethRuntime.execute(code, data, params, stack, mem, accounts, accountsCode, logHash);
+        // TODO calculate state hash
+        bytes32 resultHash = result.stack.toHash(0);
 
         // TODO use actual state hash to verify right state
         if (resultHash == dispute.right.hash) {

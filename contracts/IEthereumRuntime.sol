@@ -24,15 +24,5 @@ contract IEthereumRuntime {
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
         bytes32 logHash
     ) public pure returns (Result);
-
-    // this function is only for demonstration purpose
-    function executeHash(
-        bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
-        bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
-        bytes32 logHash
-    ) public pure returns (bytes32) {
-        Result memory result = execute(code, data, intInput, stack, mem, accounts, accountsCode, logHash);
-        return result.stack.toHash(0);
-    }
 }
 
