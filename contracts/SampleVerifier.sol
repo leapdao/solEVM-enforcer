@@ -23,7 +23,6 @@ contract SampleVerifier is Ownable, IVerifier {
 
     struct Dispute {
         bytes32 executionId;
-        address solver;
         address challenger;
         ComputationHash solverComputationHash;
         ComputationHash challengerComputationHash;
@@ -37,7 +36,7 @@ contract SampleVerifier is Ownable, IVerifier {
     enum Results { SolverCorrect, ChallengerCorrect, Undecided }
     enum States { Initialised, SolverTurn, ChallengerTurn, FoundDiff, Ended }
 
-    event DisputeInitialised(bytes32 indexed disputeId, address solver, address challenger, bytes32 indexed executionId, uint256 timeout);
+    event DisputeInitialised(bytes32 indexed disputeId, address challenger, bytes32 indexed executionId, uint256 timeout);
 
     address public owner;
     uint256 public timeoutDuration;
@@ -75,16 +74,14 @@ contract SampleVerifier is Ownable, IVerifier {
         uint256 _solverStep,
         bytes32 _challengerHashRoot,
         uint256 _challengerStep,
-        address _solver,
         address _challenger
     ) public onlyEnforcer() {
-        bytes32 disputeId = keccak256(abi.encodePacked(_executionId, _solver, _challenger));
+        bytes32 disputeId = keccak256(abi.encodePacked(_executionId, _challenger));
         require(disputes[disputeId].timeout == 0, "already init");
         require(_solverHashRoot != _challengerHashRoot, "nothing to challenge");
 
         disputes[disputeId] = Dispute(
             _executionId,
-            _solver,
             _challenger,
             ComputationHash(_solverHashRoot, _solverStep),
             ComputationHash(_challengerHashRoot, _challengerStep),
@@ -95,7 +92,7 @@ contract SampleVerifier is Ownable, IVerifier {
             Results.Undecided
         );
 
-        emit DisputeInitialised(disputeId, _solver, _challenger, _executionId, disputes[disputeId].timeout);
+        emit DisputeInitialised(disputeId, _challenger, _executionId, disputes[disputeId].timeout);
     }
 
     function setRuntime(address _ethruntime) public onlyOwner() {
@@ -127,7 +124,10 @@ contract SampleVerifier is Ownable, IVerifier {
     }
 
     /**
-      * @dev solver submits initial execution state proofs
+      * @dev submits initial execution state proofs
+      *   anyone can submit these initial state proofs as long as
+      *   the proofs match the submitted merkle root
+      *   Currently only take into account the merkle root of solver
       */
     function solverProofs(
         bytes32 disputeId,
@@ -138,18 +138,13 @@ contract SampleVerifier is Ownable, IVerifier {
     ) public onlyInitialised(disputeId) onlyPlaying(disputeId) {
 
         Dispute storage dispute = disputes[disputeId];
-        if (MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0) &&
-            MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.stepCount - 1)) {
-            dispute.left = StateHash(startHash, 0);
-            dispute.right = StateHash(endHash, dispute.solverComputationHash.stepCount - 1);
-            dispute.state = States.SolverTurn;
-            dispute.timeout = getTimeout();
-        } else {
-            // solver lost immediately
-            dispute.state = States.Ended;
-            dispute.result = Results.ChallengerCorrect;
-            enforcer.result(dispute.executionId, false, dispute.challenger);
-        }
+        require(MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0), "start state proof not correct");
+        require(MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.stepCount - 1), "end state proof not correct");
+
+        dispute.left = StateHash(startHash, 0);
+        dispute.right = StateHash(endHash, dispute.solverComputationHash.stepCount - 1);
+        dispute.state = States.SolverTurn;
+        dispute.timeout = getTimeout();
     }
 
     /**

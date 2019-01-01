@@ -8,5 +8,5 @@ contract IVerifier {
         uint256 _solverStep,
         bytes32 _challengerHashRoot,
         uint256 _challengerStep,
-        address _solver, address _challenger) public;
+        address _challenger) public;
 }

@@ -43,25 +43,23 @@ contract('SampleVerifierMock', () => {
   /*
    * Dispute:
    *  0: executionId
-   *  1: solver
-   *  2: challenger
-   *  3: solverComputation
-   *  4: challengerComputation
-   *  5: left
-   *  6: right
-   *  7: timeout
-   *  8: state
-   *  9: result
+   *  1: challenger
+   *  2: solverComputation
+   *  3: challengerComputation
+   *  4: left
+   *  5: right
+   *  6: timeout
+   *  7: state
+   *  8: result
    */
   let parseDispute = async (disputeId) => {
     let dispute = await verifier.disputes(disputeId);
     return {
       executionId: dispute[0],
-      solver: dispute[1],
-      challenger: dispute[2],
-      timeout: dispute[7],
-      state: dispute[8],
-      result: dispute[9],
+      challenger: dispute[1],
+      timeout: dispute[6],
+      state: dispute[7],
+      result: dispute[8],
     };
   };
 
@@ -96,12 +94,10 @@ contract('SampleVerifierMock', () => {
       generateExecId(),
       ethers.utils.formatBytes32String('execHashsolver'), 10,
       ethers.utils.formatBytes32String('execHashChallenger'), 10,
-      wallets[0].address,
       wallets[1].address
     );
     let disputeId = await getDisputeIdFromEvent(tx);
     let dispute = await parseDispute(disputeId);
-    assert.equal(dispute.solver, wallets[0].address, 'solver address incorrect');
     assert.equal(dispute.challenger, wallets[1].address, 'challenger address incorrect');
     assert.equal(dispute.state, 0, 'state not Initialised');
     assert.equal(dispute.result, 2, 'result not Undecided');
@@ -114,7 +110,6 @@ contract('SampleVerifierMock', () => {
         generateExecId(),
         sampleProof, 2,
         sampleProof2, 2,
-        wallets[0].address,
         wallets[1].address
       );
       disputeId = await getDisputeIdFromEvent(tx);
@@ -127,24 +122,24 @@ contract('SampleVerifierMock', () => {
       assert.equal(dispute.state, 1, 'state not SolverTurn');
     });
 
-    it('should end with incorrect initial proofs', async () => {
+    it('cannot process with incorrect start proofs', async () => {
       // change enforcer to EnforcerMock address
       await verifier.setEnforcer(enforcer.address);
-      await verifier.solverProofs(disputeId, [sampleState2], sampleState2, [sampleState], sampleState);
+      assertRevert(verifier.solverProofs(disputeId, [sampleState2], sampleState2, [sampleState], sampleState));
       await verifier.setEnforcer(wallets[0].address);
       let dispute = await parseDispute(disputeId);
-      assert.equal(dispute.state, DisputeState.Ended, 'state not ended');
-      assert.equal(dispute.result, 1, 'result not challenger correct');
+      assert.equal(dispute.state, DisputeState.Initialised, 'state not Initialised');
+      assert.equal(dispute.result, 2, 'result not undecided');
     });
 
-    it('should end with incorrect end proofs', async () => {
+    it('cannot process with incorrect end proofs', async () => {
       // change enforcer to EnforcerMock address
       await verifier.setEnforcer(enforcer.address);
-      await verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2);
+      assertRevert(verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2));
       await verifier.setEnforcer(wallets[0].address);
       let dispute = await parseDispute(disputeId);
-      assert.equal(dispute.state, DisputeState.Ended, 'state not ended');
-      assert.equal(dispute.result, 1, 'result not challenger correct');
+      assert.equal(dispute.state, DisputeState.Initialised, 'state not Initialised');
+      assert.equal(dispute.result, 2, 'result not undecided');
     });
   });
 
@@ -153,7 +148,6 @@ contract('SampleVerifierMock', () => {
       generateExecId(),
       sampleProof, 2,
       sampleProof2, 2,
-      wallets[0].address,
       wallets[1].address
     );
     let disputeId = await getDisputeIdFromEvent(tx);
@@ -177,7 +171,6 @@ contract('SampleVerifierMock', () => {
           generateExecId(),
           sampleProof, 2,
           sampleProof2, 2,
-          wallets[0].address,
           wallets[1].address
         );
         let disputeId = await getDisputeIdFromEvent(tx);
@@ -204,7 +197,6 @@ contract('SampleVerifierMock', () => {
         generateExecId(),
         sampleProof, 2,
         sampleProof2, 2,
-        wallets[0].address,
         wallets[1].address
       );
       let disputeId = await getDisputeIdFromEvent(tx);
@@ -243,7 +235,6 @@ contract('SampleVerifierMock', () => {
         generateExecId(),
         solverHash, solverStep,
         challengerHash, challengerStep,
-        wallets[0].address,
         wallets[1].address
       );
       disputeId = await getDisputeIdFromEvent(tx);
