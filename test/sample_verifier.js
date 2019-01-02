@@ -1,5 +1,4 @@
 import assertRevert from './helpers/assertRevert.js';
-import chai from 'chai';
 import { deployContract, wallets } from './utils.js';
 import { ethers } from 'ethers';
 import { BLOCK_GAS_LIMIT } from './helpers/constants.js';
@@ -10,10 +9,6 @@ const Verifier = artifacts.require('./SampleVerifierMock');
 // const Verifier = artifacts.require('./SampleVerifier');
 const Enforcer = artifacts.require('./EnforcerMock');
 const EthRuntime = artifacts.require('./EthereumRuntime');
-
-const should = chai
-  .use(require('chai-as-promised'))
-  .should();
 
 const DisputeState = {
   Initialised: 0,

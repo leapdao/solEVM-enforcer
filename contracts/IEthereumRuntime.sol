@@ -22,5 +22,5 @@ contract IEthereumRuntime {
         bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
         bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
         bytes32 logHash
-    ) public pure returns (Result);
+    ) public pure returns (Result memory);
 }

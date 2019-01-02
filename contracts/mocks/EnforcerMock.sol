@@ -1,4 +1,4 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.2;
 import "../IEnforcer.sol";
 
 
@@ -13,7 +13,7 @@ contract EnforcerMock is IEnforcer {
         _challenger;
     }
 
-    function register(bytes _code, bytes _callData, bytes32 _endHash) public payable {
+    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash) public payable {
         _code;
         _callData;
         _endHash;

@@ -1,6 +1,5 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
-pragma experimental "v0.5.0";
 
 import "./IEnforcer.sol";
 import "./IVerifier.sol";
@@ -39,7 +38,6 @@ contract SampleVerifier is Ownable, IVerifier {
 
     event DisputeInitialised(bytes32 indexed disputeId, address challenger, bytes32 indexed executionId, uint256 timeout);
 
-    address public owner;
     uint256 public timeoutDuration;
 
     IEnforcer public enforcer;
@@ -49,8 +47,7 @@ contract SampleVerifier is Ownable, IVerifier {
 
     using Hash for uint256[];
 
-    constructor(uint256 _timeout) public {
-        owner = msg.sender;
+    constructor(uint256 _timeout) Ownable() public {
         timeoutDuration = _timeout;
     }
 
@@ -132,9 +129,9 @@ contract SampleVerifier is Ownable, IVerifier {
       */
     function solverProofs(
         bytes32 disputeId,
-        bytes32[] startProofs,
+        bytes32[] memory startProofs,
         bytes32 startHash,
-        bytes32[] endProofs,
+        bytes32[] memory endProofs,
         bytes32 endHash
     ) public onlyInitialised(disputeId) onlyPlaying(disputeId) {
 
@@ -154,17 +151,17 @@ contract SampleVerifier is Ownable, IVerifier {
       */
     function detailExecution(
         bytes32 disputeId,
-        bytes code,
+        bytes memory code,
         // bytes32[] codeProof,
-        bytes data,
-        uint256[4] params,
-        uint256[] stack,
+        bytes memory data,
+        uint256[4] memory params,
+        uint256[] memory stack,
         // uint256[] stackSiblingHash,
-        bytes mem,
+        bytes memory mem,
         // uint256 memPos,
         // bytes32[] memProof,
-        uint256[] accounts,
-        bytes accountsCode,
+        uint256[] memory accounts,
+        bytes memory accountsCode,
         bytes32 logHash
     ) public onlyFoundDiff(disputeId) onlyPlaying(disputeId) {
         Dispute storage dispute = disputes[disputeId];

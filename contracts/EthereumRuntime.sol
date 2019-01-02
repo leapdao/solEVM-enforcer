@@ -264,7 +264,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         }
         
         if (1 <= uint(evm.target.addr) && uint(evm.target.addr) <= 8) {
-            (evm.returnData, evm.errno) = evm.handlers.p[uint(evm.target.addr)](evm.data);
+            (evm.returnData, evm.errno) = evm.handlers.p[uint(evm.target.addr)](evm);
         } else {
             // If there is no code to run, just continue. TODO
             if (evm.target.code.length == 0) {
