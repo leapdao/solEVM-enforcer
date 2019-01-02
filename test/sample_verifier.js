@@ -215,8 +215,6 @@ contract('SampleVerifierMock', () => {
 
   describe('when FoundDiff', async () => {
     const code = '0x' + OP.PUSH1 + '03' + OP.PUSH1 + '05' + OP.ADD;
-    let stack = [];
-    let mem = '0x';
 
     // TODO use state hash function
     let solverHash = hashUint256Array([8], 0);
@@ -279,4 +277,3 @@ contract('SampleVerifierMock', () => {
     });
   });
 });
-
