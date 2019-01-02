@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.4.25;
 
 import "./ICallback.sol";
 import "./IVerifier.sol";
@@ -35,7 +35,7 @@ contract Enforcer {
     bondAmount = _bondAmount;
   }
 
-  // register a new execution 
+  // register a new execution
   function register(bytes _code, bytes _callData, bytes32 _endHash) payable public returns(bytes32 executionId) {
     require(msg.value == bondAmount);
     executionId = keccak256(abi.encodePacked(_code, _callData));
@@ -52,7 +52,8 @@ contract Enforcer {
     require(msg.value == bondAmount);
     require(executions[_executionId].endHash != _endHash);
     bonds[msg.sender] += bondAmount;
-    verifier.initGame(_executionId, _endHash, executions[_executionId].solver, msg.sender);
+    // TODO pass correct computation step
+    verifier.initGame(_executionId, executions[_executionId].endHash, 1, _endHash, 1, msg.sender);
   }
 
   // receive result from Verifier contract

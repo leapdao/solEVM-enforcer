@@ -1,6 +1,12 @@
-pragma solidity ^0.4.18;
+pragma solidity 0.4.25;
+pragma experimental ABIEncoderV2;
+
 
 contract IVerifier {
-
-	function initGame(bytes32 _executionId, bytes32 _endHash, address _solver, address _challenger) public;
+    function initGame(bytes32 _executionId,
+        bytes32 _solverHashRoot,
+        uint256 _solverStep,
+        bytes32 _challengerHashRoot,
+        uint256 _challengerStep,
+        address _challenger) public;
 }

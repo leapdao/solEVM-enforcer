@@ -1,6 +1,6 @@
 pragma experimental "v0.5.0";
 pragma experimental ABIEncoderV2;
-pragma solidity 0.4.24;
+pragma solidity 0.4.25;
 
 import {MemOps} from "./MemOps.slb";
 import {EVMStorage} from "./EVMStorage.slb";
@@ -8,9 +8,9 @@ import {EVMUtils} from "./EVMUtils.slb";
 
 
 library EVMAccounts {
-    
+
     using EVMStorage for EVMStorage.Storage;
-    
+
     struct Account {
         address addr;
         uint balance;
@@ -19,17 +19,17 @@ library EVMAccounts {
         bytes code;
         EVMStorage.Storage stge;
     }
-    
+
     struct Element {
         uint _next;
         Account account;
     }
-    
+
     struct Accounts {
         Element head;
         uint size;
     }
-    
+
     function get(Accounts memory self, address addr) internal pure returns (Account memory acc) {
         if (self.size == 0) {
             Element memory e;
@@ -64,7 +64,7 @@ library EVMAccounts {
             self.size++;
         }
     }
-    
+
     function copy(Accounts memory self) internal pure returns (Accounts memory accs) {
         if (self.size == 0) {
             return;
@@ -151,5 +151,5 @@ library EVMAccounts {
             codeOffset += acc.code.length;
         }
     }
-    
+
 }
