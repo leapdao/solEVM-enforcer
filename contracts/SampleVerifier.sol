@@ -47,7 +47,7 @@ contract SampleVerifier is Ownable, IVerifier {
 
     using Hash for uint256[];
 
-    constructor(uint256 _timeout) Ownable() public {
+    constructor(uint256 _timeout) public Ownable() {
         timeoutDuration = _timeout;
     }
 

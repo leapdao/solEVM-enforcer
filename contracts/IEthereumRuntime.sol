@@ -2,6 +2,7 @@ pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 import "./Hash.slb";
 
+
 contract IEthereumRuntime {
     using Hash for uint256[];
 
