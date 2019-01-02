@@ -48,7 +48,7 @@ contract('Runtime', function () {
       const executeTill = async (stopAt) =>
         (await rt.executeAndStop(
           `0x${code.join('')}`, data, [0, stopAt, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]
-        )).pc;
+        )).pc.toNumber();
       
       assert.equal(await executeTill(2), 2);
       assert.equal(await executeTill(3), 3);
@@ -74,7 +74,7 @@ contract('Runtime', function () {
     fixtures.forEach(fixture => {
       const { code, pc, opcodeUnderTest } = getCode(fixture);
 
-      it(opcodeUnderTest, async () => {
+      it(fixture.description || opcodeUnderTest, async () => {
         const initialStack = fixture.stack || [];
         const initialMemory = fixture.memory || '0x';
         const { accounts, accountsCode } = encodeAccounts(fixture.accounts || []);
@@ -126,10 +126,10 @@ contract('Runtime', function () {
           assert.equal(res.logHash, fixture.result.logHash, 'logHash');
         }
         if (fixture.result.pc !== undefined) {
-          assert.equal(res.pc, fixture.result.pc, 'pc');
+          assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');
         }
         if (fixture.result.gasUsed !== undefined) {
-          assert.equal(res.gasRemaining, gasLimit - fixture.result.gasUsed, 'gasUsed');
+          assert.equal(gasLimit - parseInt(res.gasRemaining), fixture.result.gasUsed, 'gasUsed');
         }
         if (fixture.result.errno !== undefined) {
           assert.equal(res.errno, fixture.result.errno, 'errno');

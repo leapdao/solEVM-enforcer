@@ -1,5 +1,4 @@
-pragma solidity ^0.4.22;
-pragma experimental "v0.5.0";
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
 
@@ -20,12 +19,12 @@ contract TestEVMMemory {
 
     function testCreate() public {
         EVMMemory.Memory memory mem = EVMMemory.newMemory();
+        uint fMem = MemOps.freeMemPtr();
+        uint tMem = mem.dataPtr + mem.cap * WORD_SIZE;
 
         Assert.equal(mem.size, 0, "mem.size");
         Assert.equal(mem.cap, ALLOC_SIZE, "mem.cap");
-
-        uint fMem = MemOps.freeMemPtr();
-        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE + 64, fMem, "freeMemPtr");
+        Assert.equal(tMem, fMem, "freeMemPtr");
 
         for(uint i = 0; i < ALLOC_SIZE; i++) {
             uint pos = mem.dataPtr + i*WORD_SIZE;
@@ -41,12 +40,12 @@ contract TestEVMMemory {
         uint CAP = 117;
         EVMMemory.Memory memory mem = EVMMemory.newMemory();
         mem.setCapacity(CAP);
+        uint fMem = MemOps.freeMemPtr();
+        uint tMem = mem.dataPtr + mem.cap * WORD_SIZE;
 
         Assert.equal(mem.size, 0, "memory size");
         Assert.equal(mem.cap, 128, "memory capacity");
-
-        uint fMem = MemOps.freeMemPtr();
-        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE + 64, fMem, "free memory pointer");
+        Assert.equal(tMem, fMem, "free memory pointer");
 
         for(uint i = 0; i < 128; i++) {
             uint pos = mem.dataPtr + i*WORD_SIZE;
@@ -201,10 +200,12 @@ contract TestEVMMemory {
         assembly {
             val := mload(pos)
         }
+        uint fMem = MemOps.freeMemPtr();
+        uint tMem = mem.dataPtr + mem.cap * WORD_SIZE;
+
         Assert.equal(mem.size, 1513, "");
         Assert.equal(mem.cap, 2048, "");
-        uint fMem = MemOps.freeMemPtr();
-        Assert.equal(mem.dataPtr + mem.cap*WORD_SIZE + 64, fMem, "free memory pointer");
+        Assert.equal(tMem, fMem, "free memory pointer");
     }
 
     function getRootHash() public view returns (uint) {

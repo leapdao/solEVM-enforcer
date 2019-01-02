@@ -1,7 +1,6 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 import "./Hash.slb";
-
 
 contract IEthereumRuntime {
     using Hash for uint256[];
@@ -25,4 +24,3 @@ contract IEthereumRuntime {
         bytes32 logHash
     ) public pure returns (Result);
 }
-

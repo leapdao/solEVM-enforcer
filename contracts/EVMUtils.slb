@@ -1,6 +1,5 @@
-pragma experimental "v0.5.0";
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
-pragma solidity 0.4.25;
 
 import {MemOps} from "./MemOps.slb";
 
@@ -35,27 +34,37 @@ library EVMUtils {
     }
 
     function newAddress(address addr, uint8 nonce) internal pure returns (address) {
-        assert(addr != 0);
+        assert(addr != address(0));
         assert(nonce > 0);
         uint8 nonceM1 = uint8(nonce - 1);
         // TODO look into addresses with highest order bytes that are zero.
         if (nonceM1 < 0x80) {
-            return address(keccak256(abi.encodePacked(
-                uint8(0xd6),
-                uint8(0x94),
-                addr,
-                nonceM1
-            )));
+            return address(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            uint8(0xd6),
+                            uint8(0x94),
+                            addr,
+                            nonceM1
+                        )
+                    )
+                )
+            );
         } else {
-            return address(keccak256(abi.encodePacked(
-                uint8(0xd7),
-                uint8(0x94),
-                addr,
-                uint8(0x81),
-                nonceM1
-            )));
+            return address(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            uint8(0xd7),
+                            uint8(0x94),
+                            addr,
+                            uint8(0x81),
+                            nonceM1
+                        )
+                    )
+                )
+            );
         }
-
     }
-
 }

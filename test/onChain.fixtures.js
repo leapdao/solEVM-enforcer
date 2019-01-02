@@ -141,17 +141,17 @@ export default [
   // MSTORE
   {
     code: [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE, OP.PUSH1, '01', OP.MLOAD, OP.POP, OP.MSIZE ],
-    pc: 35
+    pc: 35,
   },
   // MLOAD
   {
     code: [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE, OP.PUSH1, '01', OP.MLOAD, OP.POP, OP.MSIZE ],
-    pc: 38
+    pc: 38,
   },
   // MSTORE8
   {
     code: [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE8, OP.MSIZE ],
-    pc: 35
+    pc: 35,
   },
   // MSIZE
   [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE8, OP.MSIZE ],
@@ -159,7 +159,7 @@ export default [
   // Data, stack and memory type OP-codes (CALLDATACOPY)
   {
     code: [OP.PUSH1, '01', OP.PUSH1, '03', OP.PUSH1, '04', OP.CALLDATACOPY],
-    data: '0x06397872cdd21945455a7fdc7921e2db7bd8e402607cad66279e899f6ae9b1da'
+    data: '0x06397872cdd21945455a7fdc7921e2db7bd8e402607cad66279e899f6ae9b1da',
   },
     
   // Code, stack and memory type OP-codes (CODECOPY)

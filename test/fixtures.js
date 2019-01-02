@@ -9,7 +9,6 @@ const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
 const stack16 = range(1, 16);
 
 export default [
-
   // 0x - arithmetic ops
   { code: OP.ADD, stack: ['3', '5'], result: { stack: ['8'], gasUsed: 3 } },
   { code: OP.MUL, stack: ['3', '5'], result: { stack: ['15'], gasUsed: 5 } },
@@ -20,7 +19,15 @@ export default [
   { code: OP.SMOD, stack: ['3', '8'], result: { stack: ['2'], gasUsed: 5 } },
   { code: OP.ADDMOD, stack: ['5', '3', '5'], result: { stack: ['3'], gasUsed: 8 } },
   { code: OP.MULMOD, stack: ['4', '3', '6'], result: { stack: ['2'], gasUsed: 8 } },
-  { code: OP.EXP, stack: ['3', '5'], result: { stack: ['125'], gasUsed: 10 } },
+  { code: OP.EXP, stack: ['3', '5'], result: { stack: ['125'], gasUsed: 60 } },
+  { code: OP.EXP, stack: ['0xffff', '1'], result: { gasUsed: 110 } },
+  { code: OP.EXP, stack: ['0xffffff', '1'], result: { gasUsed: 160 } },
+  { code: OP.EXP, stack: ['0xffffffff', '1'], result: { gasUsed: 210 } },
+  {
+    code: OP.EXP,
+    stack: ['0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', '1'],
+    result: { gasUsed: 1610 },
+  },
   { code: OP.SIGNEXTEND, stack: ['3', '2'], result: { stack: ['3'], gasUsed: 5 } },
 
   // 1x - Comparison & bitwise logic
@@ -109,43 +116,51 @@ export default [
   { code: OP.GASLIMIT, result: { stack: [toBN(BLOCK_GAS_LIMIT).toString()], gasUsed: 2 } },
   { code: OP.GASLIMIT, blockGasLimit: 100, result: { stack: ['100'], gasUsed: 2 } },
   { code: [OP.PC, OP.GASPRICE, OP.POP], pc: '0', result: { stack: ['0'], gasUsed: 6 } }, // PC
-  { code: [OP.GAS, OP.GASPRICE, OP.POP], pc: '0', gasLimit: 10, result: { stack: ['8'], gasUsed: 6 } }, // GAS
-
-  // invalid JUMP
+  // ethereumvm-js throws out-of-gas with a very low gasLimit (10), even if gasUsed is <10
+  { code: [OP.GAS, OP.GASPRICE, OP.POP], pc: '0', gasLimit: 100, result: { stack: ['98'], gasUsed: 6 } }, // GAS
   {
+    description: 'invalid JUMP',
     code: [OP.PUSH1, '01', OP.JUMP],
     stack: ['0'],
     result: {
       stack: [],
       pc: 2,
       gasUsed: 8,
-      errno: OP.ERROR_INVALID_JUMP_DESTINATION
-    }
+      errno: OP.ERROR_INVALID_JUMP_DESTINATION,
+    },
   },
-  // valid JUMP
   {
+    description: 'valid JUMP',
     code: [OP.JUMPDEST, OP.PUSH1, '04', OP.JUMP, OP.JUMPDEST],
     stack: ['0'],
     pc: '3',
     result: {
       stack: [],
       pc: 5,
-      gasUsed: 21
-    }
+      gasUsed: 21,
+    },
   },
-  // invalid JUMPI
   {
+    description: 'invalid JUMPI',
     code: [OP.PUSH1, '01', OP.PUSH1, '00', OP.JUMPI],
     stack: [1, 0],
     result: {
       stack: [],
       pc: 4,
       gasUsed: 10,
-      errno: OP.ERROR_INVALID_JUMP_DESTINATION
-    }
+      errno: OP.ERROR_INVALID_JUMP_DESTINATION,
+    },
   },
-  // valid JUMPI no-op
-  { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], stack: [0, 0], result: { stack: [], pc: 5, gasUsed: 10 } },
+  {
+    description: 'valid JUMPI no-op',
+    code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI],
+    stack: [0, 0],
+    result: {
+      stack: [],
+      pc: 5,
+      gasUsed: 10,
+    },
+  },
 
   // poor test
   // TODO: init state with returnData first
@@ -195,7 +210,7 @@ export default [
     data: '0x123456',
     result: {
       stack: [toBN('0x3456000000000000000000000000000000000000000000000000000000000000').toString()],
-      gasUsed: 3
+      gasUsed: 3,
     },
   },
   { code: OP.CALLDATASIZE, data: '0x1234', result: { stack: ['2'], gasUsed: 2 } },
@@ -203,29 +218,32 @@ export default [
   // Memory and stack (MLOAD, MSTORE, MSTORE8, MSIZE)
   { code: OP.MLOAD,
     stack: [0x01],
-    memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
+    memory: '0x00000000000000000000000000000000000000000000000000000000000000' +
+            '667700000000000000000000000000000000000000000000000000000000000000',
     result: {
       stack: [toBN('0x0000000000000000000000000000000000000000000000000000000000006677').toString()],
-      gasUsed: 3
+      gasUsed: 3,
     },
   },
   { code: OP.MSTORE,
     stack: [parseInt('0x5567', 16), 1],
     result: {
-      memory: '0x00000000000000000000000000000000000000000000000000000000000000556700000000000000000000000000000000000000000000000000000000000000',
-      gasUsed: 3
+      memory: '0x00000000000000000000000000000000000000000000000000000000000000' +
+              '556700000000000000000000000000000000000000000000000000000000000000',
+      gasUsed: 9,
     },
   },
   { code: OP.MSTORE8,
     stack: [parseInt('0x5567', 16), 1],
     result: {
       memory: '0x0067000000000000000000000000000000000000000000000000000000000000',
-      gasUsed: 3
+      gasUsed: 6,
     },
   },
   { code: OP.MSIZE,
-    memory: '0x00000000000000000000000000000000000000000000000000000000000000667700000000000000000000000000000000000000000000000000000000000000',
-    result: { stack: ['64'], gasUsed: 2 }
+    memory: '0x00000000000000000000000000000000000000000000000000000000000000' +
+            '667700000000000000000000000000000000000000000000000000000000000000',
+    result: { stack: ['64'], gasUsed: 2 },
   },
 
   // Data, stack and memory type OP-codes (CALLDATACOPY)
@@ -234,19 +252,17 @@ export default [
     data: '0x06397872cdd21945455a7fdc7921e2db7bd8e402607cad66279e899f6ae9b1da',
     result: {
       memory: '0x0072cdd219000000000000000000000000000000000000000000000000000000',
-      gasUsed: 3,
+      gasUsed: 9,
     },
   },
-
   // Code, stack and memory type OP-codes (CODECOPY)
   { code: [OP.GASPRICE, OP.POP, OP.CODECOPY],
     stack: [2, 1, 1],
     result: {
       memory: '0x0050390000000000000000000000000000000000000000000000000000000000',
-      gasUsed: 3,
+      gasUsed: 9,
     },
   },
-
   // Storage and stack (SSTORE, SLOAD)
   {
     code: OP.SSTORE,
@@ -260,8 +276,24 @@ export default [
         },
       ],
       pc: 1,
-      gasUsed: 0,
-    }
+      gasUsed: 20000,
+    },
+  },
+  {
+    code: [OP.SSTORE, OP.SSTORE],
+    stack: [0, 0, 5, 0],
+    pc: 0,
+    result: {
+      stack: [],
+      accounts: [
+        {
+          address: DEFAULT_CONTRACT_ADDRESS,
+          storage: [],
+        },
+      ],
+      pc: 2,
+      gasUsed: 25000,
+    },
   },
   {
     code: OP.SLOAD,
@@ -276,7 +308,7 @@ export default [
       stack: ['5'],
       pc: 1,
       gasUsed: 200,
-    }
+    },
   },
 
   // Context, stack and memory type OP-codes (LOG)
@@ -287,8 +319,8 @@ export default [
     result: {
       stack: [],
       logHash: '0x73d2c8d7164fd32313bc49407c85be488239dda257c390b3fb8c4b78ae7e5d90',
-      gasUsed: 375
-    }
+      gasUsed: 407,
+    },
   },
   {
     code: OP.LOG1,
@@ -297,8 +329,8 @@ export default [
     result: {
       stack: [],
       logHash: '0x8a3fc8f56f0d1d1b858ce6753e8e950ab6cec2652736744c0603c3ff05c4716b',
-      gasUsed: 375 * 2
-    }
+      gasUsed: 782,
+    },
   },
   {
     code: OP.LOG2,
@@ -307,8 +339,8 @@ export default [
     result: {
       stack: [],
       logHash: '0xc2152d58ac22809607a34167a0289fd8f40f695364b49cc870f198fc6bdf9b09',
-      gasUsed: 375 * 3
-    }
+      gasUsed: 1157,
+    },
   },
   {
     code: OP.LOG3,
@@ -317,8 +349,8 @@ export default [
     result: {
       stack: [],
       logHash: '0xb7e7d2bc2c72f5ee94013d38b2cc7d125bae556227c46b4f7e12a657585e1b37',
-      gasUsed: 375 * 4
-    }
+      gasUsed: 1532,
+    },
   },
   {
     code: OP.LOG4,
@@ -327,8 +359,8 @@ export default [
     result: {
       stack: [],
       logHash: '0xcb56c22daa081416d6024fa5415236dfe4e5be1a903ee3fad83cd66a3bbb1dca',
-      gasUsed: 375 * 5
-    }
+      gasUsed: 1907,
+    },
   },
 
   // Check logHash
@@ -340,8 +372,8 @@ export default [
     result: {
       stack: [],
       logHash: '0x3890e1cc9f39d08777e250e082c7642985cdfcc08ce34593dd6ee80870871d8a',
-      gasUsed: 375
-    }
+      gasUsed: 407,
+    },
   },
   {
     code: OP.LOG1,
@@ -351,8 +383,8 @@ export default [
     result: {
       stack: [],
       logHash: '0x153e61e8bae37db12468fbfdbb040a394d0d131169c2c453db9d5ea93b4aba11',
-      gasUsed: 375 * 2
-    }
+      gasUsed: 782,
+    },
   },
   {
     code: OP.LOG2,
@@ -362,8 +394,8 @@ export default [
     result: {
       stack: [],
       logHash: '0x14422ad14c72f4738362ca0e5c9c01c0311fd96247efa06b0cccc2939fe32278',
-      gasUsed: 375 * 3
-    }
+      gasUsed: 1157,
+    },
   },
   {
     code: OP.LOG3,
@@ -373,8 +405,8 @@ export default [
     result: {
       stack: [],
       logHash: '0x426e18c50d3adc9b7281858e6386bd5b27e60bb4310ee4ce69f00816f916dcb7',
-      gasUsed: 375 * 4
-    }
+      gasUsed: 1532,
+    },
   },
   {
     code: OP.LOG4,
@@ -384,8 +416,8 @@ export default [
     result: {
       stack: [],
       logHash: '0x83d7464c358e068fb006f770433a511f79431ebc618ff4f528be7f250adb46b4',
-      gasUsed: 375 * 5
-    }
+      gasUsed: 1907,
+    },
   },
 
   // Return, Stack and Memory type OP-codes (RETURN, REVERT, RETURNDATACOPY)
@@ -395,8 +427,8 @@ export default [
     result: {
       stack: [],
       pc: 0,
-      gasUsed: 0
-    }
+      gasUsed: 0,
+    },
   },
   {
     code: OP.REVERT,
@@ -405,8 +437,8 @@ export default [
       stack: [],
       errno: OP.ERROR_STATE_REVERTED,
       pc: 0,
-      gasUsed: 0
-    }
+      gasUsed: 0,
+    },
   },
   {
     code: OP.RETURNDATACOPY,
@@ -414,7 +446,286 @@ export default [
     result: {
       stack: [],
       pc: 1,
-      gasUsed: 3
-    }
+      gasUsed: 3,
+    },
+  },
+  {
+    code: OP.SHA3,
+    stack: ['0', '0'],
+    result: {
+      stack: ['89477152217924674838424037953991966239322087453347756267410168184682657981552'],
+      gasUsed: 30,
+    },
+  },
+  {
+    code: OP.SHA3,
+    stack: ['16', '0'],
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
+    result: {
+      stack: ['51079273531545631271186254190825661466610319062327825936014390943984294837068'],
+      gasUsed: 36,
+    },
+  },
+  {
+    code: OP.SHA3,
+    stack: ['33', '1'],
+    memory: '0x01020304050607080910111213141516171819202122232425262728293031' +
+            '320102030405060708091011121314151617181920212223242526272829303132',
+    result: {
+      stack: ['42547598288241533357066651653958571462069256745040824873964792010086985876747'],
+      gasUsed: 42,
+    },
+  },
+  {
+    code: [OP.MSTORE, OP.MSTORE, OP.MSTORE, OP.MSTORE],
+    stack: ['33', '1', '33', '1', '33', '0', '33', '21'],
+    pc: 0,
+    result: {
+      gasUsed: 18,
+    },
+  },
+  {
+    code: [OP.MSTORE, OP.MSTORE, OP.MSTORE, OP.MSTORE],
+    stack: ['33', '34', '33', '0', '33', '1', '33', '1'],
+    pc: 0,
+    result: {
+      gasUsed: 21,
+    },
+  },
+  {
+    code: [OP.MSTORE, OP.MSTORE, OP.MSTORE, OP.MSTORE],
+    stack: ['33', '3899', '33', '940', '33', '344', '33', '32'],
+    pc: 0,
+    result: {
+      gasUsed: 410,
+    },
+  },
+  {
+    code: [OP.MSTORE, OP.MSTORE, OP.MSTORE, OP.MSTORE],
+    stack: ['33', '6899', '33', '2144', '33', '777', '33', '496'],
+    pc: 0,
+    result: {
+      gasUsed: 754,
+    },
+  },
+  {
+    code: [OP.MSTORE8, OP.MSTORE8, OP.MSTORE8, OP.MSTORE8],
+    stack: ['33', '32', '33', '31', '33', '0', '33', '672'],
+    pc: 0,
+    result: {
+      gasUsed: 78,
+    },
+  },
+  {
+    code: [OP.MSTORE8, OP.MSTORE8, OP.MSTORE8, OP.MSTORE8],
+    stack: ['33', '972', '33', '0', '33', '31', '33', '32'],
+    pc: 0,
+    result: {
+      gasUsed: 106,
+    },
+  },
+  {
+    code: [OP.GAS, OP.GAS, OP.CODECOPY, OP.CODECOPY],
+    stack: [2, 1, 1, 2, 1, 1],
+    pc: 2,
+    result: {
+      gasUsed: 15,
+    },
+  },
+  {
+    code: OP.SELFDESTRUCT,
+    stack: [DEFAULT_CALLER_ADDRESS],
+    accounts: [
+      {
+        address: DEFAULT_CONTRACT_ADDRESS,
+        balance: 254,
+        storage: [{ address: 0, value: 5 }],
+      },
+      {
+        address: DEFAULT_CALLER_ADDRESS,
+        balance: 254,
+        storage: [{ address: 0, value: 5 }],
+      },
+    ],
+    result: {
+      gasUsed: 5000,
+    },
+  },
+  {
+    code: OP.SELFDESTRUCT,
+    stack: ['0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6'],
+    accounts: [
+      {
+        address: DEFAULT_CONTRACT_ADDRESS,
+        balance: 254,
+        storage: [{ address: 0, value: 5 }],
+      },
+    ],
+    result: {
+      gasUsed: 30000,
+    },
+  },
+  {
+    description: 'CALL ECRECOVER without input/output',
+    code: OP.CALL,
+    stack: [0, 0, 0, 0, 0, 1, 10000],
+    result: {
+      gasUsed: 3700,
+    },
+  },
+  {
+    description: 'CALL ECRECOVER with input/output',
+    code: OP.CALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [64, 32, 32, 0, 0, 1, 10000],
+    result: {
+      gasUsed: 3709,
+    },
+  },
+  {
+    description: 'CALL SHA256 without input/output',
+    code: OP.CALL,
+    stack: [0, 0, 0, 0, 0, 2, 10000],
+    result: {
+      gasUsed: 760,
+    },
+  },
+  {
+    description: 'CALL SHA256 with input/output',
+    code: OP.CALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [64, 32, 32, 0, 0, 2, 10000],
+    result: {
+      gasUsed: 781,
+    },
+  },
+  {
+    description: 'CALL RIPEMD160 without input/output',
+    code: OP.CALL,
+    stack: [0, 0, 0, 0, 0, 3, 10000],
+    result: {
+      gasUsed: 1300,
+    },
+  },
+  {
+    description: 'CALL RIPEMD160 with input/output',
+    code: OP.CALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [64, 32, 32, 0, 0, 3, 10000],
+    result: {
+      gasUsed: 1429,
+    },
+  },
+  {
+    description: 'CALL IDENTITY without input/output',
+    code: OP.CALL,
+    stack: [0, 0, 0, 0, 0, 4, 10000],
+    result: {
+      gasUsed: 715,
+    },
+  },
+  {
+    description: 'CALL IDENTITY with input/output',
+    code: OP.CALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [64, 32, 32, 0, 0, 4, 10000],
+    result: {
+      gasUsed: 727,
+    },
+  },
+  {
+    description: 'CALL with value transfer & new account',
+    code: OP.CALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [64, 32, 32, 0, 1234, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    result: {
+      gasUsed: 32409,
+    },
+  },
+  {
+    description: 'CALL without value transfer',
+    code: OP.CALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [64, 32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    result: {
+      gasUsed: 709,
+    },
+  },
+  {
+    code: OP.DELEGATECALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    result: {
+      gasUsed: 706,
+    },
+  },
+  {
+    description: 'STATICCALL without input',
+    code: OP.STATICCALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    result: {
+      gasUsed: 706,
+    },
+  },
+  {
+    description: 'STATICCALL with out of range input',
+    code: OP.STATICCALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [32, 32, 64, 48, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    result: {
+      gasUsed: 712,
+    },
+  },
+  {
+    code: OP.CREATE,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [16, 0, 123],
+    result: {
+      gasUsed: 32003,
+    },
+  },
+  {
+    description: 'CREATE growing memory',
+    code: OP.CREATE,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [16, 44, 123],
+    result: {
+      gasUsed: 32006,
+    },
+  },
+  {
+    description: 'SSTORE [set to 0, set to 5, set to 0]',
+    code: [OP.SSTORE, OP.SSTORE, OP.SSTORE],
+    stack: [0, 0, 5, 0, 0, 0],
+    pc: 0,
+    result: {
+      stack: [],
+      accounts: [
+        {
+          address: DEFAULT_CONTRACT_ADDRESS,
+          storage: [],
+        },
+      ],
+      pc: 3,
+      gasUsed: 30000,
+    },
+  },
+  {
+    description: 'CALLDATACOPY expanding memory',
+    code: OP.CALLDATACOPY,
+    stack: [4, 3, 144],
+    data: '0x06397872cdd21945455a7fdc7921e2db7bd8e402607cad66279e899f6ae9b1da',
+    result: {
+      gasUsed: 21,
+    },
+  },
+  {
+    description: 'RETURN - grows memory',
+    code: OP.RETURN,
+    stack: [4, 0],
+    result: {
+      gasUsed: 3,
+    },
   },
 ];

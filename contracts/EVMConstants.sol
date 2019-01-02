@@ -1,5 +1,4 @@
-pragma solidity 0.4.25;
-pragma experimental "v0.5.0";
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
 
@@ -166,6 +165,7 @@ contract EVMConstants {
     uint constant internal OP_SELFDESTRUCT = 0xff;
 
     // GAS
+    uint constant internal GAS_ADDITIONAL_HANDLING = 0;
     uint constant internal GAS_ZERO = 0;
     uint constant internal GAS_BASE = 2;
     uint constant internal GAS_VERYLOW = 3;

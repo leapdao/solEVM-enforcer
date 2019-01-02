@@ -1,13 +1,16 @@
-pragma solidity 0.4.25;
+pragma solidity 0.5.2;
+pragma experimental ABIEncoderV2;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "../IVerifier.sol";
 import "../IEnforcer.sol";
+import "../IEthereumRuntime.sol";
 
 contract VerifierMock is Ownable, IVerifier {
 
   uint256 queryPeriod;
   IEnforcer enforcer;
+  IEthereumRuntime ethereumRuntime;
 
   struct Dispute {
     uint256 lastQueryBlock;
@@ -20,7 +23,6 @@ contract VerifierMock is Ownable, IVerifier {
   event DisputeStart(bytes32 indexed _disputeId);
 
   constructor(uint256 _queryPeriod) public {
-    owner = msg.sender;
     queryPeriod = _queryPeriod;
   }
 
@@ -48,4 +50,6 @@ contract VerifierMock is Ownable, IVerifier {
     enforcer.result(disputes[_disputeId].executionId, _winner, disputes[_disputeId].challenger);
   }
 
+  function runStep(bytes32 _disputeId, IEthereumRuntime.Result memory) public {
+  }
 }

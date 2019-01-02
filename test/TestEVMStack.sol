@@ -1,5 +1,4 @@
-pragma solidity ^0.4.22;
-pragma experimental "v0.5.0";
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
 
@@ -16,9 +15,10 @@ contract TestEVMStack {
     uint constant internal testVal3 = 2;
 
     function testCreate() public {
-        uint fPtr = MemOps.freeMemPtr();
         EVMStack.Stack memory stack = EVMStack.newStack();
-        Assert.equal(stack.dataPtr, fPtr + 0x60, "");
+        uint fPtr = MemOps.freeMemPtr();
+
+        Assert.equal(stack.dataPtr, fPtr - (stack.cap * 32), "");
         Assert.equal(stack.size, 0, "");
         Assert.equal(stack.cap, 64, "");
     }

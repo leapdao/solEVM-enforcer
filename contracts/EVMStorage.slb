@@ -1,6 +1,5 @@
-pragma experimental "v0.5.0";
+pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
-pragma solidity 0.4.25;
 
 
 library EVMStorage {
@@ -58,7 +57,7 @@ library EVMStorage {
             while (true) {
                 if (e.slot.addr == addr) {
                     val = e.slot.val;
-                    return;
+                    return val;
                 }
                 if (e._next == 0) {
                     break;
@@ -70,12 +69,12 @@ library EVMStorage {
             }
         }
         val = 0;
-        return;
+        return val;
     }
 
     function copy(Storage memory self) internal pure returns (Storage memory stg) {
         if (self.size == 0) {
-            return;
+            return stg;
         }
         stg.size = self.size;
         Element memory e = self.head;
@@ -97,12 +96,12 @@ library EVMStorage {
             e2._next = newElemAddr;
             e2 = newElem;
         }
-        return;
+        return stg;
     }
 
     function toArray(Storage memory self) internal pure returns (StorageSlot[] memory slots) {
         if (self.size == 0) {
-            return;
+            return slots;
         }
         slots = new StorageSlot[](self.size);
         uint i = 0;
@@ -117,8 +116,7 @@ library EVMStorage {
                 e := n
             }
         }
-        return;
+        return slots;
     }
-
-
+    
 }
