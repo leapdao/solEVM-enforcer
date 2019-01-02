@@ -5,16 +5,16 @@ import {MemOps} from "./MemOps.slb";
 
 
 library EVMStack {
-    
+
     uint constant internal INITIAL_CAP = 64;
     uint constant internal MAX_SIZE = 1024;
-    
+
     struct Stack {
         uint size;
         uint cap;
         uint dataPtr;
     }
-    
+
     // Re-sizes and re-allocates the stack.
     function expandCapacity(Stack memory self, uint capIncrease) internal pure {
         assert(capIncrease != 0);
@@ -25,13 +25,13 @@ library EVMStack {
         MemOps.memcopy32(src, dest, self.size);
         self.dataPtr = dest;
     }
-    
+
     function newStack() internal pure returns (Stack memory stk) {
         stk.size = 0;
         stk.cap = INITIAL_CAP;
         stk.dataPtr = MemOps.allocate32(INITIAL_CAP);
     }
-    
+
     function fromArray(uint[] memory sArr) internal pure returns (Stack memory stk) {
         stk.size = sArr.length;
         stk.cap = sArr.length + INITIAL_CAP;
@@ -44,7 +44,7 @@ library EVMStack {
             }
         }
     }
-    
+
     function toArray(Stack memory self) internal pure returns (uint[] memory arr) {
         if (self.size == 0) {
             return arr;
@@ -118,5 +118,5 @@ library EVMStack {
             mstore(slot2, data1)
         }
     }
-    
+
 }
