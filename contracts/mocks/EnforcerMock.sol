@@ -13,10 +13,10 @@ contract EnforcerMock is IEnforcer {
         _challenger;
     }
 
-    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _step) public payable {
+    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _executionLength) public payable {
         _code;
         _callData;
         _endHash;
-        _step;
+        _executionLength;
     }
 }

@@ -14,7 +14,7 @@ contract Enforcer {
     struct Execution {
         uint256 startBlock;
         bytes32 endHash;
-        uint256 step;
+        uint256 executionLength;
         address solver;
     }
 
@@ -39,26 +39,26 @@ contract Enforcer {
     }
 
     // register a new execution
-    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _step)
+    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _executionLength)
         public payable returns(bytes32 executionId)
     {
         require(msg.value == bondAmount);
         executionId = keccak256(abi.encodePacked(_code, _callData));
         require(executions[executionId].startBlock == 0);
-        executions[executionId] = Execution(block.number, _endHash, _step, msg.sender);
+        executions[executionId] = Execution(block.number, _endHash, _executionLength, msg.sender);
         bonds[msg.sender] += bondAmount;
         emit Registered(executionId, msg.sender, _code, _callData);
     }
 
     // starts a new dispute
-    function dispute(bytes32 _executionId, bytes32 _endHash, uint256 _step) public payable {
+    function dispute(bytes32 _executionId, bytes32 _endHash, uint256 _executionLength) public payable {
         Execution storage execution = executions[_executionId];
         require(execution.startBlock != 0);
         require(execution.startBlock + challengePeriod > block.number);
         require(msg.value == bondAmount);
-        require(execution.endHash != _endHash || execution.step != _step);
+        require(execution.endHash != _endHash);
         bonds[msg.sender] += bondAmount;
-        verifier.initGame(_executionId, execution.endHash, execution.step, _endHash, _step, msg.sender);
+        verifier.initGame(_executionId, execution.endHash, execution.executionLength, _endHash, _executionLength, msg.sender);
     }
 
     // receive result from Verifier contract

@@ -14,8 +14,8 @@ contract CallbackMock {
     }
 
     // register a new execution
-    function register(address _enforcer, bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _step) public payable {
+    function register(address _enforcer, bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _executionLength) public payable {
         IEnforcer enforcer = IEnforcer(_enforcer);
-        enforcer.register.value(msg.value)(_code, _callData, _endHash, _step);
+        enforcer.register.value(msg.value)(_code, _callData, _endHash, _executionLength);
     }
 }
