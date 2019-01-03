@@ -46,6 +46,7 @@
   "author": "johannbarbie@me.com",
   "license": "ISC",
   "dependencies": {
-    "openzeppelin-solidity": "github:OpenZeppelin/openzeppelin-solidity#v2.1.0-rc.2"
+    "openzeppelin-solidity": "github:OpenZeppelin/openzeppelin-solidity#v2.1.0-rc.2",
+    "ethereumjs-vm": "github:pinkiebell/ethereumjs-vm.git#distR1"
   }
 }

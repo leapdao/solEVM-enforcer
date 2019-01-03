@@ -101,7 +101,9 @@ contract('Runtime', function () {
           assert.deepEqual(res.mem, fixture.result.memory);
         }
         if (fixture.result.accounts) {
-          fixture.result.accounts.push({
+          const accounts = Array.from(fixture.result.accounts);
+
+          accounts.push({
             address: `0x${DEFAULT_CALLER}`,
             balance: 0,
             nonce: 0,
@@ -111,7 +113,7 @@ contract('Runtime', function () {
           });
           const accs = decodeAccounts(res.accounts, res.accountsCode);
           const accsMap = accs.reduce((m, a) => { m[a.address] = a; return m; }, {});
-          fixture.result.accounts.forEach(account => {
+          accounts.forEach(account => {
             const expectedAccount = accsMap[account.address];
             assert.isTrue(!!expectedAccount);
             if (account.balance) {
