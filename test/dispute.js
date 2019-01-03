@@ -222,7 +222,12 @@ contract('JS DisputeMock', function () {
     let wrongExecution = JSON.parse(copy);
     wrongExecution.shift();
     await disputeGame(code, steps, wrongExecution, 'solver');
-    // TODO: how to proof valid or invalid if solver misses first step?
+  });
+
+  it('solver first step missing', async () => {
+    let wrongExecution = JSON.parse(copy);
+    wrongExecution.shift();
+    await disputeGame(code, wrongExecution, steps, 'challenger');
   });
 
   it('challenger last step gone', async () => {
