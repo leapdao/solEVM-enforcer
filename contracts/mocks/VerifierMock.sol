@@ -38,17 +38,15 @@ contract VerifierMock is Ownable, IVerifier {
         _;
     }
 
+    // solhint-disable no-unused-vars
     function initGame(bytes32 _executionId, bytes32 _solverHash, uint256 _solverExecutionLength,
         bytes32 _challengerHash, uint256 _challengerExecutionLength, address _challenger) public onlyEnforcer() {
         bytes32 disputeId = keccak256(abi.encodePacked(_executionId, _challenger));
         require(disputes[disputeId].lastQueryBlock == 0);
         emit DisputeStart(disputeId);
         disputes[disputeId] = Dispute(block.number, _challenger, _executionId);
-        _solverHash;
-        _solverExecutionLength;
-        _challengerHash;
-        _challengerExecutionLength;
     }
+    // solhint-enable no-unused-vars
 
     function result(bytes32 _disputeId, bool _winner) public {
         require(disputes[_disputeId].lastQueryBlock > 0);

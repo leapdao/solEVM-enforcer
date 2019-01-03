@@ -137,6 +137,7 @@ contract SampleVerifier is Ownable, IVerifier {
 
         Dispute storage dispute = disputes[disputeId];
         require(MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0), "start state proof not correct");
+        // TODO verify length of proofs match step
         // solhint-disable-next-line max-line-length
         require(MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.executionLength - 1), "end state proof not correct");
 
