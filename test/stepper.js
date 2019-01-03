@@ -65,7 +65,7 @@ contract('JS Stepper', function () {
           assert.equal(res.output.errno, fixture.result.errno, 'errno');
         }
         if (fixture.result.logHash) {
-          assert.equal(res.logHash, fixture.result.logHash, 'logHash');
+          assert.equal(res.output.logHash, fixture.result.logHash, 'logHash');
         }
         if (fixture.result.accounts) {
           const accsMap = res.accounts.reduce((m, a) => { m[a.address] = a; return m; }, {});
