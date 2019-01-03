@@ -7,7 +7,9 @@ const CallbackMock = artifacts.require('./mocks/CallbackMock.sol');
 const code = '0xaabb';
 const callData = '0xbb';
 const endHash = '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+const executionLength = 1;
 const otherEndHash = '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+const otherExecutionLength = 1;
 
 contract('Enforcer', () => {
   it('should allow to register and finalize execution', async () => {
@@ -16,11 +18,11 @@ contract('Enforcer', () => {
     const enforcer = await deployContract(Enforcer, wallets[0].address, 0, 0);
 
     // register execution and check state
-    let tx = await contract.register(enforcer.address, code, callData, endHash, txOverrides);
+    let tx = await contract.register(enforcer.address, code, callData, endHash, executionLength, txOverrides);
     const reg = await tx.wait();
     const executionId = reg.events[0].topics[1];
     const execs = await enforcer.executions(executionId);
-    assert.equal(execs[2], contract.address); // execs[2] is solver address of execution struct
+    assert.equal(execs[3], contract.address); // execs[3] is solver address of execution struct
 
     // finalize execution
     tx = await enforcer.finalize(executionId);
@@ -37,7 +39,7 @@ contract('Enforcer', () => {
 
     // register execution and check state
     let tx = await contract.register(
-      enforcer.address, code, callData, endHash,
+      enforcer.address, code, callData, endHash, executionLength,
       { value: bondAmount, gasLimit: 0xffffff }
     );
 
@@ -62,13 +64,13 @@ contract('Enforcer', () => {
     await tx.wait();
 
     // register execution and check state
-    tx = await contract.register(enforcer.address, code, callData, endHash, txOverrides);
+    tx = await contract.register(enforcer.address, code, callData, endHash, executionLength, txOverrides);
     const reg = await tx.wait();
     const executionId = reg.events[0].topics[1];
 
     // start dispute
     tx = await enforcer.dispute(
-      executionId, otherEndHash,
+      executionId, otherEndHash, otherExecutionLength,
       txOverrides
     );
     const disp = await tx.wait();
@@ -97,7 +99,7 @@ contract('Enforcer', () => {
 
     // register execution and check state
     tx = await contract.register(
-      enforcer.address, code, callData, endHash,
+      enforcer.address, code, callData, endHash, executionLength,
       { value: bondAmount, gasLimit: 0xffffff }
     );
 
@@ -106,7 +108,7 @@ contract('Enforcer', () => {
 
     // start dispute
     tx = await enforcer.dispute(
-      executionId, otherEndHash,
+      executionId, otherEndHash, otherExecutionLength,
       { value: bondAmount, gasLimit: 0xffffff }
     );
     const disp = await tx.wait();

@@ -6,5 +6,5 @@ contract IEnforcer {
 
     function result(bytes32 _executionId, bool _result, address _challenger) public;
 
-    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash) public payable;
+    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _executionLength) public payable;
 }

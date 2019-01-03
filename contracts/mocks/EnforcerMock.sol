@@ -7,15 +7,9 @@ contract EnforcerMock is IEnforcer {
     // solhint-disable-next-line no-empty-blocks
     constructor() public {}
 
-    function result(bytes32 _executionId, bool _result, address _challenger) public {
-        _executionId;
-        _result;
-        _challenger;
-    }
+    // solhint-disable-next-line no-unused-vars, no-empty-blocks
+    function result(bytes32 _executionId, bool _result, address _challenger) public {}
 
-    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash) public payable {
-        _code;
-        _callData;
-        _endHash;
-    }
+    // solhint-disable-next-line no-unused-vars, no-empty-blocks
+    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _executionLength) public payable {}
 }

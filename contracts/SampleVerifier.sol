@@ -18,7 +18,7 @@ contract SampleVerifier is Ownable, IVerifier {
 
     struct ComputationHash {
         bytes32 merkleRoot;
-        uint256 stepCount;
+        uint256 executionLength;
     }
 
     struct Dispute {
@@ -69,9 +69,9 @@ contract SampleVerifier is Ownable, IVerifier {
     function initGame(
         bytes32 _executionId,
         bytes32 _solverHashRoot,
-        uint256 _solverStep,
+        uint256 _solverExecutionLength,
         bytes32 _challengerHashRoot,
-        uint256 _challengerStep,
+        uint256 _challengerExecutionLength,
         address _challenger
     ) public onlyEnforcer() {
         bytes32 disputeId = keccak256(abi.encodePacked(_executionId, _challenger));
@@ -81,8 +81,8 @@ contract SampleVerifier is Ownable, IVerifier {
         disputes[disputeId] = Dispute(
             _executionId,
             _challenger,
-            ComputationHash(_solverHashRoot, _solverStep),
-            ComputationHash(_challengerHashRoot, _challengerStep),
+            ComputationHash(_solverHashRoot, _solverExecutionLength),
+            ComputationHash(_challengerHashRoot, _challengerExecutionLength),
             StateHash("", 0),
             StateHash("", 0),
             getTimeout(),
@@ -137,11 +137,12 @@ contract SampleVerifier is Ownable, IVerifier {
 
         Dispute storage dispute = disputes[disputeId];
         require(MerkleProof.verify(startProofs, dispute.solverComputationHash.merkleRoot, startHash, 0), "start state proof not correct");
+        // TODO verify length of proofs match step
         // solhint-disable-next-line max-line-length
-        require(MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.stepCount - 1), "end state proof not correct");
+        require(MerkleProof.verify(endProofs, dispute.solverComputationHash.merkleRoot, endHash, dispute.solverComputationHash.executionLength - 1), "end state proof not correct");
 
         dispute.left = StateHash(startHash, 0);
-        dispute.right = StateHash(endHash, dispute.solverComputationHash.stepCount - 1);
+        dispute.right = StateHash(endHash, dispute.solverComputationHash.executionLength - 1);
         dispute.state = States.SolverTurn;
         dispute.timeout = getTimeout();
     }
