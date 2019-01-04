@@ -1,0 +1,76 @@
+pragma solidity 0.5.2;
+pragma experimental ABIEncoderV2;
+
+
+library Merkelizer {
+
+    struct ExecutionState {
+        bytes data;
+        uint[] stack;
+        bytes mem;
+        bytes returnData;
+        bytes32 logHash;
+        uint pc;
+        uint pcEnd;
+        uint gasRemaining;
+        bool isCodeCompacted;
+        // accounts...
+    }
+
+    function memHash(bytes memory _mem) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_mem));
+    }
+
+    function dataHash(bytes memory _data) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_data));
+    }
+
+    function stackHash(ExecutionState memory self, bytes32 _sibling) internal pure returns (bytes32) {
+        bytes32 hash = _sibling;
+        uint[] memory stack = self.stack;
+
+        for (uint i = 0; i < stack.length; i++) {
+            assembly {
+                mstore(0, hash)
+                mstore(0x20, mload(add(add(stack, 0x20), mul(i, 0x20))))
+                hash := keccak256(0, 0x40)
+            }
+        }
+
+        return hash;
+    }
+
+    function stateHash(
+        ExecutionState memory self,
+        bytes32 _stackHash,
+        bytes32 _memHash,
+        bytes32 _dataHash
+    ) internal pure returns (bytes32) {
+        // TODO: implement support for accounts
+        // TODO: compact-{returnData, accounts}
+
+        if (_stackHash == 0) {
+            _stackHash = stackHash(self, 0);
+        }
+
+        if (_memHash == 0) {
+            _memHash = memHash(self.mem);
+        }
+
+        if (_dataHash == 0) {
+            _dataHash = dataHash(self.data);
+        }
+
+        return keccak256(
+            abi.encodePacked(
+                _stackHash,
+                _memHash,
+                _dataHash,
+                self.logHash,
+                self.returnData,
+                self.pc,
+                self.gasRemaining
+            )
+        );
+    }
+}
