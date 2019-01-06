@@ -114,7 +114,7 @@ contract('Runtime', function () {
           assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');
         }
         if (fixture.result.gasUsed !== undefined) {
-          assert.equal(gasLimit - parseInt(res.gasRemaining), fixture.result.gasUsed, 'gasUsed');
+          assert.equal(gasLimit - parseInt(res.gas), fixture.result.gasUsed, 'gasUsed');
         }
         if (fixture.result.errno !== undefined) {
           assert.equal(res.errno, fixture.result.errno, 'errno');
@@ -130,7 +130,7 @@ contract('Runtime', function () {
 
     const res = await rt.execute({ code, data, gasLimit });
     // should have zero gas left
-    assert.equal(res.gasRemaining, 0);
+    assert.equal(res.gas, 0);
   });
 
   it('should run out of gas', async function () {

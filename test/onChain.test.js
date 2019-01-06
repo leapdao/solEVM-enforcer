@@ -1,4 +1,4 @@
-import { toStr, getCodeWithStep, deployContract } from './utils';
+import { getCodeWithStep, deployContract } from './utils';
 
 import onChainFixtures from './onChain.fixtures';
 import Runtime from './helpers/runtimeAdapter';
@@ -31,22 +31,20 @@ contract('Runtime', function () {
             data,
             pc: beforeState.pc,
             stepCount: 1,
-            gasRemaining: beforeState.gasRemaining,
+            gasRemaining: beforeState.gas,
             stack: beforeState.stack,
             mem: beforeState.mem,
             accounts: beforeState.accounts,
             accountsCode: beforeState.accountsCode,
             logHash: beforeState.logHash,
           }
+
         );
-        // console.log('After', onChainState.stack);
 
         // 4. check that on-chain state is the same as off-chain
-        assert.deepEqual(toStr(onChainState.stack), toStr(afterState.stack), 'Stack');
-        assert.equal(onChainState.mem, afterState.mem, 'Memory');
-        assert.deepEqual(onChainState.accounts, afterState.accounts, 'Accounts');
-        assert.equal(onChainState.accountsCode, afterState.accountsCode, 'Accounts code');
-        assert.equal(onChainState.logHash, afterState.logHash, 'Log hash');
+        // checking hashValue is enough to say that states are same
+        assert.equal(onChainState.hashValue, afterState.hashValue, 'State Hash');
+        // assert.equal(onChainState.n, afterState.n, 'n');
       });
     });
   });

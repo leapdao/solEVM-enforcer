@@ -22,7 +22,7 @@ contract CompactProofMock {
     }
 
     function mockExecute(EthereumRuntime.EVMPreimage memory evmPreimage)
-    public returns (EthereumRuntime.EVMPreimage memory) {
+    public returns (EthereumRuntime.EVMResult memory) {
         executed = true;
         return ethRuntime.execute(evmPreimage);
     }

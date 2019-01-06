@@ -112,7 +112,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
-    function execute(EVMPreimage memory img) public pure returns (EVMPreimage memory) {
+    function execute(EVMPreimage memory img) public pure returns (EVMResult memory) {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
 
@@ -148,16 +148,26 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         _run(evm, img.pc, img.stepCount);
 
-        img.stack = evm.stack.toArray();
-        img.mem = evm.mem.toArray();
-        img.returnData = evm.returnData;
-        img.pc = evm.pc;
-        img.errno = evm.errno;
-        img.gasRemaining = evm.gas;
-        img.logHash = evm.logHash;
-        (img.accounts, img.accountsCode) = evm.accounts.toArray();
+        Context memory context = evm.context;
+        bytes32 hashValue = stateHash(evm, context);
+        EVMResult memory resultState;
+        
+        resultState.gas = evm.gas;
+        resultState.code = evm.code;
+        resultState.data = evm.data;
+        resultState.lastRet = evm.lastRet;
+        resultState.returnData = evm.returnData;
+        resultState.errno = evm.errno;
+        (resultState.accounts, resultState.accountsCode) = EVMAccounts.toArray(evm.accounts);
+        resultState.logHash = evm.logHash;
+        resultState.mem = EVMMemory.toArray(evm.mem);
+        resultState.stack = EVMStack.toArray(evm.stack);
+        resultState.depth = evm.depth;
+        // resultState.n = evm.n;
+        resultState.pc = evm.pc;
+        resultState.hashValue = hashValue;
 
-        return img;
+        return resultState;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
@@ -276,6 +286,40 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         }
         newAcc.code = evm.returnData;
         addr = newAddress;
+    }
+
+    function stateHash(EVM memory evm, Context memory context) internal pure returns (bytes32) {
+        bytes32 contextHash = keccak256(abi.encodePacked(
+            context.origin,
+            context.gasPrice,
+            context.gasLimit,
+            context.coinBase,
+            context.blockNumber,
+            context.time
+        ));
+
+        bytes32 dataHash = keccak256(abi.encodePacked(
+            evm.gas,
+            evm.code,
+            evm.data,
+            evm.lastRet,
+            evm.returnData,
+            evm.errno,
+            evm.accounts.size
+        ));
+
+        bytes32 hashValue = keccak256(abi.encodePacked(
+            dataHash,
+            evm.logHash,
+            evm.mem.size,
+            evm.stack.size,
+            evm.depth,
+            // evm.n,
+            evm.pc,
+            contextHash
+        ));
+
+        return hashValue;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
