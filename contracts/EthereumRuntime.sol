@@ -278,6 +278,134 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         addr = newAddress;
     }
 
+    function stateHash(EVM memory evm, uint pc) internal pure returns (bytes32) {
+        uint errno = NO_ERROR;
+        bytes memory code = evm.code;
+
+        if (evm.gas > evm.context.gasLimit) {
+            errno = ERROR_OUT_OF_GAS;
+        }
+
+        if (errno == NO_ERROR && pc < code.length) {
+            uint8 opcode = uint8(code[pc]);
+            Instruction memory ins = evm.handlers.ins[opcode];
+
+            if (ins.gas != GAS_ADDITIONAL_HANDLING) {
+                if (ins.gas > evm.gas) {
+                    errno = ERROR_OUT_OF_GAS;
+                    evm.gas = 0;
+                }
+                evm.gas -= ins.gas;
+            }
+
+            // Check for violation of static execution.
+            if (
+                evm.staticExec &&
+                (opcode == OP_SSTORE || opcode == OP_CREATE || (OP_LOG0 <= opcode && opcode <= OP_LOG4))
+            ) {
+                errno = ERROR_ILLEGAL_WRITE_OPERATION;
+            }
+
+            // Check for stack errors
+            if (evm.stack.size < ins.stackIn) {
+                errno = ERROR_STACK_UNDERFLOW;
+            } else if (ins.stackOut > ins.stackIn && evm.stack.size + ins.stackOut - ins.stackIn > MAX_STACK_SIZE) {
+                errno = ERROR_STACK_OVERFLOW;
+            }
+
+            if (OP_PUSH1 <= opcode && opcode <= OP_PUSH32) {
+                evm.pc = pc;
+                uint n = opcode - OP_PUSH1 + 1;
+                evm.n = n;
+                errno = ins.handler(evm);
+            } else if (opcode == OP_JUMP || opcode == OP_JUMPI) {
+                evm.pc = pc;
+                errno = ins.handler(evm);
+            } else if (opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_STOP || opcode == OP_SELFDESTRUCT) {
+                errno = ins.handler(evm);
+            } else {
+                if (OP_DUP1 <= opcode && opcode <= OP_DUP16) {
+                    evm.n = opcode - OP_DUP1 + 1;
+                    errno = ins.handler(evm);
+                } else if (OP_SWAP1 <= opcode && opcode <= OP_SWAP16) {
+                    evm.n = opcode - OP_SWAP1 + 1;
+                    errno = ins.handler(evm);
+                } else if (OP_LOG0 <= opcode && opcode <= OP_LOG4) {
+                    evm.n = opcode - OP_LOG0;
+                    errno = ins.handler(evm);
+                } else if (opcode == OP_PC) {
+                    evm.pc = pc;
+                    errno = ins.handler(evm);
+                } else {
+                    errno = ins.handler(evm);
+                }
+            }
+        }
+        evm.errno = errno;
+        // to be used if errno is non-zero
+        evm.errpc = pc;
+        evm.pc = pc;
+        
+        bytes32 hashValue = keccak256(abi.encodePacked(
+            evm.gas,
+            evm.value,
+            evm.code,
+            evm.data,
+            evm.lastRet,
+            evm.returnData,
+            evm.errno,
+            evm.errpc,
+            //evm.accounts.head,
+            evm.accounts.size,
+    
+            evm.logHash,
+            //evm.context,
+            
+            evm.mem.size,
+            evm.mem.cap,
+            evm.mem.dataPtr,
+            
+            evm.stack.size,
+            evm.stack.cap,
+            evm.stack.dataPtr,
+
+            
+            evm.depth,
+            
+            evm.caller.addr,
+            evm.caller.balance,
+            evm.caller.nonce,
+            evm.caller.destroyed,
+            evm.caller.code,
+           // evm.caller.stge.head,
+            evm.caller.stge.size,
+
+            evm.target.addr,
+            evm.target.balance,
+            evm.target.nonce,
+            evm.target.destroyed,
+            evm.target.code,
+            //evm.target.stge.head,
+            evm.target.stge.size,
+
+            evm.n,
+            evm.pc,
+            evm.staticExec,
+
+            //evm.handlers,
+
+            evm.context.origin,
+            evm.context.gasPrice,
+            evm.context.gasLimit,
+            evm.context.coinBase,
+            evm.context.blockNumber,
+            evm.context.time,
+            evm.context.difficulty
+            ));
+            
+        return hashValue;
+    }
+
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
     function _run(EVM memory evm, uint pc, uint pcStepCount) internal pure {
         uint pcNext = 0;
