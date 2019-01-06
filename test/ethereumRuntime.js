@@ -15,27 +15,8 @@ contract('Runtime', function () {
   });
 
   describe('executeAndStop', () => {
-    it('should allow to stop at specified op-count and export the state', async function () {
-      const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD + PUSH1 + '00' + OP.MSTORE;
-      const data = '0x';
-      let r = await rt.executeAndStop(code, data, [0, 2, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
-      assert.deepEqual(toNum(r.stack), [3]);
-      assert.equal(r.pc, 2);
-      assert.equal(r.mem, '0x');
-
-      r = await rt.executeAndStop(code, data, [0, 4, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
-      assert.deepEqual(toNum(r.stack), [3, 5]);
-
-      r = await rt.executeAndStop(code, data, [0, 5, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
-      assert.deepEqual(toNum(r.stack), [8]);
-      r = await rt.executeAndStop(code, data, [0, 8, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
-      assert.deepEqual(toNum(r.stack), []);
-      assert.equal(r.pc, 8);
-      assert.equal(parseInt(r.mem, 16), 8);
-    });
-
-    it('should work with JUMPs', async () => {
-      //    codepointers: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A, B, C
+    it('should allow to run a specific number of steps', async () => {
+      // codepointers: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A, B, C
       // execution order: 0, 1, 2, 8, 9, A, B, 3, 4, 5, 6, 7, C
       const code = [
         OP.PUSH1, '08', OP.JUMP, // jump to 0x08
@@ -45,22 +26,22 @@ contract('Runtime', function () {
       ];
       const data = '0x';
 
-      const executeTill = async (stopAt) =>
+      const executeStep = async (stepCount) =>
         (await rt.executeAndStop(
-          `0x${code.join('')}`, data, [0, stopAt, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]
-        )).pc.toNumber();
-      
-      assert.equal(await executeTill(2), 2);
-      assert.equal(await executeTill(3), 3);
-      assert.equal(await executeTill(5), 5);
-      assert.equal(await executeTill(12), 12);
+          `0x${code.join('')}`, data, [0, stepCount, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]
+        )).pc;
+      assert.equal(await executeStep(1), 2, 'should be at 2 JUMP');
+      assert.equal(await executeStep(2), 8, 'should be at 8 JUMPDEST');
+      assert.equal(await executeStep(3), 9, 'should be at 9 PUSH1');
+      assert.equal(await executeStep(4), 11, 'should be at 11 JUMP');
+      assert.equal(await executeStep(5), 3, 'should be at 3 JUMPDEST');
     });
   });
 
   describe('initAndExecute', () => {
     it('can continue from non-zero program counter', async () => {
       const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
-      const res = await rt.executeAndStop(code, '0x', [0, 4, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
+      const res = await rt.executeAndStop(code, '0x', [0, 2, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT]);
       const { stack } = await rt.initAndExecute(
         code,
         '0x',

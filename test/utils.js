@@ -131,6 +131,25 @@ export const decodeLogs = (logsArr, logsCode = '') => {
   return logs;
 };
 
+export const getCodeWithStep = (fixture) => {
+  let code;
+  if (!fixture.join) {
+    code = fixture.code || [];
+    if (!code.join) { // wrap single opcode
+      code = [code];
+    }
+  } else {
+    code = fixture;
+  }
+
+  code = `0x${code.join('')}`;
+  const codeSize = (code.length - 2) / 2;
+  const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
+  const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
+  const step = fixture.step !== undefined ? fixture.step : 0;
+  return { code, step, opcodeUnderTest };
+};
+
 export const getCode = (fixture) => {
   let code;
   if (!fixture.join) {
@@ -148,7 +167,6 @@ export const getCode = (fixture) => {
   const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
   return { code, codeSize, pc: ~~pc, opcodeUnderTest };
 };
-
 export const wallets = [];
 
 const provider = new ethers.providers.Web3Provider(web3.currentProvider);

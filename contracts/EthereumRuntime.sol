@@ -79,7 +79,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
         uint pcStart;
-        uint pcEnd;
+        uint pcStepCount;
     }
 
     struct EVMCreateInput {
@@ -129,7 +129,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // intInput[0] - pcStart
-    // intInput[1] - pcEnd
+    // intInput[1] - pcStepCount 0: no specific
     // intInput[2] - block gasLimit
     // intInput[3] - tx gasLimit
     function execute(
@@ -185,7 +185,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         target.code = code;
 
         evmInput.pcStart = intInput[0];
-        evmInput.pcEnd = intInput[1];
+        evmInput.pcStepCount = intInput[1];
         evmInput.stack = EVMStack.fromArray(stack);
         evmInput.mem = EVMMemory.fromArray(mem);
     }
@@ -262,7 +262,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             evm.caller.balance -= evm.value;
             evm.target.balance += evm.value;
         }
-        
+
         if (1 <= uint(evm.target.addr) && uint(evm.target.addr) <= 8) {
             (evm.returnData, evm.errno) = evm.handlers.p[uint(evm.target.addr)](evm);
         } else {
@@ -281,7 +281,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             } else {
                 evm.mem = EVMMemory.newMemory();
             }
-            _run(evm, evmInput.pcStart, evmInput.pcEnd);
+            _run(evm, evmInput.pcStart, evmInput.pcStepCount);
         }
     }
 
@@ -336,9 +336,10 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
-    function _run(EVM memory evm, uint pc, uint pcEnd) internal pure {
+    function _run(EVM memory evm, uint pc, uint pcStepCount) internal pure {
 
         uint pcNext = 0;
+        uint stepRun = 0;
         uint errno = NO_ERROR;
         bytes memory code = evm.code;
 
@@ -346,7 +347,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             errno = ERROR_OUT_OF_GAS;
         }
 
-        while (errno == NO_ERROR && pc < code.length && (pcEnd == 0 || pc != pcEnd)) {
+        while (errno == NO_ERROR && pc < code.length && (pcStepCount == 0 || stepRun < pcStepCount)) {
             uint8 opcode = uint8(code[pc]);
             Instruction memory ins = evm.handlers.ins[opcode];
 
@@ -411,6 +412,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             if (errno == NO_ERROR) {
                 pc = pcNext;
             }
+            stepRun = stepRun + 1;
         }
         evm.errno = errno;
         // to be used if errno is non-zero
@@ -1195,7 +1197,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     function handleCREATE2(EVM memory) internal pure returns (uint) {
         return ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
-    
+
     // solhint-disable-next-line function-max-lines
     function handleCALL(EVM memory state) internal pure returns (uint) {
         EVMInput memory input;
