@@ -348,14 +348,12 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         
         bytes32 hashValue = keccak256(abi.encodePacked(
             evm.gas,
-            evm.value,
             evm.code,
             evm.data,
             evm.lastRet,
             evm.returnData,
             evm.errno,
             evm.errpc,
-            //evm.accounts.head,
             evm.accounts.size,
     
             evm.logHash,
@@ -363,34 +361,28 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             
             evm.mem.size,
             evm.mem.cap,
-            evm.mem.dataPtr,
-            
+            // evm.mem.dataPtr,
+            // There is no OP_CODE which can interact with setCapacity and no OP_CODE can change the dataPtr.
+
             evm.stack.size,
             evm.stack.cap,
-            evm.stack.dataPtr,
-
+            // evm.stack.dataPtr,
+            // No OP_CODE can change the expandCapacity so dataPtr will not change 
             
             evm.depth,
             
             evm.caller.addr,
             evm.caller.balance,
-            evm.caller.nonce,
-            evm.caller.destroyed,
-            evm.caller.code,
-           // evm.caller.stge.head,
-            evm.caller.stge.size,
+            // evm.caller.stge.size,
+            // Storage value will not change
 
             evm.target.addr,
             evm.target.balance,
-            evm.target.nonce,
-            evm.target.destroyed,
-            evm.target.code,
-            //evm.target.stge.head,
-            evm.target.stge.size,
-
+            // evm.target.code,
+            // evm.target.stge.size,
+            
             evm.n,
             evm.pc,
-            evm.staticExec,
 
             //evm.handlers,
 
@@ -400,7 +392,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             evm.context.coinBase,
             evm.context.blockNumber,
             evm.context.time,
-            evm.context.difficulty
             ));
             
         return hashValue;
