@@ -12,6 +12,14 @@ const otherEndHash = '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 const otherExecutionLength = 1;
 
 contract('Enforcer', () => {
+  function getDisputeId (events) {
+    return events[events.length - 1].topics[1];
+  }
+
+  function getExecutionId (events) {
+    return events[events.length - 1].topics[1];
+  }
+
   it('should allow to register and finalize execution', async () => {
     const contract = await deployContract(CallbackMock);
     // create enforcer
@@ -20,15 +28,15 @@ contract('Enforcer', () => {
     // register execution and check state
     let tx = await contract.register(enforcer.address, code, callData, endHash, executionLength, txOverrides);
     const reg = await tx.wait();
-    const executionId = reg.events[0].topics[1];
+    const executionId = getExecutionId(reg.events);
     const execs = await enforcer.executions(executionId);
     assert.equal(execs[3], contract.address); // execs[3] is solver address of execution struct
 
     // finalize execution
-    tx = await enforcer.finalize(executionId);
+    tx = await enforcer.finalize(executionId, txOverrides);
     const rsp = await tx.wait();
     // check that contract has been called with finalize
-    assert.equal(rsp.events[0].topics[1], executionId);
+    assert.equal(getExecutionId(rsp.events), executionId);
   });
 
   it('should allow to register and finalize execution with bond', async () => {
@@ -40,11 +48,11 @@ contract('Enforcer', () => {
     // register execution and check state
     let tx = await contract.register(
       enforcer.address, code, callData, endHash, executionLength,
-      { value: bondAmount, gasLimit: 0xffffff }
+      { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
 
     const reg = await tx.wait();
-    const executionId = reg.events[0].topics[1];
+    const executionId = getExecutionId(reg.events);
 
     // finalize execution
     tx = await enforcer.finalize(executionId, txOverrides);
@@ -66,7 +74,7 @@ contract('Enforcer', () => {
     // register execution and check state
     tx = await contract.register(enforcer.address, code, callData, endHash, executionLength, txOverrides);
     const reg = await tx.wait();
-    const executionId = reg.events[0].topics[1];
+    const executionId = getExecutionId(reg.events);
 
     // start dispute
     tx = await enforcer.dispute(
@@ -74,17 +82,17 @@ contract('Enforcer', () => {
       txOverrides
     );
     const disp = await tx.wait();
-    const disputeId = disp.events[0].topics[1];
+    const disputeId = getDisputeId(disp.events);
 
     // have solver win the dispute
     tx = await verifier.result(disputeId, true, txOverrides); // true == solver wins
     await tx.wait();
 
     // finalize execution
-    tx = await enforcer.finalize(executionId);
+    tx = await enforcer.finalize(executionId, txOverrides);
     const rsp = await tx.wait();
     // check that contract has been called with finalize
-    assert.equal(rsp.events[0].topics[1], executionId);
+    assert.equal(getExecutionId(rsp.events), executionId);
   });
 
   it('should allow to register and challenge execution', async () => {
@@ -100,22 +108,22 @@ contract('Enforcer', () => {
     // register execution and check state
     tx = await contract.register(
       enforcer.address, code, callData, endHash, executionLength,
-      { value: bondAmount, gasLimit: 0xffffff }
+      { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
 
     const reg = await tx.wait();
-    const executionId = reg.events[0].topics[1];
+    const executionId = getExecutionId(reg.events);
 
     // start dispute
     tx = await enforcer.dispute(
       executionId, otherEndHash, otherExecutionLength,
-      { value: bondAmount, gasLimit: 0xffffff }
+      { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     const disp = await tx.wait();
-    const disputeId = disp.events[0].topics[1];
+    const disputeId = getDisputeId(disp.events);
 
     // have challenge win the dispute
-    tx = await verifier.result(disputeId, false); // false == challenger wins
+    tx = await verifier.result(disputeId, false, txOverrides); // false == challenger wins
     await tx.wait();
 
     // check execution deleted

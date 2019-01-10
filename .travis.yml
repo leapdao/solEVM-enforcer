@@ -2,6 +2,20 @@ language: node_js
 node_js:
   - "10.14.2"
 cache: npm
-script:
-  - npm run test
-  - npm run lint:all
+jobs:
+  include:
+    - stage: tests
+      name: "Linter"
+      script: npm run lint:all
+
+    - stage: tests
+      name: "Unit tests"
+      script: npm run test
+
+    - stage: tests
+      name: "Solidity Coverage"
+      script:
+        - npm install codecov
+        - npm install solidity-coverage
+        - npm run coverage
+        - ./node_modules/.bin/codecov -f coverage/lcov.info
