@@ -178,7 +178,7 @@ for (var i = 0; i < 10; i++) {
 }
 
 export const txOverrides = {
-  gasLimit: 0xffffffff,
+  gasLimit: 0xfffffffffffff,
 };
 
 export async function deployContract (truffleContract, ...args) {

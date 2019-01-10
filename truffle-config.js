@@ -30,5 +30,12 @@ module.exports = {
       gas: 0xfffffffffffff,
       gasPrice: 0x01,
     },
+    coverage: {
+      host: 'localhost',
+      port: 8555,
+      network_id: '*', // eslint-disable-line camelcase
+      gas: 0xfffffffffffff,
+      gasPrice: 0x01,
+    },
   },
 };

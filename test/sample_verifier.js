@@ -59,7 +59,15 @@ contract('SampleVerifierMock', () => {
   };
 
   let getDisputeIdFromEvent = async (tx) => {
-    return (await tx.wait()).events[0].topics[1];
+    const events = (await tx.wait()).events;
+
+    for (let i = 0; i < events.length; i++) {
+      const evt = events[i];
+
+      if (evt.args) {
+        return evt.args.disputeId;
+      }
+    }
   };
 
   let generateExecId = () => {

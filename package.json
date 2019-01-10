@@ -18,7 +18,8 @@
     "lint:all": "npm run lint && npm run lint:sol",
     "lint:all:fix": "npm run lint:fix && npm run lint:sol",
     "console": "truffle console",
-    "version": "scripts/version.js"
+    "version": "scripts/version.js",
+    "coverage": "scripts/coverage.sh"
   },
   "keywords": [
     "evm",
