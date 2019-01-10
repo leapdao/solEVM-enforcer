@@ -74,7 +74,7 @@ contract('SampleVerifierMock', () => {
     return ethers.utils.formatBytes32String(Date.now().toString());
   };
 
-  before(async () => {
+before(async () => {
     verifier = await deployContract(Verifier, 100);
     enforcer = await deployContract(Enforcer);
     ethRuntime = await deployContract(EthRuntime);
@@ -241,7 +241,7 @@ contract('SampleVerifierMock', () => {
       disputeId = await getDisputeIdFromEvent(tx);
       await verifier.setState(disputeId, DisputeState.FoundDiff);
       await verifier.setLeft(disputeId, hashUint256Array([5, 3], 0), 4);
-      await verifier.setRight(disputeId, hashUint256Array([8], 0), 5);
+      await verifier.setRight(disputeId, solverHash, 5);
       await verifier.setEnforcer(enforcer.address);
     });
 
@@ -257,7 +257,7 @@ contract('SampleVerifierMock', () => {
           data: '0x',
           pc: 4,
           errno: 0,
-          stepCount: 0,
+          stepCount: 1,
           gasLimit: BLOCK_GAS_LIMIT,
           gasRemaining: BLOCK_GAS_LIMIT,
           stack: [5, 3],
@@ -282,7 +282,7 @@ contract('SampleVerifierMock', () => {
           data: '0x',
           pc: 4,
           errno: 0,
-          stepCount: 0,
+          stepCount: 1,
           gasLimit: BLOCK_GAS_LIMIT,
           gasRemaining: BLOCK_GAS_LIMIT,
           stack: [5, 4],
@@ -296,6 +296,28 @@ contract('SampleVerifierMock', () => {
       let dispute = await parseDispute(disputeId);
       assert.equal(dispute.state, DisputeState.Ended, 'dispute not Ended');
       assert.equal(dispute.result, 1, 'solver not lose');
+    });
+
+    it('revert when require to run more than 1 step', async () => {
+      await verifier.setLeft(disputeId, solverHash, 4);
+      assertRevert(verifier.detailExecution(
+        disputeId,
+        {
+          code: code,
+          data: '0x',
+          pc: 4,
+          errno: 0,
+          stepCount: 2,
+          gasLimit: BLOCK_GAS_LIMIT,
+          gasRemaining: BLOCK_GAS_LIMIT,
+          stack: [5, 3],
+          mem: '0x',
+          accounts: [],
+          accountsCode: '0x',
+          returnData: '0x',
+          logHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        }
+      ));
     });
   });
 });
