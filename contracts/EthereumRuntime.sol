@@ -278,7 +278,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         addr = newAddress;
     }
 
-    function stateHash(EVM memory evm, uint pc) internal pure returns (bytes32) {
+    function stateHash(EVM memory evm, uint pc, uint hashDirectly) internal pure returns (bytes32) {
         uint errno = NO_ERROR;
         bytes memory code = evm.code;
 
@@ -286,7 +286,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             errno = ERROR_OUT_OF_GAS;
         }
 
-        if (errno == NO_ERROR && pc < code.length) {
+        if (errno == NO_ERROR && pc < code.length && hashDirectly == 0) {
             uint8 opcode = uint8(code[pc]);
             Instruction memory ins = evm.handlers.ins[opcode];
 
@@ -371,13 +371,13 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             
             evm.depth,
             
-            evm.caller.addr,
-            evm.caller.balance,
+            // evm.caller.addr,
+            // evm.caller.balance,
             // evm.caller.stge.size,
             // Storage value will not change
 
-            evm.target.addr,
-            evm.target.balance,
+            // evm.target.addr,
+            // evm.target.balance,
             // evm.target.code,
             // evm.target.stge.size,
             
@@ -391,7 +391,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             evm.context.gasLimit,
             evm.context.coinBase,
             evm.context.blockNumber,
-            evm.context.time,
+            evm.context.time
             ));
             
         return hashValue;
