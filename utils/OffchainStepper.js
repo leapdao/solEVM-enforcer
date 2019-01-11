@@ -4,7 +4,7 @@ const BN = VM.deps.ethUtil.BN;
 const ethers = require('ethers');
 const OP = require('../test/helpers/constants');
 
-const toHex = arr => arr.map(e => e.toString(16));
+const toHex = arr => arr.map(e => '0x' + e.toString(16));
 const MEMORY_OPCODES =
   [
     'SHA3',
@@ -188,20 +188,72 @@ export default class OffchainStepper {
     );
   }
 
-  static _onStep (evt, context, code, data, stack, mem, gasRemaining) {
+  static _finishPrevStep (context, _stack, _mem, pc, gasLeft, returnData, exceptionError) {
+    if (!context.steps.length) {
+      return;
+    }
+
+    let prevStep = context.steps[context.steps.length - 1];
+    let isFullCodeNeeded = CODE_OPCODES.indexOf(prevStep.opcodeName) !== -1;
+
+    if (isFullCodeNeeded) {
+      prevStep.input.code = context.code;
+      prevStep.input.isCodeCompacted = false;
+    } else {
+      prevStep.input.code = context.code.slice(context.pc, pc);
+      prevStep.input.isCodeCompacted = true;
+    }
+
+    if (prevStep.output.compactStack.length) {
+      prevStep.output.compactStack = _stack.slice(-prevStep.output.compactStack.length);
+    }
+
+    prevStep.output.stack = _stack;
+    prevStep.output.mem = _mem;
+    prevStep.output.gasRemaining = gasLeft.toNumber();
+    prevStep.gasFee = context.gasLeft.sub(gasLeft).toNumber();
+
+    if (returnData) {
+      prevStep.output.returnData = returnData.toString('hex');
+    }
+
+    let errno = 0;
+    if (exceptionError) {
+      // ethereumvm-js is appending the location for jumps ;)
+      const errorKeysLength = ERROR_KEYS.length;
+      const errMsg = exceptionError.error
+        ? exceptionError.error : exceptionError;
+
+      for (let i = 0; i < errorKeysLength; i++) {
+        const k = ERROR_KEYS[i];
+
+        if (errMsg.startsWith(k)) {
+          errno = ERRNO_MAP[k];
+          break;
+        }
+      }
+    }
+    prevStep.output.errno = errno;
+
+    if (prevStep.output.errno === 0 && prevStep.opcodeName !== 'RETURN') {
+      prevStep.output.pc = pc;
+    }
+  }
+
+  static _onStep (evt, context) {
     if (context.inject) {
       context.inject = false;
 
-      if (stack) {
-        let len = stack.length;
+      if (context.stack) {
+        let len = context.stack.length;
         for (let i = 0; i < len; i++) {
-          evt.stack.push(new BN(stack[i].replace('0x', ''), 'hex'));
+          evt.stack.push(new BN(context.stack[i].replace('0x', ''), 'hex'));
         }
         // For fixing the logic below
         evt.opcode.out += len;
       }
-      if (mem) {
-        const tmp = Buffer.from(mem.replace('0x', ''), 'hex');
+      if (context.mem) {
+        const tmp = Buffer.from(context.mem.replace('0x', ''), 'hex');
         const len = tmp.length;
 
         for (let i = 0; i < len; i++) {
@@ -212,8 +264,8 @@ export default class OffchainStepper {
         }
       }
 
-      if (typeof gasRemaining !== 'undefined') {
-        evt.gasLeft.isub(evt.gasLeft.sub(new BN(gasRemaining)));
+      if (typeof context.gasRemaining !== 'undefined') {
+        evt.gasLeft.isub(evt.gasLeft.sub(new BN(context.gasRemaining)));
       }
     }
 
@@ -249,11 +301,15 @@ export default class OffchainStepper {
     let _stack = toHex(evt.stack);
     let _mem = Buffer.from(evt.memory).toString('hex');
 
+    while ((_mem.length % 64) !== 0) {
+      _mem += '00';
+    }
+
     let pc = evt.pc;
     let step = {
       opcodeName: evt.opcode.name,
       input: {
-        data: data,
+        data: context.data,
         stack: _stack,
         compactStack: evt.opcode.in ? _stack.slice(-evt.opcode.in) : (stackFixed || []),
         mem: _mem,
@@ -262,7 +318,7 @@ export default class OffchainStepper {
         gasRemaining: evt.gasLeft.toNumber(),
       },
       output: {
-        data: data,
+        data: context.data,
         compactStack: new Array(evt.opcode.out),
         mem: '',
         returnData: '',
@@ -270,32 +326,14 @@ export default class OffchainStepper {
         errno: 0,
         gasRemaining: 0,
       },
-      code: code,
       isCallDataRequired: isCallDataRequired,
       isMemoryRequired: isMemoryRequired,
     };
 
-    let prevStep = context.steps[context.steps.push(step) - 2];
-    if (prevStep) {
-      let isFullCodeNeeded = CODE_OPCODES.indexOf(prevStep.opcodeName) !== -1;
-      if (isFullCodeNeeded) {
-        prevStep.input.code = code;
-        prevStep.input.isCodeCompacted = false;
-      } else {
-        prevStep.input.code = code.slice(context.pc, pc);
-        prevStep.input.isCodeCompacted = true;
-      }
+    this._finishPrevStep(context, _stack, _mem, pc, evt.gasLeft);
 
-      if (prevStep.output.compactStack.length) {
-        prevStep.output.compactStack = _stack.slice(-prevStep.output.compactStack.length);
-      }
+    context.steps.push(step);
 
-      prevStep.output.mem = _mem;
-      prevStep.output.pc = pc;
-      prevStep.output.gasRemaining = evt.gasLeft.toNumber();
-      prevStep.gasFee = context.gasLeft.sub(evt.gasLeft).toNumber();
-      prevStep.output.stack = _stack;
-    }
     context.pc = pc;
     context.gasLeft = evt.gasLeft;
   }
@@ -314,13 +352,18 @@ export default class OffchainStepper {
     }
 
     const context = {
+      code: code,
+      data: data,
+      stack: stack,
+      mem: mem,
       pc: pc | 0,
+      gasRemaining: gasRemaining,
       steps: [],
       gasLeft: null,
       inject: true,
     };
 
-    evm.on('step', (evt) => this._onStep(evt, context, code, data, stack, mem, gasRemaining));
+    evm.on('step', (evt) => this._onStep(evt, context));
 
     const defaultBlock = {
       header: {
@@ -350,52 +393,17 @@ export default class OffchainStepper {
             // we handle execution errors further below
           }
 
-          let prevStep = context.steps[context.steps.length - 1];
-          if (prevStep) {
-            let _stack = toHex(res.runState.stack);
-            let isFullCodeNeeded = CODE_OPCODES.indexOf(prevStep.opcodeName) !== -1;
+          let _stack = toHex(res.runState.stack);
+          let _mem = Buffer.from(res.runState.memory).toString('hex');
+          let pc = res.runState.programCounter;
+          let gasLeft = res.runState.gasLeft;
+          let returnData = res.return;
 
-            if (isFullCodeNeeded) {
-              prevStep.input.code = code;
-              prevStep.input.isCodeCompacted = false;
-            } else {
-              prevStep.input.code = code.slice(context.pc, res.runState.programCounter);
-              prevStep.input.isCodeCompacted = true;
-            }
-
-            if (prevStep.output.compactStack.length) {
-              prevStep.output.compactStack = _stack.slice(-prevStep.output.compactStack.length);
-            }
-
-            prevStep.output.mem = Buffer.from(res.runState.memory).toString('hex');
-            prevStep.output.returnData = res.return.toString('hex');
-            prevStep.output.stack = _stack;
-
-            let errno = 0;
-            if (res.exceptionError) {
-              // ethereumvm-js is appending the location for jumps ;)
-              const errorKeysLength = ERROR_KEYS.length;
-              const errMsg = res.exceptionError.error
-                ? res.exceptionError.error : res.exceptionError;
-
-              for (let i = 0; i < errorKeysLength; i++) {
-                const k = ERROR_KEYS[i];
-
-                if (errMsg.startsWith(k)) {
-                  errno = ERRNO_MAP[k];
-                  break;
-                }
-              }
-            }
-            prevStep.output.errno = errno;
-
-            if (prevStep.output.errno === 0 && prevStep.opcodeName !== 'RETURN') {
-              prevStep.output.pc = res.runState.programCounter;
-            }
-
-            prevStep.output.gasRemaining = res.runState.gasLeft.toNumber();
-            prevStep.gasFee = context.gasLeft.sub(res.runState.gasLeft).toNumber();
+          while ((_mem.length % 64) !== 0) {
+            _mem += '00';
           }
+
+          this._finishPrevStep(context, _stack, _mem, pc, gasLeft, returnData, res.exceptionError);
 
           let len = context.steps.length;
           let prevLogHash = logHash ? logHash.replace('0x', '') : ZERO_HASH;

@@ -5,36 +5,22 @@ export default class RuntimeAdapter {
     this.runtimeContract = runtimeContract;
   }
 
-  buildArgs (code, data, params, stack, memory, accounts, accountsCode, logHash) {
-    return [
-      code,
-      data,
-      params || [0, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
-      stack || [],
-      memory || '0x',
-      accounts || [],
-      accountsCode || '0x',
-      logHash || '0x0000000000000000000000000000000000000000000000000000000000000000',
-    ];
-  }
-
-  executeAndStop (code, data, params) {
-    assert(params.length === 4);
-    return this.runtimeContract.execute(...this.buildArgs(code, data, params));
-  };
-
-  initAndExecute (code, data, params, stack, memory, accounts, accountsCode, logHash) {
-    assert(params.length === 4);
+  execute ({ code, data, pc, stepCount, gasRemaining, gasLimit, stack, mem, accounts, accountsCode, logHash }) {
     return this.runtimeContract
       .execute(
-        ...this.buildArgs(code, data, params, stack, memory, accounts, accountsCode, logHash)
-      );
-  };
-
-  execute (code, data, gasLimit = BLOCK_GAS_LIMIT) {
-    return this.runtimeContract
-      .execute(
-        ...this.buildArgs(code, data, [0, 0, BLOCK_GAS_LIMIT, gasLimit])
+        {
+          code: code || '0x',
+          data: data || '0x',
+          pc: pc | 0,
+          stepCount: stepCount | 0,
+          gasRemaining: gasRemaining || gasLimit || BLOCK_GAS_LIMIT,
+          gasLimit: gasLimit || BLOCK_GAS_LIMIT,
+          stack: stack || [],
+          mem: mem || '0x',
+          accounts: accounts || [],
+          accountsCode: accountsCode || '0x',
+          logHash: logHash || '0x0000000000000000000000000000000000000000000000000000000000000000',
+        }
       );
   };
 }

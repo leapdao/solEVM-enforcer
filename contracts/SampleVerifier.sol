@@ -152,18 +152,11 @@ contract SampleVerifier is Ownable, IVerifier {
       */
     function detailExecution(
         bytes32 disputeId,
-        bytes memory code,
         // bytes32[] codeProof,
-        bytes memory data,
-        uint256[4] memory params,
-        uint256[] memory stack,
         // uint256[] stackSiblingHash,
-        bytes memory mem,
         // uint256 memPos,
         // bytes32[] memProof,
-        uint256[] memory accounts,
-        bytes memory accountsCode,
-        bytes32 logHash
+        IEthereumRuntime.EVMPreimage memory img
     ) public onlyFoundDiff(disputeId) onlyPlaying(disputeId) {
         Dispute storage dispute = disputes[disputeId];
 
@@ -180,9 +173,9 @@ contract SampleVerifier is Ownable, IVerifier {
         // - calculate stack hash from stack and stackSiblingHash
         // - calculate mem hash root from mem, memPos and memProof
         // - combine to actual state hash to verify left state
-        require(stack.toHash(0) == dispute.left.hash, "state hash not match");
+        require(img.stack.toHash(0) == dispute.left.hash, "state hash not match");
 
-        IEthereumRuntime.Result memory result = ethRuntime.execute(code, data, params, stack, mem, accounts, accountsCode, logHash);
+        IEthereumRuntime.Result memory result = ethRuntime.execute(img);
         // TODO calculate state hash
         bytes32 resultHash = result.stack.toHash(0);
 

@@ -114,7 +114,7 @@ export default [
   { code: OP.NUMBER, result: { stack: ['0'], gasUsed: 2 } },
   { code: OP.DIFFICULTY, result: { stack: ['0'], gasUsed: 2 } },
   { code: OP.GASLIMIT, result: { stack: [toBN(BLOCK_GAS_LIMIT).toString()], gasUsed: 2 } },
-  { code: OP.GASLIMIT, blockGasLimit: 100, result: { stack: ['100'], gasUsed: 2 } },
+  { code: OP.GASLIMIT, gasLimit: 100, result: { stack: ['100'], gasUsed: 2 } },
   { code: [OP.PC, OP.GASPRICE, OP.POP], pc: '0', result: { stack: ['0'], gasUsed: 6 } }, // PC
   // ethereumvm-js throws out-of-gas with a very low gasLimit (10), even if gasUsed is <10
   { code: [OP.GAS, OP.GASPRICE, OP.POP], pc: '0', gasLimit: 100, result: { stack: ['98'], gasUsed: 6 } }, // GAS

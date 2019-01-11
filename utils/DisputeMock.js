@@ -2,7 +2,7 @@
 import Merkelizer from './Merkelizer';
 
 export default class DisputeMock {
-  constructor (solverComputationPath, challengerComputationPath, solverDepth, code, evm) {
+  constructor (solverComputationPath, challengerComputationPath, solverDepth, code, data, evm) {
     this.treeDepth = solverDepth;
 
     this.solver = solverComputationPath;
@@ -14,8 +14,13 @@ export default class DisputeMock {
     this.solverVerified = false;
     this.challengerVerified = false;
 
+    this.isStartOfExecution = true;
     this.isEndOfExecution = true;
-    this.codeHash = Merkelizer.codeHash(code);
+
+    // this should be the address of the contract in the solidity implementation
+    this.code = code;
+
+    this.initialStateHash = Merkelizer.initialStateHash(code, data);
     this.evm = evm;
 
     this._updateRound();
@@ -34,9 +39,7 @@ export default class DisputeMock {
       this.solverPath = this.solver.right.hash;
       this.challengerPath = this.challenger.right.hash;
 
-      if (this.isEndOfExecution) {
-        this.isEndOfExecution = true;
-      }
+      this.isStartOfExecution = false;
     } else {
       // following left
       this.solverPath = this.solver.left.hash;
@@ -92,7 +95,7 @@ export default class DisputeMock {
       data: executionState.data,
       stack: executionState.stack,
       mem: executionState.mem,
-      pc: executionState.isCodeCompacted ? 0 : executionState.pc,
+      pc: executionState.pc,
       logHash: executionState.logHash,
       gasRemaining: executionState.gasRemaining,
     };
@@ -102,6 +105,7 @@ export default class DisputeMock {
     const r = steps[0] ||
       {
         output: {
+          code: args.code,
           data: '',
           compactStack: [],
           stack: [],
@@ -126,30 +130,52 @@ export default class DisputeMock {
    *  - last execution step must end with either REVERT or RETURN to be considered complete
    *  - any execution step which does not have errno = 0 or errno = 0x07 (REVERT)
    *    is considered invalid
-   *  - the left-most (first) execution step must be a `Merkelizer.emptyState`
-   *    TODO: This must be accounted for in a `timeout` function.
+   *  - the left-most (first) execution step must be a `Merkelizer.initialStateHash`
    *
    * Note: if that doesn't happen, this will finally timeout
    */
   async submitProof (proofs, executionInput) {
-    if (this.solverPath === this.challengerPath) {
-      // special case
-    } else if (this.solver.left.hash !== this.challenger.left.hash) {
-      throw new Error('solver.left must match challenger.left');
-    }
-
-    if (Merkelizer.codeHash(executionInput.code) !== this.codeHash) {
-      throw new Error('codeHash does not match');
-    }
-
     let stackHash = Merkelizer.stackHash(executionInput.stack, proofs.stackHash);
     let inputHash = Merkelizer.stateHash(executionInput, stackHash, proofs.memHash, proofs.dataHash);
 
-    if (inputHash !== this.solver.left.hash && inputHash !== this.challenger.left.hash) {
+    if ((inputHash !== this.solver.left.hash && inputHash !== this.challenger.left.hash) ||
+        (this.isStartOfExecution && inputHash !== this.initialStateHash)) {
       return 'invalid';
     }
 
+    let pc = executionInput.pc;
+    let code = this.code;
+    // TODO: what happens if the code make assumptions with OP.PC ?
+    //       should we pad the code array with zeros?
+    if (executionInput.isCodeCompacted) {
+      let pcEnd = executionInput.pcEnd;
+
+      if (executionInput.pc === pcEnd) {
+        pcEnd += 1;
+      }
+
+      code = this.code.slice(executionInput.pc, pcEnd);
+      executionInput.pc = 0;
+    }
+    executionInput.code = code;
+
     let result = await this.computeExecutionState(executionInput);
+
+    if (result.output.errno !== 0 && result.output.errno !== 0x07) {
+      return 'invalid';
+    }
+
+    if (this.isEndOfExecution) {
+      if (result.opcodeName !== 'REVERT' && result.opcodeName !== 'RETURN') {
+        return 'invalid';
+      }
+    }
+
+    // patch
+    if (executionInput.isCodeCompacted) {
+      result.output.pc += pc;
+    }
+
     stackHash = Merkelizer.stackHash(result.output.stack, proofs.stackHash);
     let hash = Merkelizer.stateHash(result.output, stackHash, proofs.memHash, proofs.dataHash);
 
@@ -173,46 +199,19 @@ export default class DisputeMock {
 
     if (hash === this.solver.right.hash) {
       this.solverVerified = true;
-
-      if (!this.result && result.output.errno !== 0 && result.output.errno !== 0x07) {
-        this.result = 'challenger';
-      }
-
-      if (this.isEndOfExecution) {
-        if (result.opcodeName !== 'REVERT' && result.opcodeName !== 'RETURN') {
-          this.result = 'challenger';
-        }
-      }
     }
 
     if (hash === this.challenger.right.hash) {
       this.challengerVerified = true;
-
-      if (!this.result && result.output.errno !== 0 && result.output.errno !== 0x07) {
-        this.result = 'solver';
-      }
-
-      if (!this.result && this.isEndOfExecution) {
-        if (result.opcodeName !== 'REVERT' && result.opcodeName !== 'RETURN') {
-          this.result = 'solver';
-        }
-      }
     }
   }
 
   decideOutcome () {
-    if (this.result) {
-      return this.result;
-    }
-
     if (this.solverVerified) {
       return 'solver';
     }
 
-    if (this.challengerVerified) {
-      return 'challenger';
-    }
-
-    return 'none';
+    // defaults to challenger
+    return 'challenger';
   }
 }

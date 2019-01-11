@@ -5,7 +5,7 @@ import fixtures from './fixtures';
 
 const ethers = require('ethers');
 
-const fromHextoStr = arr => arr.map(e => toBN('0x' + e).toString());
+const fromHextoStr = arr => arr.map(e => toBN(e).toString());
 const fromMixedToHex = arr => arr.map(e => toBN(e).toHexString('hex'));
 
 contract('JS Stepper', function () {
@@ -20,8 +20,8 @@ contract('JS Stepper', function () {
         const mem = fixture.memory || '';
         const accounts = fixture.accounts;
         const data = fixture.data || '';
-        const blockGasLimit = fixture.blockGasLimit;
-        const gasLimit = fixture.gasLimit || blockGasLimit;
+        const gasLimit = fixture.gasLimit;
+        const blockGasLimit = fixture.gasLimit;
         const logHash = fixture.logHash;
         const args = {
           code,

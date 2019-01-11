@@ -1,8 +1,13 @@
 
 import Merkelizer from '../utils/Merkelizer';
-import DisputeMock from '../utils/DisputeMock';
-import OffchainStepper from '../utils/OffchainStepper';
+
 import disputeFixtures from './dispute.fixtures';
+import { deployContract, wallets, txOverrides } from './utils';
+
+const OP = require('./helpers/constants');
+
+const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
+const Verifier = artifacts.require('Verifier.sol');
 
 // for additional logging
 const DEBUG = false;
@@ -13,39 +18,55 @@ function debugLog (...args) {
   }
 }
 
-function submitProofHelper (dispute, code, computationPath) {
+async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const prevOutput = computationPath.left.executionState.output;
   const execState = computationPath.right.executionState;
   const input = execState.input;
+  const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
   const proofs = {
     stackHash: Merkelizer.stackHash(
       prevOutput.stack.slice(0, prevOutput.stack.length - input.compactStack.length)
     ),
-    memHash: execState.isMemoryRequired ? '' : Merkelizer.memHash(prevOutput.mem),
-    dataHash: execState.isCallDataRequired ? '' : Merkelizer.dataHash(input.data),
+    memHash: execState.isMemoryRequired ? ZERO_HASH : Merkelizer.memHash(prevOutput.mem),
+    dataHash: execState.isCallDataRequired ? ZERO_HASH : Merkelizer.dataHash(input.data),
   };
 
-  return dispute.submitProof(
+  let tx = await verifier.submitProof(
+    disputeId,
     proofs,
     {
       // TODO: compact {returnData}, support for accounts
-      data: execState.isCallDataRequired ? input.data : '',
+      data: '0x' + (execState.isCallDataRequired ? input.data : ''),
       stack: input.compactStack,
-      mem: execState.isMemoryRequired ? input.mem : '',
-      returnData: input.returnData,
-      logHash: input.logHash,
+      mem: '0x' + (execState.isMemoryRequired ? input.mem : ''),
+      returnData: '0x' + input.returnData,
+      logHash: '0x' + input.logHash,
       pc: input.pc,
       pcEnd: execState.output.pc,
-      isCodeCompacted: input.isCodeCompacted,
+      isCodeCompacted: !!input.isCodeCompacted,
       gasRemaining: input.gasRemaining,
+    },
+    txOverrides
+  );
+
+  tx = await tx.wait();
+
+  /*
+  tx.events.forEach(
+    (ele) => {
+      console.log(ele.args);
     }
   );
+  */
+
+  return tx;
 }
 
-async function disputeGame (code, callData, solverSteps, challengerSteps, expectedWinner, expectedError) {
+async function disputeGame (
+  verifier, codeContract, code, callData, solverSteps, challengerSteps, expectedWinner, expectedError
+) {
   try {
-    const stepper = OffchainStepper;
     const solverMerkle = new Merkelizer().run(solverSteps, code, callData);
     const challengerMerkle = new Merkelizer().run(challengerSteps, code, callData);
 
@@ -64,28 +85,39 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
       challengerComputationPath = challengerMerkle.tree[solverMerkle.depth][0];
     }
 
-    const dispute = new DisputeMock(
-      solverComputationPath,
-      challengerComputationPath,
-      solverMerkle.depth,
-      code,
-      callData,
-      stepper
+    let tx = await verifier.initGame(
+      Merkelizer.initialStateHash(code, callData).hash,
+      solverComputationPath.hash,
+      solverSteps.length,
+      challengerComputationPath.hash,
+      // challenger address
+      wallets[1].address,
+      // code contract address
+      codeContract
     );
 
+    let dispute = await tx.wait();
+    let event = dispute.events[0].args;
+
     while (true) {
+      dispute = await verifier.disputes(event.disputeId);
+
       if (solverComputationPath.isLeaf && challengerComputationPath.isLeaf) {
         debugLog('REACHED leaves');
 
         debugLog('Solver: SUBMITTING FOR l=' +
           solverComputationPath.left.hash + ' r=' + solverComputationPath.right.hash);
-        await submitProofHelper(dispute, code, solverComputationPath);
+        await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
 
         debugLog('Challenger: SUBMITTING FOR l=' +
           challengerComputationPath.left.hash + ' r=' + challengerComputationPath.right.hash);
-        await submitProofHelper(dispute, code, challengerComputationPath);
+        await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
 
-        let winner = dispute.decideOutcome();
+        // set timeout to 0, so that we can play again with the same execution
+        tx = await verifier.setTimeoutOfDispute(event.disputeId, 0);
+        await tx.wait();
+
+        let winner = await verifier.getWinner(event.disputeId);
         debugLog('winner=' + winner);
 
         assert.equal(winner, expectedWinner, 'winner should match fixture');
@@ -98,7 +130,7 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
 
         if (!nextPath) {
           debugLog('solver: submission already made by another party');
-          solverComputationPath = solverMerkle.getPair(dispute.solver.left.hash, dispute.solver.right.hash);
+          solverComputationPath = solverMerkle.getPair(dispute.solver.left, dispute.solver.right);
           continue;
         }
 
@@ -116,7 +148,15 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
 
         solverComputationPath = nextPath;
 
-        dispute.respond(solverComputationPath);
+        tx = await verifier.respond(
+          event.disputeId,
+          {
+            left: solverComputationPath.left.hash,
+            right: solverComputationPath.right.hash,
+          }
+        );
+        await tx.wait();
+        dispute = await verifier.disputes(event.disputeId);
       }
 
       if (!challengerComputationPath.isLeaf) {
@@ -126,7 +166,7 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
         if (!nextPath) {
           debugLog('challenger submission already made by another party');
           challengerComputationPath =
-            challengerMerkle.getPair(dispute.challenger.left.hash, dispute.challenger.right.hash);
+            challengerMerkle.getPair(dispute.challenger.left, dispute.challenger.right);
           continue;
         }
 
@@ -144,7 +184,14 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
 
         challengerComputationPath = nextPath;
 
-        dispute.respond(challengerComputationPath);
+        tx = await verifier.respond(
+          event.disputeId,
+          {
+            left: challengerComputationPath.left.hash,
+            right: challengerComputationPath.right.hash,
+          }
+        );
+        await tx.wait();
       }
     }
   } catch (e) {
@@ -157,10 +204,48 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
   }
 }
 
-contract('JS DisputeMock', function () {
+contract('Verifier', function () {
+  let evm;
+  let verifier;
+
+  before(async () => {
+    evm = await deployContract(EthereumRuntime);
+    verifier = await deployContract(Verifier, 100);
+
+    let tx = await verifier.setEnforcer(wallets[0].address);
+    await tx.wait();
+    tx = await verifier.setRuntime(evm.address);
+    await tx.wait();
+  });
+
   disputeFixtures(
     async (code, callData, solverSteps, challengerSteps, expectedWinner) => {
-      await disputeGame(code, callData, solverSteps, challengerSteps, expectedWinner);
+      let codelen = (code.length).toString(16);
+      let codeOffset = '0b';
+      let codeCopy = [
+        OP.PUSH1, codelen,
+        OP.DUP1,
+        OP.PUSH1, codeOffset,
+        OP.PUSH1, '00',
+        OP.CODECOPY,
+        OP.PUSH1, '00',
+        OP.RETURN,
+      ];
+      const obj = {
+        abi: [],
+        bytecode: '0x' + codeCopy.join('') + code.join(''),
+      };
+      const codeContract = await deployContract(obj);
+
+      await disputeGame(
+        verifier,
+        codeContract.address,
+        code,
+        callData,
+        solverSteps,
+        challengerSteps,
+        expectedWinner
+      );
     }
   );
 });
