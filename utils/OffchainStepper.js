@@ -35,39 +35,6 @@ const CODE_OPCODES =
     'CODESIZE',
     'JUMP',
     'JUMPI',
-    // PUSH has boundary checks
-    'PUSH1',
-    'PUSH2',
-    'PUSH3',
-    'PUSH4',
-    'PUSH5',
-    'PUSH6',
-    'PUSH7',
-    'PUSH8',
-    'PUSH9',
-    'PUSH10',
-    'PUSH11',
-    'PUSH12',
-    'PUSH13',
-    'PUSH14',
-    'PUSH15',
-    'PUSH16',
-    'PUSH17',
-    'PUSH18',
-    'PUSH19',
-    'PUSH20',
-    'PUSH21',
-    'PUSH22',
-    'PUSH23',
-    'PUSH24',
-    'PUSH25',
-    'PUSH26',
-    'PUSH27',
-    'PUSH28',
-    'PUSH29',
-    'PUSH30',
-    'PUSH31',
-    'PUSH32',
   ];
 
 // Supported by ethereumjs-vm
@@ -90,6 +57,11 @@ const DEFAULT_CONTRACT_ADDRESS = Buffer.from('0f572e5295c57F15886F9b263E2f6d2d6c
 const DEFAULT_CALLER = Buffer.from('cD1722f2947Def4CF144679da39c4C32bDc35681', 'hex');
 
 const ZERO_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
+
+const OP_SWAP1 = parseInt(OP.SWAP1, 16);
+const OP_SWAP16 = parseInt(OP.SWAP16, 16);
+const OP_DUP1 = parseInt(OP.DUP1, 16);
+const OP_DUP16 = parseInt(OP.DUP16, 16);
 
 function NumToBuf32 (val) {
   val = val.toString(16);
@@ -279,21 +251,16 @@ export default class OffchainStepper {
       isCallDataRequired = true;
     }
 
-    let swap1 = parseInt(OP.SWAP1, 16);
-    let swap16 = parseInt(OP.SWAP16, 16);
-    let dup1 = parseInt(OP.DUP1, 16);
-    let dup16 = parseInt(OP.DUP16, 16);
-
     let opcode = evt.opcode.opcode;
-
     let stackFixed;
-    if (opcode >= swap1 && opcode <= swap16) {
-      let x = 16 - (swap16 - opcode);
+
+    if (opcode >= OP_SWAP1 && opcode <= OP_SWAP16) {
+      let x = 16 - (OP_SWAP16 - opcode);
       stackFixed = toHex(evt.stack.slice(-(x * 2)));
     }
 
-    if (opcode >= dup1 && opcode <= dup16) {
-      let x = 16 - (dup16 - opcode);
+    if (opcode >= OP_DUP1 && opcode <= OP_DUP16) {
+      let x = 16 - (OP_DUP16 - opcode);
       stackFixed = toHex(evt.stack.slice(-x));
     }
 
@@ -307,7 +274,7 @@ export default class OffchainStepper {
 
     let pc = evt.pc;
     let step = {
-      opcodeName: evt.opcode.name,
+      opcodeName: opcodeName,
       input: {
         data: context.data,
         stack: _stack,
