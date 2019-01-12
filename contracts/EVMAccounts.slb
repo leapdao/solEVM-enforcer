@@ -155,7 +155,7 @@ library EVMAccounts {
         uint[] memory accountsIn,
         bytes memory accountsCode
     ) internal pure returns (Accounts memory accountsOut) {
-         if (accountsIn.length == 0) {
+        if (accountsIn.length == 0) {
             return accountsOut;
         }
         uint offset = 0;
