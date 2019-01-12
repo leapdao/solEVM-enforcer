@@ -12,6 +12,7 @@ export default class RuntimeAdapter {
           code: code || '0x',
           data: data || '0x',
           pc: pc | 0,
+          errno: 0,
           stepCount: stepCount | 0,
           gasRemaining: gasRemaining || gasLimit || BLOCK_GAS_LIMIT,
           gasLimit: gasLimit || BLOCK_GAS_LIMIT,
@@ -19,6 +20,7 @@ export default class RuntimeAdapter {
           mem: mem || '0x',
           accounts: accounts || [],
           accountsCode: accountsCode || '0x',
+          returnData: '0x',
           logHash: logHash || '0x0000000000000000000000000000000000000000000000000000000000000000',
         }
       );

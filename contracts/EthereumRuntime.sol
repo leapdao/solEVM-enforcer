@@ -128,10 +128,9 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
-    function execute(EVMPreimage memory img) public pure returns (Result memory result) {
+    function execute(EVMPreimage memory img) public pure returns (EVMPreimage memory) {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
-        CallType callType = CallType.Call;
 
         evm.context = Context(
             DEFAULT_CALLER,
@@ -149,7 +148,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         evm.gas = img.gasRemaining;
         evm.logHash = img.logHash;
 
-        evm.accounts = _accsFromArray(img.accounts, img.accountsCode);
+        evm.accounts = EVMAccounts.fromArray(img.accounts, img.accountsCode);
         EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
         caller.nonce = uint8(1);
 
@@ -159,74 +158,25 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         evm.caller = evm.accounts.get(DEFAULT_CALLER);
         // TODO touching accounts.
         evm.target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
-        evm.staticExec = false;
 
+        evm.code = evm.target.code;
         evm.stack = EVMStack.fromArray(img.stack);
         evm.mem = EVMMemory.fromArray(img.mem);
 
-        // Transfer value. TODO if callcode is added
-        if (callType != CallType.DelegateCall && evm.value > 0) {
-            if (evm.staticExec) {
-                evm.errno = ERROR_ILLEGAL_WRITE_OPERATION;
-                return result;
-            }
-            if (evm.caller.balance < evm.value) {
-                evm.errno = ERROR_INSUFFICIENT_FUNDS;
-                return result;
-            }
-            evm.caller.balance -= evm.value;
-            evm.target.balance += evm.value;
-        }
+        _run(evm, img.pc, img.stepCount);
 
-        if (1 <= uint(evm.target.addr) && uint(evm.target.addr) <= 8) {
-            (evm.returnData, evm.errno) = evm.handlers.p[uint(evm.target.addr)](evm);
-        } else {
-            // If there is no code to run, just continue. TODO
-            if (evm.target.code.length == 0) {
-                return result;
-            }
-            evm.code = evm.target.code;
-            _run(evm, img.pc, img.stepCount);
-        }
-
-        result.stack = evm.stack.toArray();
-        result.mem = evm.mem.toArray();
-        result.returnData = evm.returnData;
-        result.errno = evm.errno;
-        result.pc = evm.pc;
-        result.gasRemaining = evm.gas;
-        result.logHash = evm.logHash;
+        img.stack = evm.stack.toArray();
+        img.mem = evm.mem.toArray();
+        img.returnData = evm.returnData;
+        img.pc = evm.pc;
+        img.errno = evm.errno;
+        img.gasRemaining = evm.gas;
+        img.logHash = evm.logHash;
 
         // TODO handle accounts that result from a failed transaction.
         //      re-enable or otherwise hash it because 'out of gas'
-        // (result.accounts, result.accountsCode) = evm.accounts.toArray();
-
-        return result;
-    }
-
-    function _accsFromArray(
-        uint[] memory accountsIn,
-        bytes memory accountsCode
-    ) internal pure returns (EVMAccounts.Accounts memory accountsOut) {
-        if (accountsIn.length == 0) {
-            return accountsOut;
-        }
-        uint offset = 0;
-        while (offset < accountsIn.length) {
-            address addr = address(accountsIn[offset]);
-            EVMAccounts.Account memory acc = accountsOut.get(addr);
-            acc.balance = accountsIn[offset + 1];
-            acc.nonce = uint8(accountsIn[offset + 2]);
-            acc.destroyed = accountsIn[offset + 3] == 1;
-            uint codeSize = accountsIn[offset + 5];
-            acc.code = new bytes(codeSize);
-            EVMUtils.copy(accountsCode, acc.code, accountsIn[offset + 4], 0, codeSize); // accountsIn[offset + 4] - code offset
-            uint storageSize = accountsIn[offset + 6];
-            for (uint i = 0; i < storageSize; i++) {
-                acc.stge.store(accountsIn[offset + 7 + 2*i], accountsIn[offset + 8 + 2*i]);
-            }
-            offset += 7 + 2 * storageSize;
-        }
+        //(img.accounts, img.accountsCode) = evm.accounts.toArray();
+        return img;
     }
 
     // solhint-disable-next-line code-complexity
