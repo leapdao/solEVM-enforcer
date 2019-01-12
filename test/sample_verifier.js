@@ -264,6 +264,7 @@ contract('SampleVerifierMock', () => {
           mem: '0x',
           accounts: [],
           accountsCode: '0x',
+          returnData: '0x',
           logHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
         }
       );
@@ -288,6 +289,7 @@ contract('SampleVerifierMock', () => {
           mem: '0x',
           accounts: [],
           accountsCode: '0x',
+          returnData: '0x',
           logHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
         }
       );
