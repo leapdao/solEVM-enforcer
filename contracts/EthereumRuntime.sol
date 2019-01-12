@@ -57,13 +57,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     // ************* Only used internally *************
-    struct Instruction {
-        function(EVM memory) internal pure returns (uint8) handler;
-        uint8 stackIn;
-        uint8 stackOut;
-        uint16 gas;
-    }
-
     struct EVMInput {
         uint gas;
         uint value;
@@ -73,7 +66,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         Context context;
         EVMAccounts.Accounts accounts;
         bytes32 logHash;
-        Handlers handlers;
         bool staticExec;
 
         EVMMemory.Memory mem;
@@ -91,13 +83,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         Context context;
         EVMAccounts.Accounts accounts;
         bytes32 logHash;
-        Handlers handlers;
-    }
-
-    struct Handlers {
-        Instruction[256] ins;
-        // solhint-disable-next-line space-after-comma
-        function(EVM memory /* input */) internal pure returns (bytes memory /* ret */, uint8 /* errno */)[9] p;
     }
 
     struct EVM {
@@ -123,7 +108,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         uint pc;
 
         bool staticExec;
-        Handlers handlers;
     }
 
     // Init EVM with given stack and memory and execute from the given opcode
@@ -143,7 +127,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             0
         );
 
-        evm.handlers = _newHandlers();
         evm.data = img.data;
         evm.gas = img.gasRemaining;
         evm.logHash = img.logHash;
@@ -172,17 +155,14 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         img.errno = evm.errno;
         img.gasRemaining = evm.gas;
         img.logHash = evm.logHash;
+        (img.accounts, img.accountsCode) = evm.accounts.toArray();
 
-        // TODO handle accounts that result from a failed transaction.
-        //      re-enable or otherwise hash it because 'out of gas'
-        //(img.accounts, img.accountsCode) = evm.accounts.toArray();
         return img;
     }
 
-    // solhint-disable-next-line code-complexity
+    // solhint-disable-next-line code-complexity, function-max-lines
     function _call(EVMInput memory evmInput, CallType callType) internal pure returns (EVM memory evm) {
         evm.context = evmInput.context;
-        evm.handlers = evmInput.handlers;
         evm.logHash = evmInput.logHash;
         if (evmInput.staticExec) {
             evm.accounts = evmInput.accounts;
@@ -212,7 +192,23 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         }
 
         if (1 <= uint(evm.target.addr) && uint(evm.target.addr) <= 8) {
-            (evm.returnData, evm.errno) = evm.handlers.p[uint(evm.target.addr)](evm);
+            if (uint(evm.target.addr) == 1) {
+                handlePreC_ECRECOVER(evm);
+            } else if (uint(evm.target.addr) == 2) {
+                handlePreC_SHA256(evm);
+            } else if (uint(evm.target.addr) == 3) {
+                handlePreC_RIPEMD160(evm);
+            } else if (uint(evm.target.addr) == 4) {
+                handlePreC_IDENTITY(evm);
+            } else if (uint(evm.target.addr) == 5) {
+                handlePreC_MODEXP(evm);
+            } else if (uint(evm.target.addr) == 6) {
+                handlePreC_ECADD(evm);
+            } else if (uint(evm.target.addr) == 7) {
+                handlePreC_ECMUL(evm);
+            } else if (uint(evm.target.addr) == 8) {
+                handlePreC_ECPAIRING(evm);
+            }
         } else {
             // If there is no code to run, just continue. TODO
             if (evm.target.code.length == 0) {
@@ -235,7 +231,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     function _create(EVMCreateInput memory evmInput) internal pure returns (EVM memory evm, address addr) {
         evm.context = evmInput.context;
-        evm.handlers = evmInput.handlers;
         evm.accounts = evmInput.accounts.copy();
         evm.logHash = evmInput.logHash;
         evm.value = evmInput.value;
@@ -285,27 +280,719 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
     function _run(EVM memory evm, uint pc, uint pcStepCount) internal pure {
-
         uint pcNext = 0;
         uint stepRun = 0;
-        uint8 errno = NO_ERROR;
-        bytes memory code = evm.code;
 
         if (evm.gas > evm.context.gasLimit) {
-            errno = ERROR_OUT_OF_GAS;
+            evm.errno = ERROR_OUT_OF_GAS;
         }
 
-        while (errno == NO_ERROR && pc < code.length && (pcStepCount == 0 || stepRun < pcStepCount)) {
-            uint8 opcode = uint8(code[pc]);
-            Instruction memory ins = evm.handlers.ins[opcode];
+        while (evm.errno == NO_ERROR && pc < evm.code.length && (pcStepCount == 0 || stepRun < pcStepCount)) {
+            uint stackIn;
+            uint stackOut;
+            uint gasFee;
+            uint8 opcode = uint8(evm.code[pc]);
+            function(EVM memory) internal pure opcodeHandler;
 
-            if (ins.gas != GAS_ADDITIONAL_HANDLING) {
-                if (ins.gas > evm.gas) {
-                    errno = ERROR_OUT_OF_GAS;
+            if (opcode == 0) {
+                opcodeHandler = handleSTOP;
+                stackIn = 0;
+                stackOut = 0;
+                gasFee = GAS_ZERO;
+            } else if (opcode == 1) {
+                opcodeHandler = handleADD;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 2) {
+                opcodeHandler = handleMUL;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_LOW;
+            } else if (opcode == 3) {
+                opcodeHandler = handleSUB;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 4) {
+                opcodeHandler = handleDIV;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_LOW;
+            } else if (opcode == 5) {
+                opcodeHandler = handleSDIV;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_LOW;
+            } else if (opcode == 6) {
+                opcodeHandler = handleMOD;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_LOW;
+            } else if (opcode == 7) {
+                opcodeHandler = handleSMOD;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_LOW;
+            } else if (opcode == 8) {
+                opcodeHandler = handleADDMOD;
+                stackIn = 3;
+                stackOut = 1;
+                gasFee = GAS_MID;
+            } else if (opcode == 9) {
+                opcodeHandler = handleMULMOD;
+                stackIn = 3;
+                stackOut = 1;
+                gasFee = GAS_MID;
+            } else if (opcode == 10) {
+                opcodeHandler = handleEXP;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 11) {
+                opcodeHandler = handleSIGNEXTEND;
+                stackIn = 0;
+                stackOut = 0;
+                gasFee = GAS_LOW;
+            } else if (opcode == 16) {
+                opcodeHandler = handleLT;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 17) {
+                opcodeHandler = handleGT;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 18) {
+                opcodeHandler = handleSLT;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 19) {
+                opcodeHandler = handleSGT;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 20) {
+                opcodeHandler = handleEQ;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 21) {
+                opcodeHandler = handleISZERO;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 22) {
+                opcodeHandler = handleAND;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 23) {
+                opcodeHandler = handleOR;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 24) {
+                opcodeHandler = handleXOR;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 25) {
+                opcodeHandler = handleNOT;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 26) {
+                opcodeHandler = handleBYTE;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 27) {
+                opcodeHandler = handleSHL;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 28) {
+                opcodeHandler = handleSHR;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 29) {
+                opcodeHandler = handleSAR;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 32) {
+                opcodeHandler = handleSHA3;
+                stackIn = 2;
+                stackOut = 1;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 48) {
+                opcodeHandler = handleADDRESS;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 49) {
+                opcodeHandler = handleBALANCE;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_BALANCE;
+            } else if (opcode == 50) {
+                opcodeHandler = handleORIGIN;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 51) {
+                opcodeHandler = handleCALLER;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 52) {
+                opcodeHandler = handleCALLVALUE;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 53) {
+                opcodeHandler = handleCALLDATALOAD;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 54) {
+                opcodeHandler = handleCALLDATASIZE;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 55) {
+                opcodeHandler = handleCALLDATACOPY;
+                stackIn = 3;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 56) {
+                opcodeHandler = handleCODESIZE;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 57) {
+                opcodeHandler = handleCODECOPY;
+                stackIn = 3;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 58) {
+                opcodeHandler = handleGASPRICE;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 59) {
+                opcodeHandler = handleEXTCODESIZE;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_EXTCODE;
+            } else if (opcode == 60) {
+                opcodeHandler = handleEXTCODECOPY;
+                stackIn = 4;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 61) {
+                opcodeHandler = handleRETURNDATASIZE;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 62) {
+                opcodeHandler = handleRETURNDATACOPY;
+                stackIn = 3;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 64) {
+                opcodeHandler = handleBLOCKHASH;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_BLOCKHASH;
+            } else if (opcode == 65) {
+                opcodeHandler = handleCOINBASE;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 66) {
+                opcodeHandler = handleTIMESTAMP;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 67) {
+                opcodeHandler = handleNUMBER;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 68) {
+                opcodeHandler = handleDIFFICULTY;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 69) {
+                opcodeHandler = handleGASLIMIT;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 80) {
+                opcodeHandler = handlePOP;
+                stackIn = 1;
+                stackOut = 0;
+                gasFee = GAS_BASE;
+            } else if (opcode == 81) {
+                opcodeHandler = handleMLOAD;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 82) {
+                opcodeHandler = handleMSTORE;
+                stackIn = 2;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 83) {
+                opcodeHandler = handleMSTORE8;
+                stackIn = 2;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 84) {
+                opcodeHandler = handleSLOAD;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_SLOAD;
+            } else if (opcode == 85) {
+                opcodeHandler = handleSSTORE;
+                stackIn = 2;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 86) {
+                opcodeHandler = handleJUMP;
+                stackIn = 1;
+                stackOut = 0;
+                gasFee = GAS_MID;
+            } else if (opcode == 87) {
+                opcodeHandler = handleJUMPI;
+                stackIn = 2;
+                stackOut = 0;
+                gasFee = GAS_HIGH;
+            } else if (opcode == 88) {
+                opcodeHandler = handlePC;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 89) {
+                opcodeHandler = handleMSIZE;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 90) {
+                opcodeHandler = handleGAS;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_BASE;
+            } else if (opcode == 91) {
+                opcodeHandler = handleJUMPDEST;
+                stackIn = 0;
+                stackOut = 0;
+                gasFee = GAS_JUMPDEST;
+            } else if (opcode == 96) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 97) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 98) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 99) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 100) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 101) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 102) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 103) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 104) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 105) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 106) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 107) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 108) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 109) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 110) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 111) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 112) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 113) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 114) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 115) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 116) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 117) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 118) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 119) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 120) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 121) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 122) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 123) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 124) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 125) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 126) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 127) {
+                opcodeHandler = handlePUSH;
+                stackIn = 0;
+                stackOut = 1;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 128) {
+                opcodeHandler = handleDUP;
+                stackIn = 1;
+                stackOut = 2;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 129) {
+                opcodeHandler = handleDUP;
+                stackIn = 2;
+                stackOut = 3;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 130) {
+                opcodeHandler = handleDUP;
+                stackIn = 3;
+                stackOut = 4;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 131) {
+                opcodeHandler = handleDUP;
+                stackIn = 4;
+                stackOut = 5;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 132) {
+                opcodeHandler = handleDUP;
+                stackIn = 5;
+                stackOut = 6;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 133) {
+                opcodeHandler = handleDUP;
+                stackIn = 6;
+                stackOut = 7;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 134) {
+                opcodeHandler = handleDUP;
+                stackIn = 7;
+                stackOut = 8;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 135) {
+                opcodeHandler = handleDUP;
+                stackIn = 8;
+                stackOut = 9;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 136) {
+                opcodeHandler = handleDUP;
+                stackIn = 9;
+                stackOut = 10;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 137) {
+                opcodeHandler = handleDUP;
+                stackIn = 10;
+                stackOut = 11;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 138) {
+                opcodeHandler = handleDUP;
+                stackIn = 11;
+                stackOut = 12;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 139) {
+                opcodeHandler = handleDUP;
+                stackIn = 12;
+                stackOut = 13;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 140) {
+                opcodeHandler = handleDUP;
+                stackIn = 13;
+                stackOut = 14;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 141) {
+                opcodeHandler = handleDUP;
+                stackIn = 14;
+                stackOut = 15;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 142) {
+                opcodeHandler = handleDUP;
+                stackIn = 15;
+                stackOut = 16;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 143) {
+                opcodeHandler = handleDUP;
+                stackIn = 16;
+                stackOut = 17;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 144) {
+                opcodeHandler = handleSWAP;
+                stackIn = 2;
+                stackOut = 2;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 145) {
+                opcodeHandler = handleSWAP;
+                stackIn = 3;
+                stackOut = 3;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 146) {
+                opcodeHandler = handleSWAP;
+                stackIn = 4;
+                stackOut = 4;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 147) {
+                opcodeHandler = handleSWAP;
+                stackIn = 5;
+                stackOut = 5;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 148) {
+                opcodeHandler = handleSWAP;
+                stackIn = 6;
+                stackOut = 6;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 149) {
+                opcodeHandler = handleSWAP;
+                stackIn = 7;
+                stackOut = 7;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 150) {
+                opcodeHandler = handleSWAP;
+                stackIn = 8;
+                stackOut = 8;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 151) {
+                opcodeHandler = handleSWAP;
+                stackIn = 9;
+                stackOut = 9;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 152) {
+                opcodeHandler = handleSWAP;
+                stackIn = 10;
+                stackOut = 10;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 153) {
+                opcodeHandler = handleSWAP;
+                stackIn = 11;
+                stackOut = 11;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 154) {
+                opcodeHandler = handleSWAP;
+                stackIn = 12;
+                stackOut = 12;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 155) {
+                opcodeHandler = handleSWAP;
+                stackIn = 13;
+                stackOut = 13;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 156) {
+                opcodeHandler = handleSWAP;
+                stackIn = 14;
+                stackOut = 14;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 157) {
+                opcodeHandler = handleSWAP;
+                stackIn = 15;
+                stackOut = 15;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 158) {
+                opcodeHandler = handleSWAP;
+                stackIn = 16;
+                stackOut = 16;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 159) {
+                opcodeHandler = handleSWAP;
+                stackIn = 17;
+                stackOut = 17;
+                gasFee = GAS_VERYLOW;
+            } else if (opcode == 160) {
+                opcodeHandler = handleLOG;
+                stackIn = 2;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 161) {
+                opcodeHandler = handleLOG;
+                stackIn = 3;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 162) {
+                opcodeHandler = handleLOG;
+                stackIn = 4;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 163) {
+                opcodeHandler = handleLOG;
+                stackIn = 5;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 164) {
+                opcodeHandler = handleLOG;
+                stackIn = 6;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 240) {
+                opcodeHandler = handleCREATE;
+                stackIn = 3;
+                stackOut = 1;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 241) {
+                opcodeHandler = handleCALL;
+                stackIn = 7;
+                stackOut = 1;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 242) {
+                opcodeHandler = handleCALLCODE;
+                stackIn = 7;
+                stackOut = 1;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 243) {
+                opcodeHandler = handleRETURN;
+                stackIn = 2;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 244) {
+                opcodeHandler = handleDELEGATECALL;
+                stackIn = 6;
+                stackOut = 1;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 250) {
+                opcodeHandler = handleSTATICCALL;
+                stackIn = 6;
+                stackOut = 1;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 253) {
+                opcodeHandler = handleREVERT;
+                stackIn = 2;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 255) {
+                opcodeHandler = handleSELFDESTRUCT;
+                stackIn = 1;
+                stackOut = 0;
+                gasFee = GAS_ADDITIONAL_HANDLING;
+            } else {
+                opcodeHandler = handleINVALID;
+                stackIn = 0;
+                stackOut = 0;
+                gasFee = 0;
+            }
+
+            if (gasFee != GAS_ADDITIONAL_HANDLING) {
+                if (gasFee > evm.gas) {
+                    evm.errno = ERROR_OUT_OF_GAS;
                     evm.gas = 0;
                     break;
                 }
-                evm.gas -= ins.gas;
+                evm.gas -= gasFee;
             }
 
             // Check for violation of static execution.
@@ -313,16 +1000,16 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
                 evm.staticExec &&
                 (opcode == OP_SSTORE || opcode == OP_CREATE || (OP_LOG0 <= opcode && opcode <= OP_LOG4))
             ) {
-                errno = ERROR_ILLEGAL_WRITE_OPERATION;
+                evm.errno = ERROR_ILLEGAL_WRITE_OPERATION;
                 break;
             }
 
             // Check for stack errors
-            if (evm.stack.size < ins.stackIn) {
-                errno = ERROR_STACK_UNDERFLOW;
+            if (evm.stack.size < stackIn) {
+                evm.errno = ERROR_STACK_UNDERFLOW;
                 break;
-            } else if (ins.stackOut > ins.stackIn && evm.stack.size + ins.stackOut - ins.stackIn > MAX_STACK_SIZE) {
-                errno = ERROR_STACK_OVERFLOW;
+            } else if (stackOut > stackIn && evm.stack.size + stackOut - stackIn > MAX_STACK_SIZE) {
+                evm.errno = ERROR_STACK_OVERFLOW;
                 break;
             }
 
@@ -330,39 +1017,38 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
                 evm.pc = pc;
                 uint n = opcode - OP_PUSH1 + 1;
                 evm.n = n;
-                errno = ins.handler(evm);
+                opcodeHandler(evm);
                 pcNext = pc + n + 1;
             } else if (opcode == OP_JUMP || opcode == OP_JUMPI) {
                 evm.pc = pc;
-                errno = ins.handler(evm);
+                opcodeHandler(evm);
                 pcNext = evm.pc;
             } else if (opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_STOP || opcode == OP_SELFDESTRUCT) {
-                errno = ins.handler(evm);
+                opcodeHandler(evm);
                 break;
             } else {
                 if (OP_DUP1 <= opcode && opcode <= OP_DUP16) {
                     evm.n = opcode - OP_DUP1 + 1;
-                    errno = ins.handler(evm);
+                    opcodeHandler(evm);
                 } else if (OP_SWAP1 <= opcode && opcode <= OP_SWAP16) {
                     evm.n = opcode - OP_SWAP1 + 1;
-                    errno = ins.handler(evm);
+                    opcodeHandler(evm);
                 } else if (OP_LOG0 <= opcode && opcode <= OP_LOG4) {
                     evm.n = opcode - OP_LOG0;
-                    errno = ins.handler(evm);
+                    opcodeHandler(evm);
                 } else if (opcode == OP_PC) {
                     evm.pc = pc;
-                    errno = ins.handler(evm);
+                    opcodeHandler(evm);
                 } else {
-                    errno = ins.handler(evm);
+                    opcodeHandler(evm);
                 }
                 pcNext = pc + 1;
             }
-            if (errno == NO_ERROR) {
+            if (evm.errno == NO_ERROR) {
                 pc = pcNext;
             }
             stepRun = stepRun + 1;
         }
-        evm.errno = errno;
         evm.pc = pc;
     }
 
@@ -394,10 +1080,11 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     // ************************* Handlers ***************************
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECRECOVER(EVM memory state) internal pure returns (bytes memory ret, uint8 errno) {
+    function handlePreC_ECRECOVER(EVM memory state) internal pure {
         if (GAS_ECRECOVER > state.gas) {
             state.gas = 0;
-            return (ret, ERROR_OUT_OF_GAS);
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= GAS_ECRECOVER;
 
@@ -406,81 +1093,84 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         uint r = state.data.length < 96 ? 0 : EVMUtils.toUint(state.data, 64, 32);
         uint s = state.data.length < 128 ? 0 : EVMUtils.toUint(state.data, 96, 32);
         address result = ecrecover(bytes32(hash), uint8(v), bytes32(r), bytes32(s));
-        ret = EVMUtils.fromUint(uint(result));
+        state.returnData = EVMUtils.fromUint(uint(result));
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_SHA256(EVM memory state) internal pure returns (bytes memory ret, uint8 errno) {
+    function handlePreC_SHA256(EVM memory state) internal pure {
         uint gasFee = GAS_SHA256_BASE + (((state.data.length + 31) / 32) * GAS_SHA256_WORD);
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return (ret, ERROR_OUT_OF_GAS);
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
         bytes32 result = sha256(state.data);
-        ret = EVMUtils.fromUint(uint(result));
+        state.returnData = EVMUtils.fromUint(uint(result));
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_RIPEMD160(EVM memory state) internal pure returns (bytes memory ret, uint8 errno) {
+    function handlePreC_RIPEMD160(EVM memory state) internal pure {
         uint gasFee = GAS_RIPEMD160_BASE + (((state.data.length + 31) / 32) * GAS_RIPEMD160_WORD);
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return (ret, ERROR_OUT_OF_GAS);
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
         bytes20 result = ripemd160(state.data);
-        ret = EVMUtils.fromUint(uint(bytes32(result)));
+        state.returnData = EVMUtils.fromUint(uint(bytes32(result)));
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_IDENTITY(EVM memory state) internal pure returns (bytes memory ret, uint8 errno) {
+    function handlePreC_IDENTITY(EVM memory state) internal pure {
         uint gasFee = GAS_IDENTITY_BASE + (((state.data.length + 31) / 32) * GAS_IDENTITY_WORD);
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return (ret, ERROR_OUT_OF_GAS);
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
-        ret = state.data;
+        state.returnData = state.data;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_MODEXP(EVM memory) internal pure returns (bytes memory, uint8 errno) {
+    function handlePreC_MODEXP(EVM memory state) internal pure {
         // TODO
-        errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECADD(EVM memory) internal pure returns (bytes memory, uint8 errno) {
+    function handlePreC_ECADD(EVM memory state) internal pure {
         // TODO
-        errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECMUL(EVM memory) internal pure returns (bytes memory, uint8 errno) {
+    function handlePreC_ECMUL(EVM memory state) internal pure {
         // TODO
-        errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECPAIRING(EVM memory) internal pure returns (bytes memory, uint8 errno) {
+    function handlePreC_ECPAIRING(EVM memory state) internal pure {
         // TODO
-        errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
     // 0x0X
 
     // solhint-disable-next-line no-empty-blocks
-    function handleSTOP(EVM memory state) internal pure returns (uint8) {
+    function handleSTOP(EVM memory state) internal pure {
 
     }
 
-    function handleADD(EVM memory state) internal pure returns (uint8) {
+    function handleADD(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -490,7 +1180,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleMUL(EVM memory state) internal pure returns (uint8) {
+    function handleMUL(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -500,7 +1190,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSUB(EVM memory state) internal pure returns (uint8) {
+    function handleSUB(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -510,7 +1200,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleDIV(EVM memory state) internal pure returns (uint8) {
+    function handleDIV(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -520,7 +1210,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSDIV(EVM memory state) internal pure returns (uint8) {
+    function handleSDIV(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -530,7 +1220,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleMOD(EVM memory state) internal pure returns (uint8) {
+    function handleMOD(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -540,7 +1230,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSMOD(EVM memory state) internal pure returns (uint8) {
+    function handleSMOD(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -550,7 +1240,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleADDMOD(EVM memory state) internal pure returns (uint8) {
+    function handleADDMOD(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint m = state.stack.pop();
@@ -561,7 +1251,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleMULMOD(EVM memory state) internal pure returns (uint8) {
+    function handleMULMOD(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint m = state.stack.pop();
@@ -572,7 +1262,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleEXP(EVM memory state) internal pure returns (uint8) {
+    function handleEXP(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c = 0;
@@ -589,7 +1279,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (c > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= c;
@@ -600,7 +1291,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSIGNEXTEND(EVM memory state) internal pure returns (uint8) {
+    function handleSIGNEXTEND(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -610,7 +1301,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSHL(EVM memory state) internal pure returns (uint8) {
+    function handleSHL(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -620,7 +1311,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSHR(EVM memory state) internal pure returns (uint8) {
+    function handleSHR(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -630,7 +1321,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSAR(EVM memory state) internal pure returns (uint8) {
+    function handleSAR(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -641,7 +1332,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     // 0x1X
-    function handleLT(EVM memory state) internal pure returns (uint8) {
+    function handleLT(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -651,7 +1342,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleGT(EVM memory state) internal pure returns (uint8) {
+    function handleGT(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -661,7 +1352,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSLT(EVM memory state) internal pure returns (uint8) {
+    function handleSLT(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -671,7 +1362,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleSGT(EVM memory state) internal pure returns (uint8) {
+    function handleSGT(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -681,7 +1372,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleEQ(EVM memory state) internal pure returns (uint8) {
+    function handleEQ(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -691,7 +1382,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleISZERO(EVM memory state) internal pure returns (uint8) {
+    function handleISZERO(EVM memory state) internal pure {
         uint data = state.stack.pop();
         uint res;
         assembly {
@@ -700,7 +1391,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(res);
     }
 
-    function handleAND(EVM memory state) internal pure returns (uint8) {
+    function handleAND(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -710,7 +1401,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleOR(EVM memory state) internal pure returns (uint8) {
+    function handleOR(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -720,7 +1411,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleXOR(EVM memory state) internal pure returns (uint8) {
+    function handleXOR(EVM memory state) internal pure {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -730,7 +1421,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(c);
     }
 
-    function handleNOT(EVM memory state) internal pure returns (uint8) {
+    function handleNOT(EVM memory state) internal pure {
         uint data = state.stack.pop();
         uint res;
         assembly {
@@ -739,7 +1430,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(res);
     }
 
-    function handleBYTE(EVM memory state) internal pure returns (uint8) {
+    function handleBYTE(EVM memory state) internal pure {
         uint n = state.stack.pop();
         uint x = state.stack.pop();
         uint b;
@@ -750,7 +1441,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     // 0x2X
-    function handleSHA3(EVM memory state) internal pure returns (uint8) {
+    function handleSHA3(EVM memory state) internal pure {
         uint p = state.stack.pop();
         uint n = state.stack.pop();
         uint res = GAS_SHA3 +
@@ -759,7 +1450,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (res > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= res;
 
@@ -772,27 +1464,27 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     // 0x3X
-    function handleADDRESS(EVM memory state) internal pure returns (uint8) {
+    function handleADDRESS(EVM memory state) internal pure {
         state.stack.push(uint(state.target.addr));
     }
 
-    function handleBALANCE(EVM memory state) internal pure returns (uint8) {
+    function handleBALANCE(EVM memory state) internal pure {
         state.stack.push(state.accounts.get(address(state.stack.pop())).balance);
     }
 
-    function handleORIGIN(EVM memory state) internal pure returns (uint8) {
+    function handleORIGIN(EVM memory state) internal pure {
         state.stack.push(uint(state.context.origin));
     }
 
-    function handleCALLER(EVM memory state) internal pure returns (uint8) {
+    function handleCALLER(EVM memory state) internal pure {
         state.stack.push(uint(state.caller.addr));
     }
 
-    function handleCALLVALUE(EVM memory state) internal pure returns (uint8) {
+    function handleCALLVALUE(EVM memory state) internal pure {
         state.stack.push(state.value);
     }
 
-    function handleCALLDATALOAD(EVM memory state) internal pure returns (uint8) {
+    function handleCALLDATALOAD(EVM memory state) internal pure {
         uint addr = state.stack.pop();
         bytes memory data = state.data;
         uint val;
@@ -811,11 +1503,11 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.stack.push(val);
     }
 
-    function handleCALLDATASIZE(EVM memory state) internal pure returns (uint8) {
+    function handleCALLDATASIZE(EVM memory state) internal pure {
         state.stack.push(state.data.length);
     }
 
-    function handleCALLDATACOPY(EVM memory state) internal pure returns (uint8) {
+    function handleCALLDATACOPY(EVM memory state) internal pure {
         uint mAddr = state.stack.pop();
         uint dAddr = state.stack.pop();
         uint len = state.stack.pop();
@@ -824,7 +1516,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= gasFee;
@@ -837,24 +1530,26 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         );
     }
 
-    function handleCODESIZE(EVM memory state) internal pure returns (uint8) {
+    function handleCODESIZE(EVM memory state) internal pure {
         state.stack.push(state.code.length);
     }
 
-    function handleCODECOPY(EVM memory state) internal pure returns (uint8) {
+    function handleCODECOPY(EVM memory state) internal pure {
         uint mAddr = state.stack.pop();
         uint cAddr = state.stack.pop();
         uint len = state.stack.pop();
 
         if (cAddr + len > state.code.length) {
-            return ERROR_INDEX_OOB;
+            state.errno = ERROR_INDEX_OOB;
+            return;
         }
 
         uint gasFee = GAS_VERYLOW + computeGasForMemoryCopy(state, mAddr, len);
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= gasFee;
@@ -862,29 +1557,31 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.mem.storeBytes(state.code, cAddr, mAddr, len);
     }
 
-    function handleGASPRICE(EVM memory state) internal pure returns (uint8) {
+    function handleGASPRICE(EVM memory state) internal pure {
         state.stack.push(state.context.gasPrice);
     }
 
-    function handleEXTCODESIZE(EVM memory state) internal pure returns (uint8) {
+    function handleEXTCODESIZE(EVM memory state) internal pure {
         state.stack.push(state.accounts.get(address(state.stack.pop())).code.length);
     }
 
-    function handleEXTCODECOPY(EVM memory state) internal pure returns (uint8) {
+    function handleEXTCODECOPY(EVM memory state) internal pure {
         bytes memory code = state.accounts.get(address(state.stack.pop())).code;
         uint mAddr = state.stack.pop();
         uint dAddr = state.stack.pop();
         uint len = state.stack.pop();
 
         if (dAddr + len > code.length) {
-            return ERROR_INDEX_OOB;
+            state.errno = ERROR_INDEX_OOB;
+            return;
         }
 
         uint gasFee = GAS_VERYLOW + computeGasForMemoryCopy(state, mAddr, len);
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= gasFee;
@@ -892,11 +1589,11 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.mem.storeBytes(code, dAddr, mAddr, len);
     }
 
-    function handleRETURNDATASIZE(EVM memory state) internal pure returns (uint8) {
+    function handleRETURNDATASIZE(EVM memory state) internal pure {
         state.stack.push(state.lastRet.length);
     }
 
-    function handleRETURNDATACOPY(EVM memory state) internal pure returns (uint8) {
+    function handleRETURNDATACOPY(EVM memory state) internal pure {
         uint mAddr = state.stack.pop();
         uint rAddr = state.stack.pop();
         uint len = state.stack.pop();
@@ -905,7 +1602,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= gasFee;
@@ -919,41 +1617,41 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     // 0x4X
-    function handleBLOCKHASH(EVM memory state) internal pure returns (uint8) {
+    function handleBLOCKHASH(EVM memory state) internal pure {
         state.stack.pop();
         state.stack.push(0);
     }
 
-    function handleCOINBASE(EVM memory state) internal pure returns (uint8) {
+    function handleCOINBASE(EVM memory state) internal pure {
         state.stack.push(state.context.coinBase);
     }
 
-    function handleTIMESTAMP(EVM memory state) internal pure returns (uint8) {
+    function handleTIMESTAMP(EVM memory state) internal pure {
         state.stack.push(state.context.time);
     }
 
-    function handleNUMBER(EVM memory state) internal pure returns (uint8) {
+    function handleNUMBER(EVM memory state) internal pure {
         state.stack.push(state.context.blockNumber);
     }
 
-    function handleDIFFICULTY(EVM memory state) internal pure returns (uint8) {
+    function handleDIFFICULTY(EVM memory state) internal pure {
         state.stack.push(state.context.difficulty);
     }
 
-    function handleGASLIMIT(EVM memory state) internal pure returns (uint8) {
+    function handleGASLIMIT(EVM memory state) internal pure {
         state.stack.push(state.context.gasLimit);
     }
 
     // 0x5X
-    function handlePOP(EVM memory state) internal pure returns (uint8) {
+    function handlePOP(EVM memory state) internal pure {
         state.stack.pop();
     }
 
-    function handleMLOAD(EVM memory state) internal pure returns (uint8) {
+    function handleMLOAD(EVM memory state) internal pure {
         state.stack.push(state.mem.load(state.stack.pop()));
     }
 
-    function handleMSTORE(EVM memory state) internal pure returns (uint8) {
+    function handleMSTORE(EVM memory state) internal pure {
         uint addr = state.stack.pop();
         uint val = state.stack.pop();
 
@@ -961,7 +1659,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= gasFee;
@@ -969,7 +1668,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.mem.store(addr, val);
     }
 
-    function handleMSTORE8(EVM memory state) internal pure returns (uint8) {
+    function handleMSTORE8(EVM memory state) internal pure {
         uint addr = state.stack.pop();
         uint8 val = uint8(state.stack.pop());
 
@@ -977,7 +1676,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= gasFee;
@@ -985,11 +1685,11 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.mem.store8(addr, val);
     }
 
-    function handleSLOAD(EVM memory state) internal pure returns (uint8) {
+    function handleSLOAD(EVM memory state) internal pure {
         state.stack.push(state.target.stge.load(state.stack.pop()));
     }
 
-    function handleSSTORE(EVM memory state) internal pure returns (uint8) {
+    function handleSSTORE(EVM memory state) internal pure {
         uint addr = state.stack.pop();
         uint val = state.stack.pop();
 
@@ -1000,7 +1700,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
 
         state.gas -= gasFee;
@@ -1008,67 +1709,70 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.target.stge.store(addr, val);
     }
 
-    function handleJUMP(EVM memory state) internal pure returns (uint8) {
+    function handleJUMP(EVM memory state) internal pure {
         uint dest = state.stack.pop();
         if (dest >= state.code.length || uint8(state.code[dest]) != OP_JUMPDEST) {
-            return ERROR_INVALID_JUMP_DESTINATION;
+            state.errno = ERROR_INVALID_JUMP_DESTINATION;
+            return;
         }
         state.pc = dest;
     }
 
-    function handleJUMPI(EVM memory state) internal pure returns (uint8) {
+    function handleJUMPI(EVM memory state) internal pure {
         uint dest = state.stack.pop();
         uint cnd = state.stack.pop();
         if (cnd == 0) {
             state.pc = state.pc + 1;
-            return 0;
+            return;
         }
         if (dest >= state.code.length || uint8(state.code[dest]) != OP_JUMPDEST) {
-            return ERROR_INVALID_JUMP_DESTINATION;
+            state.errno = ERROR_INVALID_JUMP_DESTINATION;
+            return;
         }
         state.pc = dest;
     }
 
-    function handlePC(EVM memory state) internal pure returns (uint8) {
+    function handlePC(EVM memory state) internal pure {
         state.stack.push(state.pc);
     }
 
-    function handleMSIZE(EVM memory state) internal pure returns (uint8) {
+    function handleMSIZE(EVM memory state) internal pure {
         state.stack.push(32 * state.mem.size);
     }
 
-    function handleGAS(EVM memory state) internal pure returns (uint8) {
+    function handleGAS(EVM memory state) internal pure {
         state.stack.push(state.gas);
     }
 
     // solhint-disable-next-line no-empty-blocks
-    function handleJUMPDEST(EVM memory state) internal pure returns (uint8) {
+    function handleJUMPDEST(EVM memory state) internal pure {
 
     }
 
     // 0x6X, 0x7X
-    function handlePUSH(EVM memory state) internal pure returns (uint8) {
+    function handlePUSH(EVM memory state) internal pure {
         assert(1 <= state.n && state.n <= 32);
         if (state.pc + state.n > state.code.length) {
-            return ERROR_INDEX_OOB;
+            state.errno = ERROR_INDEX_OOB;
+            return;
         }
         state.stack.push(EVMUtils.toUint(state.code, state.pc + 1, state.n));
     }
 
     // 0x8X
-    function handleDUP(EVM memory state) internal pure returns (uint8) {
+    function handleDUP(EVM memory state) internal pure {
         assert(1 <= state.n && state.n <= 16);
         state.stack.dup(state.n);
     }
 
     // 0x9X
-    function handleSWAP(EVM memory state) internal pure returns (uint8) {
+    function handleSWAP(EVM memory state) internal pure {
         assert(1 <= state.n && state.n <= 16);
         state.stack.swap(state.n);
     }
 
     // 0xaX
-    function handleLOG(EVM memory state) internal pure returns (uint8) {
+    function handleLOG(EVM memory state) internal pure {
         uint mAddr = state.stack.pop();
         uint mSize = state.stack.pop();
         uint gasFee = GAS_LOG +
@@ -1078,7 +1782,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
@@ -1101,7 +1806,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     // 0xfX
-    function handleCREATE(EVM memory state) internal pure returns (uint8) {
+    function handleCREATE(EVM memory state) internal pure {
         assert(!state.staticExec);
 
         EVMCreateInput memory input;
@@ -1114,7 +1819,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         input.gas -= gasFee;
 
@@ -1123,7 +1829,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         input.context = state.context;
         input.accounts = state.accounts;
         input.logHash = state.logHash;
-        input.handlers = state.handlers;
 
         EVM memory retEvm;
         address newAddress;
@@ -1140,12 +1845,12 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.gas = retEvm.gas;
     }
 
-    function handleCREATE2(EVM memory) internal pure returns (uint8) {
-        return ERROR_INSTRUCTION_NOT_SUPPORTED;
+    function handleCREATE2(EVM memory state) internal pure {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     // solhint-disable-next-line function-max-lines
-    function handleCALL(EVM memory state) internal pure returns (uint8) {
+    function handleCALL(EVM memory state) internal pure {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
@@ -1175,7 +1880,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (input.gas + gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
@@ -1183,7 +1889,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         input.context = state.context;
         input.accounts = state.accounts;
         input.logHash = state.logHash;
-        input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -1204,25 +1909,26 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.gas -= input.gas - retEvm.gas;
     }
 
-    function handleCALLCODE(EVM memory) internal pure returns (uint8) {
-        return ERROR_INSTRUCTION_NOT_SUPPORTED;
+    function handleCALLCODE(EVM memory state) internal pure {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
-    function handleRETURN(EVM memory state) internal pure returns (uint8) {
+    function handleRETURN(EVM memory state) internal pure {
         uint start = state.stack.pop();
         uint len = state.stack.pop();
         uint gasFee = computeGasForMemory(state, start + len);
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
         state.returnData = state.mem.toArray(start, len);
     }
 
-    function handleDELEGATECALL(EVM memory state) internal pure returns (uint8) {
+    function handleDELEGATECALL(EVM memory state) internal pure {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
@@ -1240,7 +1946,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (input.gas + gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
@@ -1250,7 +1957,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         input.context = state.context;
         input.accounts = state.accounts;
         input.logHash = state.logHash;
-        input.handlers = state.handlers;
         input.staticExec = state.staticExec;
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -1272,7 +1978,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.gas -= input.gas - retEvm.gas;
     }
 
-    function handleSTATICCALL(EVM memory state) internal pure returns (uint8) {
+    function handleSTATICCALL(EVM memory state) internal pure {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
@@ -1289,7 +1995,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         if (input.gas + gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
@@ -1297,7 +2004,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         input.context = state.context;
         input.accounts = state.accounts;
         input.logHash = state.logHash;
-        input.handlers = state.handlers;
         input.staticExec = true;
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -1314,32 +2020,34 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.gas -= input.gas - retEvm.gas;
     }
 
-    function handleREVERT(EVM memory state) internal pure returns (uint8) {
+    function handleREVERT(EVM memory state) internal pure {
         uint start = state.stack.pop();
         uint len = state.stack.pop();
         uint gasFee = computeGasForMemory(state, start + len);
 
         if (gasFee > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= gasFee;
 
         state.returnData = state.mem.toArray(start, len);
-        return ERROR_STATE_REVERTED;
+        state.errno = ERROR_STATE_REVERTED;
     }
 
-    function handleINVALID(EVM memory) internal pure returns (uint8) {
-        return ERROR_INVALID_OPCODE;
+    function handleINVALID(EVM memory evm) internal pure {
+        evm.errno = ERROR_INVALID_OPCODE;
     }
 
-    function handleSELFDESTRUCT(EVM memory state) internal pure returns (uint8) {
+    function handleSELFDESTRUCT(EVM memory state) internal pure {
         // receiver
         EVMAccounts.Account memory acc = state.accounts.get(address(state.stack.pop()));
 
         if (GAS_SELFDESTRUCT > state.gas) {
             state.gas = 0;
-            return ERROR_OUT_OF_GAS;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
         }
         state.gas -= GAS_SELFDESTRUCT;
 
@@ -1348,7 +2056,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
                 // assuming new account created!?
                 if (GAS_NEWACCOUNT > state.gas) {
                     state.gas = 0;
-                    return ERROR_OUT_OF_GAS;
+                    state.errno = ERROR_OUT_OF_GAS;
+                    return;
                 }
                 state.gas -= GAS_NEWACCOUNT;
             }
@@ -1359,368 +2068,4 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         state.target.destroyed = true;
     }
-
-    // Since reference types can't be constant.
-    // solhint-disable-next-line function-max-lines
-    function _newHandlers() internal pure returns (Handlers memory handlers) {
-        Instruction memory inv = Instruction(handleINVALID, 0, 0, 0);
-        Instruction memory push = Instruction(handlePUSH, 0, 1, GAS_VERYLOW);
-
-        handlers.ins = [
-            // 0x0X
-            Instruction(handleSTOP, 0, 0, GAS_ZERO),
-            Instruction(handleADD, 2, 1, GAS_VERYLOW),
-            Instruction(handleMUL, 2, 1, GAS_LOW),
-            Instruction(handleSUB, 2, 1, GAS_VERYLOW),
-            Instruction(handleDIV, 2, 1, GAS_LOW),
-            Instruction(handleSDIV, 2, 1, GAS_LOW),
-            Instruction(handleMOD, 2, 1, GAS_LOW),
-            Instruction(handleSMOD, 2, 1, GAS_LOW),
-            Instruction(handleADDMOD, 3, 1, GAS_MID),
-            Instruction(handleMULMOD, 3, 1, GAS_MID),
-            Instruction(handleEXP, 2, 1, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleSIGNEXTEND, 0, 0, GAS_LOW),
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0x1X
-            Instruction(handleLT, 2, 1, GAS_VERYLOW),
-            Instruction(handleGT, 2, 1, GAS_VERYLOW),
-            Instruction(handleSLT, 2, 1, GAS_VERYLOW),
-            Instruction(handleSGT, 2, 1, GAS_VERYLOW),
-            Instruction(handleEQ, 2, 1, GAS_VERYLOW),
-            Instruction(handleISZERO, 1, 1, GAS_VERYLOW),
-            Instruction(handleAND, 2, 1, GAS_VERYLOW),
-            Instruction(handleOR, 2, 1, GAS_VERYLOW),
-            Instruction(handleXOR, 2, 1, GAS_VERYLOW),
-            Instruction(handleNOT, 1, 1, GAS_VERYLOW),
-            Instruction(handleBYTE, 2, 1, GAS_VERYLOW),
-            Instruction(handleSHL, 2, 1, GAS_VERYLOW),
-            Instruction(handleSHR, 2, 1, GAS_VERYLOW),
-            Instruction(handleSAR, 2, 1, GAS_VERYLOW),
-            inv,
-            inv,
-            // 0x2X
-            Instruction(handleSHA3, 2, 1, GAS_ADDITIONAL_HANDLING),
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0x3X
-            Instruction(handleADDRESS, 0, 1, GAS_BASE),
-            Instruction(handleBALANCE, 1, 1, GAS_BALANCE),
-            Instruction(handleORIGIN, 0, 1, GAS_BASE),
-            Instruction(handleCALLER, 0, 1, GAS_BASE),
-            Instruction(handleCALLVALUE, 0, 1, GAS_BASE),
-            Instruction(handleCALLDATALOAD, 1, 1, GAS_VERYLOW),
-            Instruction(handleCALLDATASIZE, 0, 1, GAS_BASE),
-            Instruction(handleCALLDATACOPY, 3, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleCODESIZE, 0, 1, GAS_BASE),
-            Instruction(handleCODECOPY, 3, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleGASPRICE, 0, 1, GAS_BASE),
-            Instruction(handleEXTCODESIZE, 1, 1, GAS_EXTCODE),
-            Instruction(handleEXTCODECOPY, 4, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleRETURNDATASIZE, 0, 1, GAS_BASE),
-            Instruction(handleRETURNDATACOPY, 3, 0, GAS_ADDITIONAL_HANDLING),
-            inv,
-            // 0x4X
-            Instruction(handleBLOCKHASH, 1, 1, GAS_BLOCKHASH),
-            Instruction(handleCOINBASE, 0, 1, GAS_BASE),
-            Instruction(handleTIMESTAMP, 0, 1, GAS_BASE),
-            Instruction(handleNUMBER, 0, 1, GAS_BASE),
-            Instruction(handleDIFFICULTY, 0, 1, GAS_BASE),
-            Instruction(handleGASLIMIT, 0, 1, GAS_BASE),
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0x5X
-            Instruction(handlePOP, 1, 0, GAS_BASE),
-            Instruction(handleMLOAD, 1, 1, GAS_VERYLOW),
-            Instruction(handleMSTORE, 2, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleMSTORE8, 2, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleSLOAD, 1, 1, GAS_SLOAD),
-            Instruction(handleSSTORE, 2, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleJUMP, 1, 0, GAS_MID),
-            Instruction(handleJUMPI, 2, 0, GAS_HIGH),
-            Instruction(handlePC, 0, 1, GAS_BASE),
-            Instruction(handleMSIZE, 0, 1, GAS_BASE),
-            Instruction(handleGAS, 0, 1, GAS_BASE),
-            Instruction(handleJUMPDEST, 0, 0, GAS_JUMPDEST),
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0x6X
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            // 0x7X
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            push,
-            // 0x8X
-            Instruction(handleDUP, 1, 2, GAS_VERYLOW),
-            Instruction(handleDUP, 2, 3, GAS_VERYLOW),
-            Instruction(handleDUP, 3, 4, GAS_VERYLOW),
-            Instruction(handleDUP, 4, 5, GAS_VERYLOW),
-            Instruction(handleDUP, 5, 6, GAS_VERYLOW),
-            Instruction(handleDUP, 6, 7, GAS_VERYLOW),
-            Instruction(handleDUP, 7, 8, GAS_VERYLOW),
-            Instruction(handleDUP, 8, 9, GAS_VERYLOW),
-            Instruction(handleDUP, 9, 10, GAS_VERYLOW),
-            Instruction(handleDUP, 10, 11, GAS_VERYLOW),
-            Instruction(handleDUP, 11, 12, GAS_VERYLOW),
-            Instruction(handleDUP, 12, 13, GAS_VERYLOW),
-            Instruction(handleDUP, 13, 14, GAS_VERYLOW),
-            Instruction(handleDUP, 14, 15, GAS_VERYLOW),
-            Instruction(handleDUP, 15, 16, GAS_VERYLOW),
-            Instruction(handleDUP, 16, 17, GAS_VERYLOW),
-            // 0x9X
-            Instruction(handleSWAP, 2, 2, GAS_VERYLOW),
-            Instruction(handleSWAP, 3, 3, GAS_VERYLOW),
-            Instruction(handleSWAP, 4, 4, GAS_VERYLOW),
-            Instruction(handleSWAP, 5, 5, GAS_VERYLOW),
-            Instruction(handleSWAP, 6, 6, GAS_VERYLOW),
-            Instruction(handleSWAP, 7, 7, GAS_VERYLOW),
-            Instruction(handleSWAP, 8, 8, GAS_VERYLOW),
-            Instruction(handleSWAP, 9, 9, GAS_VERYLOW),
-            Instruction(handleSWAP, 10, 10, GAS_VERYLOW),
-            Instruction(handleSWAP, 11, 11, GAS_VERYLOW),
-            Instruction(handleSWAP, 12, 12, GAS_VERYLOW),
-            Instruction(handleSWAP, 13, 13, GAS_VERYLOW),
-            Instruction(handleSWAP, 14, 14, GAS_VERYLOW),
-            Instruction(handleSWAP, 15, 15, GAS_VERYLOW),
-            Instruction(handleSWAP, 16, 16, GAS_VERYLOW),
-            Instruction(handleSWAP, 17, 17, GAS_VERYLOW),
-            // 0xaX
-            Instruction(handleLOG, 2, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleLOG, 3, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleLOG, 4, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleLOG, 5, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleLOG, 6, 0, GAS_ADDITIONAL_HANDLING),
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0xbX
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0xcX
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0xdX
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0xeX
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            // 0xfX
-            Instruction(handleCREATE, 3, 1, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleCALL, 7, 1, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleCALLCODE, 7, 1, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleRETURN, 2, 0, GAS_ADDITIONAL_HANDLING),
-            Instruction(handleDELEGATECALL, 6, 1, GAS_ADDITIONAL_HANDLING),
-            inv,
-            inv,
-            inv,
-            inv,
-            inv,
-            Instruction(handleSTATICCALL, 6, 1, GAS_ADDITIONAL_HANDLING),
-            inv,
-            inv,
-            Instruction(handleREVERT, 2, 0, GAS_ADDITIONAL_HANDLING),
-            inv,
-            Instruction(handleSELFDESTRUCT, 1, 0, GAS_ADDITIONAL_HANDLING)
-        ];
-
-        handlers.p[1] = handlePreC_ECRECOVER;
-        handlers.p[2] = handlePreC_SHA256;
-        handlers.p[3] = handlePreC_RIPEMD160;
-        handlers.p[4] = handlePreC_IDENTITY;
-        handlers.p[5] = handlePreC_MODEXP;
-        handlers.p[6] = handlePreC_ECADD;
-        handlers.p[7] = handlePreC_ECMUL;
-        handlers.p[8] = handlePreC_ECPAIRING;
-    }
-
-    // solhint-disable-next-line function-max-lines
-    function concat(bytes memory _preBytes, bytes memory _postBytes) internal pure returns (bytes memory) {
-        bytes memory tempBytes;
-
-        assembly {
-            // Get a location of some free memory and store it in tempBytes as
-            // Solidity does for memory variables.
-            tempBytes := mload(0x40)
-
-            // Store the length of the first bytes array at the beginning of
-            // the memory for tempBytes.
-            let length := mload(_preBytes)
-            mstore(tempBytes, length)
-
-            // Maintain a memory counter for the current write location in the
-            // temp bytes array by adding the 32 bytes for the array length to
-            // the starting location.
-            let mc := add(tempBytes, 0x20)
-            // Stop copying when the memory counter reaches the length of the
-            // first bytes array.
-            let end := add(mc, length)
-
-            for {
-                // Initialize a copy counter to the start of the _preBytes data,
-                // 32 bytes into its memory.
-                let cc := add(_preBytes, 0x20)
-            } lt(mc, end) {
-                // Increase both counters by 32 bytes each iteration.
-                mc := add(mc, 0x20)
-                cc := add(cc, 0x20)
-            } {
-                // Write the _preBytes data into the tempBytes memory 32 bytes
-                // at a time.
-                mstore(mc, mload(cc))
-            }
-
-            // Add the length of _postBytes to the current length of tempBytes
-            // and store it as the new length in the first 32 bytes of the
-            // tempBytes memory.
-            length := mload(_postBytes)
-            mstore(tempBytes, add(length, mload(tempBytes)))
-
-            // Move the memory counter back from a multiple of 0x20 to the
-            // actual end of the _preBytes data.
-            mc := end
-            // Stop copying when the memory counter reaches the new combined
-            // length of the arrays.
-            end := add(mc, length)
-
-            for {
-                let cc := add(_postBytes, 0x20)
-            } lt(mc, end) {
-                mc := add(mc, 0x20)
-                cc := add(cc, 0x20)
-            } {
-                mstore(mc, mload(cc))
-            }
-
-            // Update the free-memory pointer by padding our last write location
-            // to 32 bytes: add 31 bytes to the end of tempBytes to move to the
-            // next 32 byte block, then round down to the nearest multiple of
-            // 32. If the sum of the length of the two arrays is zero then add
-            // one before rounding down to leave a blank 32 bytes (the length block with 0).
-            mstore(0x40, and(
-                add(add(end, iszero(add(length, mload(_preBytes)))), 31),
-                not(31) // Round down to the nearest 32 bytes.
-            ))
-        }
-
-        return tempBytes;
-    }
-
 }

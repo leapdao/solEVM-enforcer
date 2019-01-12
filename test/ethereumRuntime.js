@@ -83,9 +83,7 @@ contract('Runtime', function () {
         if (fixture.result.memory) {
           assert.deepEqual(res.mem, fixture.result.memory);
         }
-        // TODO: re-enable once we support accounts again
-        // eslint-disable-next-line no-constant-condition
-        if (fixture.result.accounts && false) {
+        if (fixture.result.accounts) {
           const accounts = Array.from(fixture.result.accounts);
 
           accounts.push({
