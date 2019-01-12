@@ -165,4 +165,34 @@ export default (callback) => {
       await callback(code, data, steps, wrongExecution, 'solver');
     });
   });
+
+  describe('Fixture for Dispute/Verifier Logic #2 (JUMP)', function () {
+    const code = [
+      OP.PUSH1, '08', OP.JUMP, // jump to 0x08
+      OP.JUMPDEST, OP.GASLIMIT, OP.PUSH1, '0C', OP.JUMP, // 0x03. Jump to 0x0c
+      OP.JUMPDEST, OP.PUSH1, '03', OP.JUMP, // 0x08. Jump to 0x03
+      OP.JUMPDEST, // 0x0c
+      OP.PUSH1, '00',
+      OP.DUP1,
+      OP.REVERT,
+    ];
+    const data = '0x';
+    let steps;
+    let copy;
+
+    before(async () => {
+      steps = await OffchainStepper.run({ code });
+      copy = JSON.stringify(steps);
+    });
+
+    it('both have the same result, solver wins', async () => {
+      await callback(code, data, steps, steps, 'solver');
+    });
+
+    it('solver last step gone', async () => {
+      let wrongExecution = JSON.parse(copy);
+      wrongExecution.pop();
+      await callback(code, data, wrongExecution, steps, 'challenger');
+    });
+  });
 };
