@@ -172,8 +172,10 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         img.errno = evm.errno;
         img.gasRemaining = evm.gas;
         img.logHash = evm.logHash;
-        (img.accounts, img.accountsCode) = evm.accounts.toArray();
 
+        // TODO handle accounts that result from a failed transaction.
+        //      re-enable or otherwise hash it because 'out of gas'
+        //(img.accounts, img.accountsCode) = evm.accounts.toArray();
         return img;
     }
 
