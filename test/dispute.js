@@ -2,10 +2,10 @@
 import Merkelizer from '../utils/Merkelizer';
 import DisputeMock from '../utils/DisputeMock';
 import OffchainStepper from '../utils/OffchainStepper';
+import disputeFixtures from './dispute.fixtures';
 
 // for additional logging
 const DEBUG = false;
-const OP = require('./helpers/constants');
 
 function debugLog (...args) {
   if (DEBUG) {
@@ -29,25 +29,25 @@ function submitProofHelper (dispute, code, computationPath) {
   return dispute.submitProof(
     proofs,
     {
-      // TODO: compact {code,returnData}, support for accounts
-      // code: input.code,
-      code: code,
+      // TODO: compact {returnData}, support for accounts
       data: execState.isCallDataRequired ? input.data : '',
       stack: input.compactStack,
       mem: execState.isMemoryRequired ? input.mem : '',
       returnData: input.returnData,
-      pc: input.pc,
       logHash: input.logHash,
+      pc: input.pc,
+      pcEnd: execState.output.pc,
+      isCodeCompacted: input.isCodeCompacted,
       gasRemaining: input.gasRemaining,
     }
   );
 }
 
-async function disputeGame (code, solverSteps, challengerSteps, expectedWinner, expectedError) {
+async function disputeGame (code, callData, solverSteps, challengerSteps, expectedWinner, expectedError) {
   try {
     const stepper = OffchainStepper;
-    const solverMerkle = new Merkelizer().run(solverSteps);
-    const challengerMerkle = new Merkelizer().run(challengerSteps);
+    const solverMerkle = new Merkelizer().run(solverSteps, code, callData);
+    const challengerMerkle = new Merkelizer().run(challengerSteps, code, callData);
 
     if (DEBUG) {
       debugLog('solver depth=' + solverMerkle.depth);
@@ -69,6 +69,7 @@ async function disputeGame (code, solverSteps, challengerSteps, expectedWinner, 
       challengerComputationPath,
       solverMerkle.depth,
       code,
+      callData,
       stepper
     );
 
@@ -157,164 +158,9 @@ async function disputeGame (code, solverSteps, challengerSteps, expectedWinner, 
 }
 
 contract('JS DisputeMock', function () {
-  const code = [
-    OP.PUSH1, '03',
-    OP.PUSH1, '05',
-    OP.ADD,
-    OP.PUSH1, 'ff',
-    OP.PUSH1, '00',
-    OP.MSTORE,
-    OP.PUSH1, '00',
-    OP.MLOAD,
-    OP.PUSH1, '00',
-    OP.MSTORE,
-    OP.PUSH1, 'ff',
-    OP.POP,
-    OP.PUSH1, '00',
-    OP.PUSH1, '01',
-    OP.DUP1,
-    OP.SWAP1,
-    OP.CALLDATASIZE,
-    OP.CALLDATACOPY,
-    OP.GASLIMIT,
-    OP.PUSH1, '01',
-    OP.MSTORE,
-    OP.PUSH1, '00',
-    OP.PUSH1, '01',
-    OP.LOG0,
-    OP.PUSH1, '00',
-    OP.PUSH1, '01',
-    OP.SHA3,
-    OP.PUSH1, '20',
-    OP.PUSH1, '00',
-    OP.RETURN,
-  ];
-  const data = '0x00010203040506070809';
-  const stepper = OffchainStepper;
-
-  let steps;
-  let copy;
-
-  before(async () => {
-    steps = await stepper.run({ code, data });
-    copy = JSON.stringify(steps);
-  });
-
-  it('both have the same result, solver wins', async () => {
-    await disputeGame(code, steps, steps, 'solver');
-  });
-
-  it('challenger has an output error somewhere', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution[6].output.compactStack.push('01');
-    wrongExecution[6].output.stack.push('01');
-    await disputeGame(code, steps, wrongExecution, 'solver');
-  });
-
-  it('solver has an output error somewhere', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution[6].output.compactStack.push('01');
-    wrongExecution[6].output.stack.push('01');
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('challenger first step missing', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution.shift();
-    await disputeGame(code, steps, wrongExecution, 'solver');
-  });
-
-  it('solver first step missing', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution.shift();
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('challenger last step gone', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution.pop();
-    await disputeGame(code, steps, wrongExecution, 'solver');
-  });
-
-  it('solver last step gone', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution.pop();
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('challenger wrong memory output', async () => {
-    let wrongExecution = JSON.parse(copy);
-    for (let i = 1; i < wrongExecution.length; i += 2) {
-      wrongExecution[i].output.mem += '00';
+  disputeFixtures(
+    async (code, callData, solverSteps, challengerSteps, expectedWinner) => {
+      await disputeGame(code, callData, solverSteps, challengerSteps, expectedWinner);
     }
-    await disputeGame(code, steps, wrongExecution, 'solver');
-  });
-
-  it('solver wrong memory output', async () => {
-    let wrongExecution = JSON.parse(copy);
-    for (let i = 1; i < wrongExecution.length; i += 2) {
-      wrongExecution[i].output.mem += '00';
-    }
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('challenger wrong stack output', async () => {
-    let wrongExecution = JSON.parse(copy);
-    for (let i = 1; i < wrongExecution.length; i += 2) {
-      wrongExecution[i].output.compactStack.push('00');
-      wrongExecution[i].output.stack.push('00');
-    }
-    await disputeGame(code, steps, wrongExecution, 'solver');
-  });
-
-  it('solver wrong stack output', async () => {
-    let wrongExecution = JSON.parse(copy);
-    for (let i = 1; i < wrongExecution.length; i += 2) {
-      wrongExecution[i].output.compactStack.push('00');
-      wrongExecution[i].output.stack.push('00');
-    }
-
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('challenger wrong opcode', async () => {
-    let wrongExecution = JSON.parse(copy);
-    for (let i = 1; i < wrongExecution.length; i += 3) {
-      wrongExecution[i].output.code = ['01'];
-      wrongExecution[i].output.pc += 1;
-    }
-    await disputeGame(code, steps, wrongExecution, 'solver');
-  });
-
-  it('solver wrong opcode', async () => {
-    let wrongExecution = JSON.parse(copy);
-    for (let i = 1; i < wrongExecution.length; i += 3) {
-      wrongExecution[i].output.code = ['01'];
-      wrongExecution[i].output.pc += 1;
-    }
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('only two steps, both wrong but doesn\'t end with REVERT or RETURN = challenger wins', async () => {
-    let wrongExecution = JSON.parse(copy).slice(0, 2);
-    await disputeGame(code, wrongExecution, wrongExecution, 'challenger');
-  });
-
-  it('solver misses steps in between', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution = wrongExecution.slice(0, 2).concat(wrongExecution.slice(-3));
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('solver with one invalid step', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution[7] = wrongExecution[8];
-    await disputeGame(code, wrongExecution, steps, 'challenger');
-  });
-
-  it('challenger with one invalid step', async () => {
-    let wrongExecution = JSON.parse(copy);
-    wrongExecution[7] = wrongExecution[8];
-    await disputeGame(code, steps, wrongExecution, 'solver');
-  });
+  );
 });

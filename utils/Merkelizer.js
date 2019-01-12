@@ -1,31 +1,20 @@
 
 const ethers = require('ethers');
-const EMPTY_STATE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 export default class Merkelizer {
-  static getEmptyState (callData) {
+  static initialStateHash (code, callData) {
     const DEFAULT_GAS = 0x0fffffffffffff;
-    const ZERO_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
     const res = {
-      hash: EMPTY_STATE,
       executionState: {
-        input: {
-          data: callData,
-          compactStack: [],
-          stack: [],
-          mem: '',
-          returnData: '',
-          logHash: ZERO_HASH,
-          pc: 0,
-          gasRemaining: DEFAULT_GAS,
-        },
         output: {
-          data: callData,
+          code: code,
+          data: callData.replace('0x', ''),
           compactStack: [],
           stack: [],
           mem: '',
           returnData: '',
-          logHash: ZERO_HASH,
+          logHash: ZERO_HASH.replace('0x', ''),
           pc: 0,
           errno: 0,
           gasRemaining: DEFAULT_GAS,
@@ -49,22 +38,14 @@ export default class Merkelizer {
     );
   }
 
-  static codeHash (code) {
-    return ethers.utils.solidityKeccak256(
-      ['bytes'],
-      ['0x' + code.join('')]
-    );
-  }
-
   static stackHash (stack, sibling) {
-    let res = sibling || EMPTY_STATE;
+    let res = sibling || ZERO_HASH;
 
     for (var i = 0; i < stack.length; i++) {
-      let h = ethers.utils.solidityKeccak256(
-        ['uint'],
-        ['0x' + stack[i]]
+      res = ethers.utils.solidityKeccak256(
+        ['bytes32', 'uint'],
+        [res, stack[i]]
       );
-      res = this.hash(res, h);
     }
 
     return res;
@@ -86,7 +67,7 @@ export default class Merkelizer {
 
   static stateHash (execution, stackHash, memHash, dataHash) {
     // TODO: implement support for accounts
-    // TODO: compact-{code, returnData, accounts}
+    // TODO: compact-{returnData, accounts}
 
     if (!stackHash) {
       stackHash = this.stackHash(execution.stack);
@@ -163,26 +144,22 @@ export default class Merkelizer {
     return null;
   }
 
-  run (executions) {
+  run (executions, code, callData) {
     if (!executions || !executions.length) {
       throw new Error('You need to pass at least one execution step');
     }
 
     this.tree = [[]];
 
-    const firstExecutionStep = executions[0];
-    const emptyState = this.constructor.getEmptyState(firstExecutionStep.input.data);
+    const initialState = this.constructor.initialStateHash(code, callData);
     const leaves = this.tree[0];
 
-    while (executions.length % 2 !== 0) {
-      executions.push(emptyState.executionState);
-    }
-
-    let prevLeaf = { left: emptyState, right: emptyState };
+    let prevLeaf = { right: initialState };
     let len = executions.length;
 
     for (let i = 0; i < len; i++) {
-      let hash = this.constructor.stateHash(executions[i].output);
+      let exec = executions[i];
+      let hash = this.constructor.stateHash(exec.output);
       let llen = leaves.push(
         {
           left: prevLeaf.right,
@@ -192,6 +169,7 @@ export default class Merkelizer {
           },
           hash: this.constructor.hash(prevLeaf.right.hash, hash),
           isLeaf: true,
+          isFirstExecutionStep: i === 0,
         }
       );
 
@@ -216,12 +194,12 @@ export default class Merkelizer {
         if (!right) {
           right = {
             left: {
-              hash: EMPTY_STATE,
+              hash: ZERO_HASH,
             },
             right: {
-              hash: EMPTY_STATE,
+              hash: ZERO_HASH,
             },
-            hash: EMPTY_STATE,
+            hash: ZERO_HASH,
           };
           last.push(right);
         }

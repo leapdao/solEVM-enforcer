@@ -1,15 +1,17 @@
 import { deployContract, wallets, txOverrides } from './utils';
 
+import Merkelizer from '../utils/Merkelizer';
+import OffchainStepper from '../utils/OffchainStepper';
+
+const OP = require('./helpers/constants');
+
 const Enforcer = artifacts.require('./Enforcer.sol');
 const VerifierMock = artifacts.require('./mocks/VerifierMock.sol');
 const CallbackMock = artifacts.require('./mocks/CallbackMock.sol');
 
-const code = '0xaabb';
+const code = [OP.PUSH1, 'ff'];
+const codeBytes = '0x' + code.join('');
 const callData = '0xbb';
-const endHash = '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
-const executionLength = 1;
-const otherEndHash = '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
-const otherExecutionLength = 1;
 
 contract('Enforcer', () => {
   function getDisputeId (events) {
@@ -20,13 +22,31 @@ contract('Enforcer', () => {
     return events[events.length - 1].topics[1];
   }
 
+  let steps;
+  let endHash;
+  let otherEndHash;
+  let executionLength;
+
+  before(async () => {
+    steps = await OffchainStepper.run({ code, data: callData });
+    executionLength = steps.length;
+
+    let tmp = new Merkelizer().run(steps, code, callData);
+    endHash = tmp.root.hash;
+    // copy execution steps, we want to modify it
+    steps = JSON.parse(JSON.stringify(steps));
+    steps[0].output.stack.push('0xfa');
+    tmp = new Merkelizer().run(steps, code, callData);
+    otherEndHash = tmp.root.hash;
+  });
+
   it('should allow to register and finalize execution', async () => {
     const contract = await deployContract(CallbackMock);
     // create enforcer
     const enforcer = await deployContract(Enforcer, wallets[0].address, 0, 0);
 
     // register execution and check state
-    let tx = await contract.register(enforcer.address, code, callData, endHash, executionLength, txOverrides);
+    let tx = await contract.register(enforcer.address, codeBytes, callData, endHash, executionLength, txOverrides);
     const reg = await tx.wait();
     const executionId = getExecutionId(reg.events);
     const execs = await enforcer.executions(executionId);
@@ -47,7 +67,7 @@ contract('Enforcer', () => {
 
     // register execution and check state
     let tx = await contract.register(
-      enforcer.address, code, callData, endHash, executionLength,
+      enforcer.address, codeBytes, callData, endHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
 
@@ -72,13 +92,13 @@ contract('Enforcer', () => {
     await tx.wait();
 
     // register execution and check state
-    tx = await contract.register(enforcer.address, code, callData, endHash, executionLength, txOverrides);
+    tx = await contract.register(enforcer.address, codeBytes, callData, endHash, executionLength, txOverrides);
     const reg = await tx.wait();
     const executionId = getExecutionId(reg.events);
 
     // start dispute
     tx = await enforcer.dispute(
-      executionId, otherEndHash, otherExecutionLength,
+      executionId, otherEndHash, executionLength,
       txOverrides
     );
     const disp = await tx.wait();
@@ -107,7 +127,7 @@ contract('Enforcer', () => {
 
     // register execution and check state
     tx = await contract.register(
-      enforcer.address, code, callData, endHash, executionLength,
+      enforcer.address, codeBytes, callData, endHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
 
@@ -116,7 +136,7 @@ contract('Enforcer', () => {
 
     // start dispute
     tx = await enforcer.dispute(
-      executionId, otherEndHash, otherExecutionLength,
+      executionId, otherEndHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     const disp = await tx.wait();

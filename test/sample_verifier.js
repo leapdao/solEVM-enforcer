@@ -252,14 +252,21 @@ contract('SampleVerifierMock', () => {
     it('should allow solver to submit correct state and win', async () => {
       await verifier.detailExecution(
         disputeId,
-        code,
-        '0x',
-        [4, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
-        [5, 3],
-        '0x',
-        [],
-        '0x',
-        '0x0000000000000000000000000000000000000000000000000000000000000000'
+        {
+          code: code,
+          data: '0x',
+          pc: 4,
+          errno: 0,
+          stepCount: 0,
+          gasLimit: BLOCK_GAS_LIMIT,
+          gasRemaining: BLOCK_GAS_LIMIT,
+          stack: [5, 3],
+          mem: '0x',
+          accounts: [],
+          accountsCode: '0x',
+          returnData: '0x',
+          logHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        }
       );
       let dispute = await parseDispute(disputeId);
       assert.equal(dispute.state, DisputeState.Ended, 'dispute not Ended');
@@ -270,14 +277,21 @@ contract('SampleVerifierMock', () => {
       await verifier.setLeft(disputeId, hashUint256Array([5, 4], 0), 4);
       await verifier.detailExecution(
         disputeId,
-        code,
-        '0x',
-        [4, 0, BLOCK_GAS_LIMIT, BLOCK_GAS_LIMIT],
-        [5, 4],
-        '0x',
-        [],
-        '0x',
-        '0x0000000000000000000000000000000000000000000000000000000000000000'
+        {
+          code: code,
+          data: '0x',
+          pc: 4,
+          errno: 0,
+          stepCount: 0,
+          gasLimit: BLOCK_GAS_LIMIT,
+          gasRemaining: BLOCK_GAS_LIMIT,
+          stack: [5, 4],
+          mem: '0x',
+          accounts: [],
+          accountsCode: '0x',
+          returnData: '0x',
+          logHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        }
       );
       let dispute = await parseDispute(disputeId);
       assert.equal(dispute.state, DisputeState.Ended, 'dispute not Ended');

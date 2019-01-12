@@ -42,12 +42,12 @@
     "ethjs-abi": "^0.2.1",
     "ganache-cli": "=6.2.5",
     "solhint": "^1.2.1",
-    "truffle": "^5.0.0"
+    "truffle": "=5.0.0"
   },
   "author": "johannbarbie@me.com",
   "license": "ISC",
   "dependencies": {
-    "ethereumjs-vm": "github:pinkiebell/ethereumjs-vm.git#distR1",
+    "ethereumjs-vm": "github:pinkiebell/ethereumjs-vm#distR1",
     "openzeppelin-solidity": "=2.1.1"
   }
 }

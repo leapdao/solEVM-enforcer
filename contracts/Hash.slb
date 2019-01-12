@@ -12,11 +12,8 @@ library Hash {
           The function comes with a sibling param which represents hash of all elements at the end of the array
       */
     function toHash(uint256[] memory self, bytes32 sibling) internal pure returns (bytes32) {
-        if (self.length == 0) {
-            return 0;
-        }
-
         bytes32 hash = sibling;
+
         for (uint i = 0; i < self.length; i++) {
             assembly {
                 mstore(0, hash)

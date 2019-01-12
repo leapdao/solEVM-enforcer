@@ -150,5 +150,29 @@ library EVMAccounts {
             codeOffset += acc.code.length;
         }
     }
-    
+
+    function fromArray(
+        uint[] memory accountsIn,
+        bytes memory accountsCode
+    ) internal pure returns (Accounts memory accountsOut) {
+        if (accountsIn.length == 0) {
+            return accountsOut;
+        }
+        uint offset = 0;
+        while (offset < accountsIn.length) {
+            address addr = address(accountsIn[offset]);
+            Account memory acc = get(accountsOut, addr);
+            acc.balance = accountsIn[offset + 1];
+            acc.nonce = uint8(accountsIn[offset + 2]);
+            acc.destroyed = accountsIn[offset + 3] == 1;
+            uint codeSize = accountsIn[offset + 5];
+            acc.code = new bytes(codeSize);
+            EVMUtils.copy(accountsCode, acc.code, accountsIn[offset + 4], 0, codeSize); // accountsIn[offset + 4] - code offset
+            uint storageSize = accountsIn[offset + 6];
+            for (uint i = 0; i < storageSize; i++) {
+                acc.stge.store(accountsIn[offset + 7 + 2*i], accountsIn[offset + 8 + 2*i]);
+            }
+            offset += 7 + 2 * storageSize;
+        }
+    }
 }

@@ -1,27 +1,24 @@
 pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
-import "./Hash.slb";
 
 
 contract IEthereumRuntime {
-    using Hash for uint256[];
 
-    struct Result {
-        uint errno;
-        uint errpc;
+    struct EVMPreimage {
+        bytes code;
+        bytes data;
+        uint gasLimit;
         uint pc;
-        bytes returnData;
+        uint errno;
+        uint gasRemaining;
+        uint stepCount;
         uint[] stack;
         bytes mem;
         uint[] accounts;
         bytes accountsCode;
-        uint gasRemaining;
+        bytes returnData;
         bytes32 logHash;
     }
 
-    function execute(
-        bytes memory code, bytes memory data, uint[4] memory intInput, uint[] memory stack,
-        bytes memory mem, uint[] memory accounts, bytes memory accountsCode,
-        bytes32 logHash
-    ) public pure returns (Result memory);
+    function execute(EVMPreimage memory) public pure returns (EVMPreimage memory);
 }
