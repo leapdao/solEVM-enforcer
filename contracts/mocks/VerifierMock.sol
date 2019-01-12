@@ -54,6 +54,6 @@ contract VerifierMock is Ownable, IVerifier {
     }
 
     // solhint-disable-next-line no-empty-blocks
-    function runStep(bytes32 _disputeId, IEthereumRuntime.Result memory) public {
+    function runStep(bytes32 _disputeId, IEthereumRuntime.EVMPreimage memory) public {
     }
 }
