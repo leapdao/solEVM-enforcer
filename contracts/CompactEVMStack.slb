@@ -1,0 +1,55 @@
+pragma solidity 0.5.2;
+pragma experimental ABIEncoderV2;
+
+import {MemOps} from "./MemOps.slb";
+import {Hash} from "./Hash.slb";
+
+
+library CompactEVMStack {
+
+    uint256 constant internal MAX_SIZE = 1024;
+
+    struct Stack {
+        uint256 size;
+        bytes32 sibling;
+        uint256[17] data;
+        uint8 length;
+    }
+
+    using Hash for Stack;
+
+    function newStack() internal pure returns (Stack memory stk) {
+        stk.size = 0;
+        stk.length = 0;
+        stk.sibling = "";
+    }
+
+    function push(Stack memory self, uint val) internal pure {
+        assert(self.size < MAX_SIZE);
+        self.size++;
+        self.data[self.length++] = val;
+    }
+
+    function pop(Stack memory self) internal pure returns (uint) {
+        assert(self.size > 0);
+        self.size--;
+        return self.data[--self.length];
+    }
+
+    function dup(Stack memory self, uint n) internal pure {
+        assert(self.size < MAX_SIZE);
+        assert(1 <= n && n <= 16);
+        assert(n <= self.size);
+        self.data[self.length] = self.data[self.length-n];
+        self.size++;
+        self.length++;
+    }
+
+    function swap(Stack memory self, uint n) internal pure {
+        assert(1 <= n && n <= 16);
+        assert(n < self.size);
+        uint256 tmp = self.data[self.length-1];
+        self.data[self.length-1] = self.data[self.length-n-1];
+        self.data[self.length-n-1] = tmp;
+    }
+}

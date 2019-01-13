@@ -162,7 +162,7 @@ contract SampleVerifier is Ownable, IVerifier {
 
         require(dispute.left.step == dispute.right.step - 1, "must find a specific step");
         // only allow to run 1 step
-        require(params[1] == 1, "must be one step");
+        require(img.stepCount == 1, "must be one step");
 
         // TODO actual procedure:
         // - calculate code root from code and codeProof, code pos is pcStart

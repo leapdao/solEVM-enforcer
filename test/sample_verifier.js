@@ -74,7 +74,7 @@ contract('SampleVerifierMock', () => {
     return ethers.utils.formatBytes32String(Date.now().toString());
   };
 
-before(async () => {
+  before(async () => {
     verifier = await deployContract(Verifier, 100);
     enforcer = await deployContract(Enforcer);
     ethRuntime = await deployContract(EthRuntime);
