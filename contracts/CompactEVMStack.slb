@@ -13,43 +13,48 @@ library CompactEVMStack {
         uint256 size;
         bytes32 sibling;
         uint256[17] data;
-        uint8 length;
+        uint8 dataLength;
     }
 
     using Hash for Stack;
 
     function newStack() internal pure returns (Stack memory stk) {
         stk.size = 0;
-        stk.length = 0;
+        stk.dataLength = 0;
         stk.sibling = "";
     }
 
     function push(Stack memory self, uint val) internal pure {
         assert(self.size < MAX_SIZE);
         self.size++;
-        self.data[self.length++] = val;
+        self.data[self.dataLength++] = val;
     }
 
     function pop(Stack memory self) internal pure returns (uint) {
         assert(self.size > 0);
+        assert(self.dataLength > 0);
+        uint256 res = self.data[self.dataLength-1];
+        self.data[self.dataLength-1] = 0;
         self.size--;
-        return self.data[--self.length];
+        self.dataLength--;
+        return res;
     }
 
     function dup(Stack memory self, uint n) internal pure {
         assert(self.size < MAX_SIZE);
         assert(1 <= n && n <= 16);
         assert(n <= self.size);
-        self.data[self.length] = self.data[self.length-n];
+        self.data[self.dataLength] = self.data[self.dataLength-n];
         self.size++;
-        self.length++;
+        self.dataLength++;
     }
 
     function swap(Stack memory self, uint n) internal pure {
         assert(1 <= n && n <= 16);
         assert(n < self.size);
-        uint256 tmp = self.data[self.length-1];
-        self.data[self.length-1] = self.data[self.length-n-1];
-        self.data[self.length-n-1] = tmp;
+        assert(n < self.dataLength);
+        uint256 tmp = self.data[self.dataLength-1];
+        self.data[self.dataLength-1] = self.data[self.dataLength-n-1];
+        self.data[self.dataLength-n-1] = tmp;
     }
 }

@@ -21,7 +21,7 @@ export default class CompactRuntimeAdapter {
             size: 0,
             sibling: '0x0000000000000000000000000000000000000000000000000000000000000000',
             data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            length: 0,
+            dataLength: 0,
           },
           mem: mem || '0x',
           accounts: accounts || [],

@@ -30,11 +30,7 @@ library Hash {
     function toHash(CompactEVMStack.Stack memory self) internal pure returns (bytes32) {
         bytes32 hash = self.sibling;
 
-        if (self.size == 0) {
-            return hash;
-        }
-
-        for (uint256 i = 0; i < self.data.length; i++) {
+        for (uint256 i = 0; i < self.dataLength; i++) {
             hash = keccak256(abi.encodePacked(hash, self.data[i]));
             // assembly {
             //     mstore(0, hash)

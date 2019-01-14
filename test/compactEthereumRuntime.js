@@ -1,4 +1,6 @@
 import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract } from './utils';
+import { padUintArray } from './helpers/compactState.js';
+
 import fixtures from './fixtures';
 import Runtime from './helpers/compactRuntimeAdapter';
 
@@ -12,7 +14,6 @@ contract('Runtime', function () {
 
   before(async () => {
     rt = new Runtime(await deployContract(EthereumRuntime));
-    console.log('Deployed');
   });
 
   describe('executeAndStop', () => {
@@ -70,27 +71,21 @@ contract('Runtime', function () {
     fixtures.forEach(fixture => {
       const { code, pc, opcodeUnderTest } = getCode(fixture);
 
-      let pad = (arr) => {
-        let res = Array.from(arr);
-        for (let i = res.length; i < 17; i++) { res.push(0); }
-        return res;
-      };
-
       it(fixture.description || opcodeUnderTest, async () => {
         let stack;
         if (fixture.stack) {
           stack = {
             size: fixture.stack.length,
             sibling: '0x0000000000000000000000000000000000000000000000000000000000000000',
-            data: pad(fixture.stack),
-            length: fixture.stack.length,
+            data: padUintArray(fixture.stack, 17),
+            dataLength: fixture.stack.length,
           };
         } else {
           stack = {
             size: 0,
             sibling: '0x0000000000000000000000000000000000000000000000000000000000000000',
             data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            length: 0,
+            dataLength: 0,
           };
         }
         const mem = fixture.memory || '0x';
