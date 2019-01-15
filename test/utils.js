@@ -169,7 +169,7 @@ export const getCode = (fixture) => {
 };
 export const wallets = [];
 
-const provider = new ethers.providers.Web3Provider(web3.currentProvider);
+export const provider = new ethers.providers.Web3Provider(web3.currentProvider);
 
 for (var i = 0; i < 10; i++) {
   const privateKey = '0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b750120' + i;
