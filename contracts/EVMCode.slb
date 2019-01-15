@@ -47,6 +47,7 @@ library EVMCode {
             uint size = self.length;
             assembly {
                 bts := mload(0x40)
+                // padding up to word size
                 mstore(0x40, add(bts, and(add(add(size, 0x20), 0x1f), not(0x1f))))
                 mstore(bts, size)
                 extcodecopy(codeContractAddress, add(bts, 0x20), 0, size)
