@@ -11,9 +11,7 @@ library Merkelizer {
         bytes returnData;
         bytes32 logHash;
         uint pc;
-        uint pcEnd;
         uint gasRemaining;
-        bool isCodeCompacted;
         // accounts...
     }
 

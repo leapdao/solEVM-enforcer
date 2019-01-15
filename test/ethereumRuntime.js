@@ -1,4 +1,4 @@
-import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract } from './utils';
+import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract, deployCode } from './utils';
 import fixtures from './fixtures';
 import Runtime from './helpers/runtimeAdapter';
 
@@ -25,11 +25,11 @@ contract('Runtime', function () {
         OP.JUMPDEST, // 0x0c
       ];
       const data = '0x';
-
+      const codeContract = await deployCode(code);
       const executeStep = async (stepCount) =>
         (await rt.execute(
           {
-            code: `0x${code.join('')}`,
+            code: codeContract.address,
             data: data,
             pc: 0,
             stepCount: stepCount,
@@ -45,17 +45,18 @@ contract('Runtime', function () {
 
   describe('initAndExecute', () => {
     it('can continue from non-zero program counter', async () => {
-      const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
+      const code = [PUSH1, '03', PUSH1, '05', OP.ADD];
+      const codeContract = await deployCode(code);
       const res = await rt.execute(
         {
-          code: code,
+          code: codeContract.address,
           pc: 0,
           stepCount: 2,
         }
       );
       const { stack } = await rt.execute(
         {
-          code,
+          code: codeContract.address,
           pc: 4,
           stepCount: 0,
           stack: res.stack,
@@ -75,7 +76,20 @@ contract('Runtime', function () {
         const data = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const logHash = fixture.logHash;
-        const res = await rt.execute({ code, data, pc, gasLimit, stack, mem, accounts, accountsCode, logHash });
+        const codeContract = await deployCode(code);
+        const res = await rt.execute(
+          {
+            code: codeContract.address,
+            data,
+            pc,
+            gasLimit,
+            stack,
+            mem,
+            accounts,
+            accountsCode,
+            logHash,
+          }
+        );
 
         if (fixture.result.stack) {
           assert.deepEqual(toStr(res.stack), fixture.result.stack);
@@ -124,175 +138,175 @@ contract('Runtime', function () {
   });
 
   it('should have enough gas', async function () {
-    const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
+    const code = [PUSH1, '03', PUSH1, '05', OP.ADD];
     const data = '0x';
     const gasLimit = 9;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     // should have zero gas left
     assert.equal(res.gas, 0);
   });
 
   it('should run out of gas', async function () {
-    const code = '0x' + PUSH1 + '03' + PUSH1 + '05' + OP.ADD;
+    const code = [PUSH1, '03', PUSH1, '05', OP.ADD];
     const data = '0x';
     const gasLimit = 8;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
 
   it('(OP.CALL) should run out of gas', async function () {
-    const code =
-      '0x' +
+    const code = [
       // gas
-      PUSH1 + 'ff' +
+      PUSH1, 'ff',
       // targetAddr
-      PUSH1 + '00' +
+      PUSH1, '00',
       // value
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inSize
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retSize
-      PUSH1 + '00' +
-      OP.CALL;
+      PUSH1, '00',
+      OP.CALL,
+    ];
     const data = '0x';
     const gasLimit = 200;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
 
   it('(OP.CALL) should not run out of gas', async function () {
-    const code =
-      '0x' +
+    const code = [
       // gas
-      PUSH1 + 'ff' +
+      PUSH1, 'ff',
       // targetAddr
-      PUSH1 + '00' +
+      PUSH1, '00',
       // value
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inSize
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retSize
-      PUSH1 + '00' +
-      OP.CALL;
+      PUSH1, '00',
+      OP.CALL,
+    ];
     const data = '0x';
     const gasLimit = 2000;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     assert.equal(res.errno, 0);
   });
 
   it('(OP.DELEGATECALL) should run out of gas', async function () {
-    const code =
-      '0x' +
+    const code = [
       // gas
-      PUSH1 + 'ff' +
+      PUSH1, 'ff',
       // targetAddr
-      PUSH1 + '00' +
+      PUSH1, '00',
       // value
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inSize
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retSize
-      PUSH1 + '00' +
-      OP.DELEGATECALL;
+      PUSH1, '00',
+      OP.DELEGATECALL,
+    ];
     const data = '0x';
     const gasLimit = 200;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
 
   it('(OP.DELEGATECALL) should not run out of gas', async function () {
-    const code =
-      '0x' +
+    const code = [
       // gas
-      PUSH1 + 'ff' +
+      PUSH1, 'ff',
       // targetAddr
-      PUSH1 + '00' +
+      PUSH1, '00',
       // value
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inSize
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retSize
-      PUSH1 + '00' +
-      OP.DELEGATECALL;
+      PUSH1, '00',
+      OP.DELEGATECALL,
+    ];
     const data = '0x';
     const gasLimit = 2000;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     assert.equal(res.errno, 0);
   });
 
   it('(OP.STATICCALL) should run out of gas', async function () {
-    const code =
-      '0x' +
+    const code = [
       // gas
-      PUSH1 + 'ff' +
+      PUSH1, 'ff',
       // targetAddr
-      PUSH1 + '00' +
+      PUSH1, '00',
       // value
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inSize
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retSize
-      PUSH1 + '00' +
-      OP.STATICCALL;
+      PUSH1, '00',
+      OP.STATICCALL,
+    ];
     const data = '0x';
     const gasLimit = 200;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
 
   it('(OP.STATICCALL) should not run out of gas', async function () {
-    const code =
-      '0x' +
+    const code = [
       // gas
-      PUSH1 + 'ff' +
+      PUSH1, 'ff',
       // targetAddr
-      PUSH1 + '00' +
+      PUSH1, '00',
       // value
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // inSize
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retOffset
-      PUSH1 + '00' +
+      PUSH1, '00',
       // retSize
-      PUSH1 + '00' +
-      OP.STATICCALL;
+      PUSH1, '00',
+      OP.STATICCALL,
+    ];
     const data = '0x';
     const gasLimit = 2000;
-
-    const res = await rt.execute({ code, data, gasLimit });
+    const codeContract = await deployCode(code);
+    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
     assert.equal(res.errno, 0);
   });
 });

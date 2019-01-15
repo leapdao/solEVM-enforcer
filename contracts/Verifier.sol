@@ -197,47 +197,23 @@ contract Verifier is EVMConstants, Ownable {
             return;
         }
 
-        uint pc = _executionState.pc;
-        uint codeptr = 0;
-        uint codeSize = 0;
-        address codeContractAddress = dispute.codeContractAddress;
-
-        // TODO: what happens if the code make assumptions with OP.PC ?
-        //       should we pad the code array with zeros?
-        //       -
-        //       we can do some prechecks without running the evm for:
-        //       - JUMP, JUMPI
-        //       - CODESIZE
-        //       - maybe others too
-        if (_executionState.isCodeCompacted) {
-            uint pcEnd = _executionState.pcEnd;
-
-            if (pc == pcEnd) {
-                pcEnd += 1;
-            }
-
-            codeSize = pcEnd - pc;
-            codeptr = pc;
-            _executionState.pc = 0;
-        } else {
-            assembly {
-                codeSize := extcodesize(codeContractAddress)
-            }
-        }
-
-        bytes memory code = new bytes(codeSize);
-        assembly {
-            extcodecopy(codeContractAddress, add(code, 0x20), codeptr, codeSize)
-        }
-
         if ((dispute.state & END_OF_EXECUTION) != 0) {
-            if (uint8(code[_executionState.pc]) != OP_REVERT && uint8(code[_executionState.pc]) != OP_RETURN) {
+            address codeAddress = dispute.codeContractAddress;
+            uint pos = _executionState.pc;
+            uint8 opcode;
+
+            assembly {
+                extcodecopy(codeAddress, 31, pos, 1)
+                opcode := mload(0)
+            }
+
+            if (opcode != OP_REVERT && opcode != OP_RETURN) {
                 return;
             }
         }
 
         IEthereumRuntime.EVMPreimage memory img;
-        img.code = code;
+        img.code = dispute.codeContractAddress;
         img.data = _executionState.data;
         img.pc = _executionState.pc;
         img.stepCount = 1;
@@ -260,11 +236,6 @@ contract Verifier is EVMConstants, Ownable {
         _executionState.logHash = resultState.logHash;
         _executionState.returnData = resultState.returnData;
         _executionState.gasRemaining = resultState.gas;
-
-        // patch
-        if (_executionState.isCodeCompacted) {
-            _executionState.pc += pc;
-        }
 
         bytes32 hash = _executionState.stateHash(
             _executionState.stackHash(_proofs.stackHash),

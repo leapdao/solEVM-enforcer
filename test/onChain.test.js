@@ -1,4 +1,4 @@
-import { getCodeWithStep, deployContract } from './utils';
+import { getCodeWithStep, deployContract, deployCode } from './utils';
 
 import onChainFixtures from './onChain.fixtures';
 import Runtime from './helpers/runtimeAdapter';
@@ -18,16 +18,17 @@ contract('Runtime', function () {
       const data = fixture.data || '0x';
 
       it(opcodeUnderTest, async () => {
+        const codeContract = await deployCode(code);
         // 1. export the state right before the target opcode (this supposed to be off-chain)
-        const beforeState = await rt.execute({ code, data, pc: 0, stepCount: step });
+        const beforeState = await rt.execute({ code: codeContract.address, data, pc: 0, stepCount: step });
         // 2. export state right after the target opcode (this supposed to be off-chain)
-        const afterState = await rt.execute({ code, data, pc: 0, stepCount: step + 1 });
+        const afterState = await rt.execute({ code: codeContract.address, data, pc: 0, stepCount: step + 1 });
 
         // 3. init with beforeState and execute just one step (target opcode) (this supposed to be on-chain)
         // console.log('Before', beforeState.stack);
         const onChainState = await rt.execute(
           {
-            code,
+            code: codeContract.address,
             data,
             pc: beforeState.pc,
             stepCount: 1,
