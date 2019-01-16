@@ -9,6 +9,7 @@ const Verifier = artifacts.require('./SampleVerifierMock');
 // const Verifier = artifacts.require('./SampleVerifier');
 const Enforcer = artifacts.require('./EnforcerMock');
 const EthRuntime = artifacts.require('./EthereumRuntime');
+const HashZero = ethers.constants.HashZero;
 
 const DisputeState = {
   Initialised: 0,
@@ -225,9 +226,9 @@ contract('SampleVerifierMock', () => {
     const code = '0x' + OP.PUSH1 + '03' + OP.PUSH1 + '05' + OP.ADD;
 
     // TODO use state hash function
-    let solverHash = hashUint256Array([8], 0);
+    let solverHash = hashUint256Array([8], 1, HashZero);
     let solverStep = 3;
-    let challengerHash = hashUint256Array([9], 0);
+    let challengerHash = hashUint256Array([9], 1, HashZero);
     let challengerStep = 3;
     let disputeId;
 
@@ -240,7 +241,7 @@ contract('SampleVerifierMock', () => {
       );
       disputeId = await getDisputeIdFromEvent(tx);
       await verifier.setState(disputeId, DisputeState.FoundDiff);
-      await verifier.setLeft(disputeId, hashUint256Array([5, 3], 0), 4);
+      await verifier.setLeft(disputeId, hashUint256Array([5, 3], 2, HashZero), 4);
       await verifier.setRight(disputeId, solverHash, 5);
       await verifier.setEnforcer(enforcer.address);
     });
@@ -274,7 +275,7 @@ contract('SampleVerifierMock', () => {
     });
 
     it('should allow solver to submit incorrect state and lose', async () => {
-      await verifier.setLeft(disputeId, hashUint256Array([5, 4], 0), 4);
+      await verifier.setLeft(disputeId, hashUint256Array([5, 4], 2, HashZero), 4);
       await verifier.detailExecution(
         disputeId,
         {

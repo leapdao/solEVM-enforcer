@@ -1,15 +1,17 @@
 import { deployContract } from './utils.js';
-import { hashUint256Array, hashStack } from './helpers/hash.js';
+import { hashUint256Array, hashSibling, hashStack } from './helpers/hash.js';
 import { padUintArray } from './helpers/compactState.js';
+import { ethers } from 'ethers';
 
 import assertInvalid from './helpers/assertInvalid.js';
+import assertRevert from './helpers/assertRevert.js';
 import Runtime from './helpers/compactRuntimeAdapter';
 
 const EthereumRuntime = artifacts.require('CompactEthereumRuntime');
 const CONST = require('./helpers/constants');
-const EMPTY_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const HashZero = ethers.constants.HashZero;
 
-contract('CompactProofMock', function () {
+contract('CompactRuntimeProof', function () {
   let rt;
 
   before(async () => {
@@ -22,7 +24,7 @@ contract('CompactProofMock', function () {
       size: 5,
       dataLength: 5,
       data: padUintArray([1, 2, 3, 5, 8], 17),
-      sibling: EMPTY_HASH,
+      sibling: HashZero,
     };
 
     it('verify correct stack proof', async () => {
@@ -39,7 +41,7 @@ contract('CompactProofMock', function () {
         size: 5,
         dataLength: 2,
         data: padUintArray([5, 8], 17),
-        sibling: hashUint256Array([1, 2, 3], 0),
+        sibling: hashSibling([1, 2, 3]),
       };
       // stackHash2 is result stack hash when submitting [5, 8] with stackSibling
       let evmImageAfter2 = await rt.execute(
@@ -60,7 +62,22 @@ contract('CompactProofMock', function () {
             size: 5,
             dataLength: 1,
             data: padUintArray([8], 17),
-            sibling: EMPTY_HASH,
+            sibling: HashZero,
+          },
+          stepCount: 1,
+        }
+      ));
+    });
+
+    it('revert when stack overflow', async () => {
+      assertRevert(rt.execute(
+        {
+          code: '0x' + CONST.PUSH1 + '01',
+          stack: {
+            size: 1024,
+            dataLength: 0,
+            data: padUintArray([], 17),
+            sibling: HashZero,
           },
           stepCount: 1,
         }
@@ -82,7 +99,7 @@ contract('CompactProofMock', function () {
         size: 5,
         dataLength: 2,
         data: padUintArray([5, 8], 17),
-        sibling: hashUint256Array([1, 2, 4], 0),
+        sibling: hashUint256Array([1, 2, 4], 3, HashZero),
       };
       // stackHash2 is result stack hash when submitting [5, 8] with incorrect sibling
       let evmImageAfter2 = await rt.execute(

@@ -9,7 +9,7 @@ const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
 
 const EthereumRuntime = artifacts.require('CompactEthereumRuntime');
 
-contract('Runtime', function () {
+contract('CompactRuntime', function () {
   let rt;
 
   before(async () => {
@@ -64,7 +64,6 @@ contract('Runtime', function () {
           mem: res.mem,
         }
       );
-      console.log('STACK', stack);
       assert.deepEqual(toNum(stack[2].slice(0, 1)), [8]);
     });
 
