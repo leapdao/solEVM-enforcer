@@ -1,4 +1,4 @@
-import { toStr, getCodeWithStep, deployContract } from './utils';
+import { getCodeWithStep, deployContract } from './utils';
 
 import onChainFixtures from './onChain.fixtures';
 import Runtime from './helpers/runtimeAdapter';
@@ -44,15 +44,11 @@ contract('Runtime', function () {
         // console.log('After', onChainState.stack);
 
         // 4. check that on-chain state is the same as off-chain
-        const offstateHash = rt.stateHash(afterState, 2, 1);
-        const onstateHash = rt.stateHash(beforeState, pc, 0);
-        console.log('Off', offstateHash);
-        console.log('On', onstateHash);
-        assert.deepEqual(toStr(onChainState.stack), toStr(afterState.stack), 'Stack');
-        // assert.equal(onstateHash, offstateHash, 'State Hash');
-        assert.deepEqual(onChainState.accounts, afterState.accounts, 'Accounts');
-        assert.equal(onChainState.accountsCode, afterState.accountsCode, 'Accounts code');
-        assert.equal(onChainState.logHash, afterState.logHash, 'Log hash');
+        // assert.deepEqual(toStr(onChainState.stack), toStr(afterState.stack), 'Stack');
+        assert.equal(onChainState.hashValue, afterState.hashValue, 'State Hash');
+        // assert.deepEqual(onChainState.accounts, afterState.accounts, 'Accounts');
+        // assert.equal(onChainState.accountsCode, afterState.accountsCode, 'Accounts code');
+        // assert.equal(onChainState.logHash, afterState.logHash, 'Log hash');
       });
     });
   });

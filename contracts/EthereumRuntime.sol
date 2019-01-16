@@ -55,6 +55,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         bytes data;
         bool staticExec;
     }
+    
 
     // ************* Only used internally *************
     struct EVMInput {
@@ -85,6 +86,23 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         bytes32 logHash;
     }
 
+    struct HashParameters {
+        uint gas;
+        bytes code;
+        bytes data;
+        bytes lastRet;
+        bytes returnData;
+        uint errno;
+        EVMAccounts.Accounts accounts;
+        bytes32 logHash;
+        EVMMemory.Memory mem;
+        EVMStack.Stack stack;
+        uint depth;
+        uint n;
+        uint pc;
+        bytes32 hashValue;
+    }
+
     struct EVM {
         uint gas;
         uint value;
@@ -112,7 +130,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
-    function execute(EVMPreimage memory img) public pure returns (EVMPreimage memory) {
+    function execute(EVMPreimage memory img) public pure returns (HashParameters memory) {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
 
@@ -148,16 +166,29 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         _run(evm, img.pc, img.stepCount);
 
-        img.stack = evm.stack.toArray();
-        img.mem = evm.mem.toArray();
-        img.returnData = evm.returnData;
-        img.pc = evm.pc;
-        img.errno = evm.errno;
-        img.gasRemaining = evm.gas;
-        img.logHash = evm.logHash;
-        (img.accounts, img.accountsCode) = evm.accounts.toArray();
+        Context memory context = evm.context;
+        bytes32 hashValue = stateHash(evm, context);
 
-        return img;
+        HashParameters memory hashState;
+        
+        hashState.gas = evm.gas;
+        hashState.code = evm.code;
+        hashState.data = evm.data;
+        hashState.lastRet = evm.lastRet;
+        hashState.returnData = evm.returnData;
+        hashState.errno = evm.errno;
+        hashState.accounts.size = evm.accounts.size;
+        hashState.logHash = evm.logHash;
+        hashState.mem.size = evm.mem.size;
+        hashState.mem.cap = evm.mem.cap;
+        hashState.stack.size = evm.stack.size;
+        hashState.stack.cap = evm.stack.cap;
+        hashState.depth = evm.depth;
+        hashState.n = evm.n;
+        hashState.pc = evm.pc;
+        hashState.hashValue = hashValue;
+
+        return hashState;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
@@ -278,74 +309,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         addr = newAddress;
     }
 
-    function stateHash(EVM memory evm, uint pc, uint hashDirectly) internal pure returns (bytes32) {
-        uint errno = NO_ERROR;
-        bytes memory code = evm.code;
-
-        if (evm.gas > evm.context.gasLimit) {
-            errno = ERROR_OUT_OF_GAS;
-        }
-
-        if (errno == NO_ERROR && pc < code.length && hashDirectly == 0) {
-            uint8 opcode = uint8(code[pc]);
-            Instruction memory ins = evm.handlers.ins[opcode];
-
-            if (ins.gas != GAS_ADDITIONAL_HANDLING) {
-                if (ins.gas > evm.gas) {
-                    errno = ERROR_OUT_OF_GAS;
-                    evm.gas = 0;
-                }
-                evm.gas -= ins.gas;
-            }
-
-            // Check for violation of static execution.
-            if (
-                evm.staticExec &&
-                (opcode == OP_SSTORE || opcode == OP_CREATE || (OP_LOG0 <= opcode && opcode <= OP_LOG4))
-            ) {
-                errno = ERROR_ILLEGAL_WRITE_OPERATION;
-            }
-
-            // Check for stack errors
-            if (evm.stack.size < ins.stackIn) {
-                errno = ERROR_STACK_UNDERFLOW;
-            } else if (ins.stackOut > ins.stackIn && evm.stack.size + ins.stackOut - ins.stackIn > MAX_STACK_SIZE) {
-                errno = ERROR_STACK_OVERFLOW;
-            }
-
-            if (OP_PUSH1 <= opcode && opcode <= OP_PUSH32) {
-                evm.pc = pc;
-                uint n = opcode - OP_PUSH1 + 1;
-                evm.n = n;
-                errno = ins.handler(evm);
-            } else if (opcode == OP_JUMP || opcode == OP_JUMPI) {
-                evm.pc = pc;
-                errno = ins.handler(evm);
-            } else if (opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_STOP || opcode == OP_SELFDESTRUCT) {
-                errno = ins.handler(evm);
-            } else {
-                if (OP_DUP1 <= opcode && opcode <= OP_DUP16) {
-                    evm.n = opcode - OP_DUP1 + 1;
-                    errno = ins.handler(evm);
-                } else if (OP_SWAP1 <= opcode && opcode <= OP_SWAP16) {
-                    evm.n = opcode - OP_SWAP1 + 1;
-                    errno = ins.handler(evm);
-                } else if (OP_LOG0 <= opcode && opcode <= OP_LOG4) {
-                    evm.n = opcode - OP_LOG0;
-                    errno = ins.handler(evm);
-                } else if (opcode == OP_PC) {
-                    evm.pc = pc;
-                    errno = ins.handler(evm);
-                } else {
-                    errno = ins.handler(evm);
-                }
-            }
-        }
-        evm.errno = errno;
-        // to be used if errno is non-zero
-        evm.errpc = pc;
-        evm.pc = pc;
-        
+    function stateHash(EVM memory evm, Context memory context) internal pure returns (bytes32) {
         bytes32 hashValue = keccak256(abi.encodePacked(
             evm.gas,
             evm.code,
@@ -355,10 +319,10 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             evm.errno,
             evm.errpc,
             evm.accounts.size,
-    
+
             evm.logHash,
             //evm.context,
-            
+
             evm.mem.size,
             evm.mem.cap,
             // evm.mem.dataPtr,
@@ -368,9 +332,9 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             evm.stack.cap,
             // evm.stack.dataPtr,
             // No OP_CODE can change the expandCapacity so dataPtr will not change 
-            
+
             evm.depth,
-            
+
             // evm.caller.addr,
             // evm.caller.balance,
             // evm.caller.stge.size,
@@ -380,20 +344,21 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             // evm.target.balance,
             // evm.target.code,
             // evm.target.stge.size,
-            
+
             evm.n,
             evm.pc,
 
             //evm.handlers,
 
-            evm.context.origin,
-            evm.context.gasPrice,
-            evm.context.gasLimit,
-            evm.context.coinBase,
-            evm.context.blockNumber,
-            evm.context.time
+            context.origin,
+            context.gasPrice,
+            context.gasLimit,
+            context.coinBase,
+            context.blockNumber,
+            context.time
             ));
-            
+
+
         return hashValue;
     }
 
