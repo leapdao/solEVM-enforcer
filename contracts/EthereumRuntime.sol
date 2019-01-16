@@ -55,7 +55,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         bytes data;
         bool staticExec;
     }
-    
 
     // ************* Only used internally *************
     struct EVMInput {
@@ -86,22 +85,23 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         bytes32 logHash;
     }
 
-    struct HashParameters {
-        uint gas;
-        bytes code;
-        bytes data;
-        bytes lastRet;
-        bytes returnData;
-        uint errno;
-        EVMAccounts.Accounts accounts;
-        bytes32 logHash;
-        EVMMemory.Memory mem;
-        EVMStack.Stack stack;
-        uint depth;
-        uint n;
-        uint pc;
-        bytes32 hashValue;
-    }
+    // struct HashParameters {
+    //     uint gas;
+    //     bytes code;
+    //     bytes data;
+    //     bytes lastRet;
+    //     bytes returnData;
+    //     uint errno;
+    //     EVMAccounts.Accounts accounts;
+    //     bytes32 logHash;
+    //     EVMMemory.Memory mem;
+    //     EVMStack.Stack stack;
+    //     uint depth;
+    //     uint n;
+    //     uint pc;
+    //     bytes32 hashValue;
+    // }
+
 
     struct EVM {
         uint gas;
@@ -130,7 +130,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
-    function execute(EVMPreimage memory img) public pure returns (HashParameters memory) {
+    function execute(EVMPreimage memory img) public pure returns (EVMResult memory) {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
 
@@ -168,27 +168,24 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         Context memory context = evm.context;
         bytes32 hashValue = stateHash(evm, context);
-
-        HashParameters memory hashState;
+        EVMResult memory resultState;
         
-        hashState.gas = evm.gas;
-        hashState.code = evm.code;
-        hashState.data = evm.data;
-        hashState.lastRet = evm.lastRet;
-        hashState.returnData = evm.returnData;
-        hashState.errno = evm.errno;
-        hashState.accounts.size = evm.accounts.size;
-        hashState.logHash = evm.logHash;
-        hashState.mem.size = evm.mem.size;
-        hashState.mem.cap = evm.mem.cap;
-        hashState.stack.size = evm.stack.size;
-        hashState.stack.cap = evm.stack.cap;
-        hashState.depth = evm.depth;
-        hashState.n = evm.n;
-        hashState.pc = evm.pc;
-        hashState.hashValue = hashValue;
+        resultState.gas = evm.gas;
+        resultState.code = evm.code;
+        resultState.data = evm.data;
+        resultState.lastRet = evm.lastRet;
+        resultState.returnData = evm.returnData;
+        resultState.errno = evm.errno;
+        (resultState.accounts, resultState.accountsCode) = EVMAccounts.toArray(evm.accounts);
+        resultState.logHash = evm.logHash;
+        resultState.mem = EVMMemory.toArray(evm.mem);
+        resultState.stack = EVMStack.toArray(evm.stack);
+        resultState.depth = evm.depth;
+        resultState.n = evm.n;
+        resultState.pc = evm.pc;
+        resultState.hashValue = hashValue;
 
-        return hashState;
+        return resultState;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
@@ -317,7 +314,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             evm.lastRet,
             evm.returnData,
             evm.errno,
-            evm.errpc,
             evm.accounts.size,
 
             evm.logHash,

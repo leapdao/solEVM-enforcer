@@ -32,7 +32,7 @@ contract('Runtime', function () {
             data,
             pc: beforeState.pc,
             stepCount: 1,
-            gasRemaining: beforeState.gasRemaining,
+            gasRemaining: beforeState.gas,
             stack: beforeState.stack,
             mem: beforeState.mem,
             accounts: beforeState.accounts,

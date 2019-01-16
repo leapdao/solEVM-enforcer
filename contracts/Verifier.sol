@@ -8,6 +8,8 @@ import "./IEthereumRuntime.sol";
 import "./Merkelizer.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
+import { IEthereumRuntime } from "./IEthereumRuntime.sol";
+
 
 contract Verifier is EVMConstants, Ownable {
     using Merkelizer for Merkelizer.ExecutionState;
@@ -247,18 +249,19 @@ contract Verifier is EVMConstants, Ownable {
         img.mem = _executionState.mem;
         img.logHash = _executionState.logHash;
 
-        img = ethRuntime.execute(img);
+        IEthereumRuntime.EVMResult memory resultState;
+        resultState = ethRuntime.execute(img);
 
-        if (img.errno != 0 && img.errno != 0x07) {
+        if (resultState.errno != 0 && resultState.errno != 0x07) {
             return;
         }
 
-        _executionState.pc = img.pc;
-        _executionState.stack = img.stack;
-        _executionState.mem = img.mem;
-        _executionState.logHash = img.logHash;
-        _executionState.returnData = img.returnData;
-        _executionState.gasRemaining = img.gasRemaining;
+        _executionState.pc = resultState.pc;
+        _executionState.stack = resultState.stack;
+        _executionState.mem = resultState.mem;
+        _executionState.logHash = resultState.logHash;
+        _executionState.returnData = resultState.returnData;
+        _executionState.gasRemaining = resultState.gas;
 
         // patch
         if (_executionState.isCodeCompacted) {
