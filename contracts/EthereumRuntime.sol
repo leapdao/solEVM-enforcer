@@ -85,24 +85,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         bytes32 logHash;
     }
 
-    // struct HashParameters {
-    //     uint gas;
-    //     bytes code;
-    //     bytes data;
-    //     bytes lastRet;
-    //     bytes returnData;
-    //     uint errno;
-    //     EVMAccounts.Accounts accounts;
-    //     bytes32 logHash;
-    //     EVMMemory.Memory mem;
-    //     EVMStack.Stack stack;
-    //     uint depth;
-    //     uint n;
-    //     uint pc;
-    //     bytes32 hashValue;
-    // }
-
-
     struct EVM {
         uint gas;
         uint value;
@@ -307,53 +289,35 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
     }
 
     function stateHash(EVM memory evm, Context memory context) internal pure returns (bytes32) {
-        bytes32 hashValue = keccak256(abi.encodePacked(
-            evm.gas,
-            evm.code,
-            evm.data,
-            evm.lastRet,
-            evm.returnData,
-            evm.errno,
-            evm.accounts.size,
-
-            evm.logHash,
-            //evm.context,
-
-            evm.mem.size,
-            evm.mem.cap,
-            // evm.mem.dataPtr,
-            // There is no OP_CODE which can interact with setCapacity and no OP_CODE can change the dataPtr.
-
-            evm.stack.size,
-            evm.stack.cap,
-            // evm.stack.dataPtr,
-            // No OP_CODE can change the expandCapacity so dataPtr will not change 
-
-            evm.depth,
-
-            // evm.caller.addr,
-            // evm.caller.balance,
-            // evm.caller.stge.size,
-            // Storage value will not change
-
-            // evm.target.addr,
-            // evm.target.balance,
-            // evm.target.code,
-            // evm.target.stge.size,
-
-            evm.n,
-            evm.pc,
-
-            //evm.handlers,
-
+        bytes32 contextHash = keccak256(abi.encodePacked(
             context.origin,
             context.gasPrice,
             context.gasLimit,
             context.coinBase,
             context.blockNumber,
             context.time
-            ));
+        ));
 
+        bytes32 dataHash = keccak256(abi.encodePacked(
+            evm.gas,
+            evm.code,
+            evm.data,
+            evm.lastRet,
+            evm.returnData,
+            evm.errno,
+            evm.accounts.size
+        ));
+
+        bytes32 hashValue = keccak256(abi.encodePacked(
+            dataHash,
+            evm.logHash,
+            evm.mem.size,
+            evm.stack.size,
+            evm.depth,
+            evm.n,
+            evm.pc,
+            contextHash
+        ));
 
         return hashValue;
     }

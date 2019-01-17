@@ -8,9 +8,6 @@ import "./IEthereumRuntime.sol";
 import "./Merkelizer.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-import { IEthereumRuntime } from "./IEthereumRuntime.sol";
-
-
 contract Verifier is EVMConstants, Ownable {
     using Merkelizer for Merkelizer.ExecutionState;
 
