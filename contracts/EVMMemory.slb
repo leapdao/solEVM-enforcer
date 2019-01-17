@@ -63,18 +63,18 @@ library EVMMemory {
     }
 
     function merklize(bytes32[] memory hashes) internal pure returns (bytes32) {
-        if(hashes.length == 1){
+        if (hashes.length == 1) {
             return hashes[0];
         } else {
-            uint256 arr_len = 0;
-            arr_len = (hashes.length % 2 == 0) ? hashes.length / 2 : (hashes.length / 2) + 1;
-            bytes32[] memory arr = new bytes32[](arr_len);
+            uint256 arrLen = 0;
+            arrLen = (hashes.length % 2 == 0) ? hashes.length / 2 : (hashes.length / 2) + 1;
+            bytes32[] memory arr = new bytes32[](arrLen);
             uint i = 0;
             uint j = 0;
-            while(i < arr_len){
-                if(hashes.length % 2 != 0 && i == arr_len - 1){
+            while (i < arrLen) {
+                if (hashes.length % 2 != 0 && i == arrLen - 1) {
                     arr[i] = keccak256(abi.encodePacked(hashes[j], "0x0000000000000000000000000000000000000000000000000000000000000000"));
-                }else{
+                } else {
                     arr[i] = keccak256(abi.encodePacked(hashes[j], hashes[j + 1]));
                     j = j + 2;
                 }
@@ -86,7 +86,7 @@ library EVMMemory {
 
     function getRootHash(Memory memory self) internal pure returns (bytes32) {
         bytes32[] memory arr = new bytes32[](self.size);
-        for(uint256 i=0; i<self.size; i++){
+        for (uint256 i=0; i < self.size; i++) {
             arr[i] = keccak256(abi.encodePacked(load(self, i * WORD_SIZE)));
         }
         return merklize(arr);

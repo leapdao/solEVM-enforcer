@@ -193,13 +193,12 @@ export async function deployContract (truffleContract, ...args) {
   return contract;
 }
 
-export function extractMemElements(mem){
+export function extractMemElements (mem) {
   let elements = [];
-  mem = mem.split("0x")[1];
-  for(let i=0; i< mem.length; i= i + 64){
+  mem = mem.split('0x')[1];
+  for (let i = 0; i < mem.length; i = i + 64) {
     elements.push(mem.slice(i, i + 64));
   }
-  elements = elements.map(x => "0x" + x);
+  elements = elements.map(x => '0x' + x);
   return elements;
 }
-
