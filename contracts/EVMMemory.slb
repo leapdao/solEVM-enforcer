@@ -61,25 +61,35 @@ library EVMMemory {
         }
         MemOps.memcopy32(src, dest, mem.size);
     }
-    
+
     function merklize(bytes32[] memory hashes) internal pure returns (bytes32) {
-        if (hashes.length == 1) {
+        if(hashes.length == 1){
             return hashes[0];
         } else {
-            bytes32[] memory arr = new bytes32[](hashes.length / 2);
-            for (uint i = 0; i < hashes.length; i = i + 2) {
-                arr[0] = keccak256(abi.encodePacked(hashes[i], hashes[i + 1]));
+            uint256 arr_len = 0;
+            arr_len = (hashes.length % 2 == 0) ? hashes.length / 2 : (hashes.length / 2) + 1;
+            bytes32[] memory arr = new bytes32[](arr_len);
+            uint i = 0;
+            uint j = 0;
+            while(i < arr_len){
+                if(hashes.length % 2 != 0 && i == arr_len - 1){
+                    arr[i] = keccak256(abi.encodePacked(hashes[j], "0x0000000000000000000000000000000000000000000000000000000000000000"));
+                }else{
+                    arr[i] = keccak256(abi.encodePacked(hashes[j], hashes[j + 1]));
+                    j = j + 2;
+                }
+                i++;
             }
             return merklize(arr);
         }
     }
 
-    function getRootHash(Memory memory self) internal pure returns (uint) {
-        bytes32[] memory arr = new bytes32[](1);
-        for (uint i = 0; i < self.cap; i = i + 2) {
-            arr[0] = keccak256(abi.encodePacked(load(self, i * WORD_SIZE), load(self, (i + 1) * WORD_SIZE)));
+    function getRootHash(Memory memory self) internal pure returns (bytes32) {
+        bytes32[] memory arr = new bytes32[](self.size);
+        for(uint256 i=0; i<self.size; i++){
+            arr[i] = keccak256(abi.encodePacked(load(self, i * WORD_SIZE)));
         }
-        return uint(merklize(arr));
+        return merklize(arr);
     }
 
     function toArray(Memory memory self) internal pure returns (bytes memory arr) {

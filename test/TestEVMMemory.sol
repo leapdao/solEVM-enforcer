@@ -208,11 +208,12 @@ contract TestEVMMemory {
         Assert.equal(tMem, fMem, "free memory pointer");
     }
 
-    function getRootHash() public view returns (uint) {
+    function testGetRootHash() public {
         bytes memory bts = hex"01020304050607080102030405060708010203040506070801020304050607080102030405060708";
         EVMMemory.Memory memory mem = EVMMemory.newMemory();
         mem.storeBytes(bts, 0, 0, bts.length);
-        return mem.getRootHash();
+        bytes32 root = mem.getRootHash();
+        Assert.equal(root, hex"170aced3550bbfef6d569188b3e31d764a806c568e99fdb012c1b8477860a209", "wrong root hash");
     }
 
 }
