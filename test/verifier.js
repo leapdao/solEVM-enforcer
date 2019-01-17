@@ -4,7 +4,6 @@ import Merkelizer from '../utils/Merkelizer';
 import disputeFixtures from './dispute.fixtures';
 import { deployContract, wallets, txOverrides, deployCode } from './utils';
 
-const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 const Verifier = artifacts.require('Verifier.sol');
 
 // for additional logging
@@ -204,16 +203,12 @@ async function disputeGame (
 }
 
 contract('Verifier', function () {
-  let evm;
   let verifier;
 
   before(async () => {
-    evm = await deployContract(EthereumRuntime);
     verifier = await deployContract(Verifier, 100);
 
     let tx = await verifier.setEnforcer(wallets[0].address);
-    await tx.wait();
-    tx = await verifier.setRuntime(evm.address);
     await tx.wait();
   });
 
