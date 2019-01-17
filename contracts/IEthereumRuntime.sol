@@ -1,6 +1,7 @@
 pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
+
 contract IEthereumRuntime {
 
     struct EVMPreimage {
@@ -8,7 +9,7 @@ contract IEthereumRuntime {
         bytes data;
         uint gasLimit;
         uint pc;
-        uint errno;
+        uint8 errno;
         uint gasRemaining;
         uint stepCount;
         uint[] stack;
@@ -18,6 +19,7 @@ contract IEthereumRuntime {
         bytes returnData;
         bytes32 logHash;
     }
+
     struct EVMResult {
         uint gas;
         bytes code;
@@ -30,7 +32,7 @@ contract IEthereumRuntime {
         bytes mem;
         uint[] stack;
         uint8 depth;
-        uint n;
+        // uint n;
         uint pc;
         bytes32 logHash;
         bytes32 hashValue;

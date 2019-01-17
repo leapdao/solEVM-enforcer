@@ -163,7 +163,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         resultState.mem = EVMMemory.toArray(evm.mem);
         resultState.stack = EVMStack.toArray(evm.stack);
         resultState.depth = evm.depth;
-        resultState.n = evm.n;
+        // resultState.n = evm.n;
         resultState.pc = evm.pc;
         resultState.hashValue = hashValue;
 
@@ -314,7 +314,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             evm.mem.size,
             evm.stack.size,
             evm.depth,
-            evm.n,
+            // evm.n,
             evm.pc,
             contextHash
         ));

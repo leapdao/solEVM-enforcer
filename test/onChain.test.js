@@ -17,7 +17,6 @@ contract('Runtime', function () {
       const { code, step, opcodeUnderTest } = getCodeWithStep(fixture);
       const data = fixture.data || '0x';
 
-
       it(opcodeUnderTest, async () => {
         // 1. export the state right before the target opcode (this supposed to be off-chain)
         const beforeState = await rt.execute({ code, data, pc: 0, stepCount: step });
@@ -41,14 +40,11 @@ contract('Runtime', function () {
           }
 
         );
-        // console.log('After', onChainState.stack);
 
         // 4. check that on-chain state is the same as off-chain
-        // assert.deepEqual(toStr(onChainState.stack), toStr(afterState.stack), 'Stack');
+        // checking hashValue is enough to say that states are same
         assert.equal(onChainState.hashValue, afterState.hashValue, 'State Hash');
-        // assert.deepEqual(onChainState.accounts, afterState.accounts, 'Accounts');
-        // assert.equal(onChainState.accountsCode, afterState.accountsCode, 'Accounts code');
-        // assert.equal(onChainState.logHash, afterState.logHash, 'Log hash');
+        // assert.equal(onChainState.n, afterState.n, 'n');
       });
     });
   });

@@ -177,7 +177,7 @@ contract SampleVerifier is Ownable, IVerifier {
 
         IEthereumRuntime.EVMResult memory result = ethRuntime.execute(img);
         // TODO calculate state hash
-        bytes32 resultHash = result.hashValue;
+        bytes32 resultHash = result.stack.toHash(0);
 
         // TODO use actual state hash to verify right state
         if (resultHash == dispute.right.hash) {

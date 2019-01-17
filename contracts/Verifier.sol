@@ -8,6 +8,7 @@ import "./IEthereumRuntime.sol";
 import "./Merkelizer.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
+
 contract Verifier is EVMConstants, Ownable {
     using Merkelizer for Merkelizer.ExecutionState;
 
@@ -281,7 +282,6 @@ contract Verifier is EVMConstants, Ownable {
         if (hash == dispute.challenger.right) {
             dispute.state |= CHALLENGER_VERIFIED;
         }
-
 
         if ((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0) {
             // both are verified, solver wins
