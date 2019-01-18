@@ -1,7 +1,6 @@
 pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./IEthereumRuntime.sol";
 
 import { EVMConstants } from "./EVMConstants.sol";
 import { EVMAccounts } from "./EVMAccounts.slb";
@@ -100,7 +99,8 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
 
-        uint8 depth;
+        // TODO: max 1024;
+        uint16 depth;
 
         EVMAccounts.Account caller;
         EVMAccounts.Account target;
@@ -1723,12 +1723,16 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
             }
         }
 
-        if (input.gas + gasFee > state.gas) {
+        if (gasFee > state.gas) {
             state.gas = 0;
             state.errno = ERROR_OUT_OF_GAS;
             return;
         }
         state.gas -= gasFee;
+
+        if (input.gas > state.gas) {
+            input.gas = state.gas;
+        }
 
         input.data = state.mem.toArray(inOffset, inSize);
         input.context = state.context;
@@ -1789,12 +1793,16 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         uint gasFee = GAS_CALL +
             computeGasForMemory(state, retOffset + retSize, inOffset + inSize);
 
-        if (input.gas + gasFee > state.gas) {
+        if (gasFee > state.gas) {
             state.gas = 0;
             state.errno = ERROR_OUT_OF_GAS;
             return;
         }
         state.gas -= gasFee;
+
+        if (input.gas > state.gas) {
+            input.gas = state.gas;
+        }
 
         input.data = state.mem.toArray(inOffset, inSize);
         input.value = state.value;
@@ -1838,12 +1846,16 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         uint gasFee = GAS_CALL +
             computeGasForMemory(state, retOffset + retSize, inOffset + inSize);
 
-        if (input.gas + gasFee > state.gas) {
+        if (gasFee > state.gas) {
             state.gas = 0;
             state.errno = ERROR_OUT_OF_GAS;
             return;
         }
         state.gas -= gasFee;
+
+        if (input.gas > state.gas) {
+            input.gas = state.gas;
+        }
 
         input.data = state.mem.toArray(inOffset, inSize);
         input.context = state.context;
