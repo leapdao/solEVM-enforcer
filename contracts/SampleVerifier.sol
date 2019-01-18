@@ -161,10 +161,8 @@ contract SampleVerifier is Ownable, IVerifier {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.left.step == dispute.right.step - 1, "must find a specific step");
-        // TODO when ethRuntime accept number of steps
-        //      we will require the number of steps to be 1
-        //      if not, we will need to have special treatment for JUMP
-        // require(params[1] == 1, "must be one step");
+        // only allow to run 1 step
+        require(img.stepCount == 1, "must be one step");
 
         // TODO actual procedure:
         // - calculate code root from code and codeProof, code pos is pcStart
@@ -173,11 +171,11 @@ contract SampleVerifier is Ownable, IVerifier {
         // - calculate stack hash from stack and stackSiblingHash
         // - calculate mem hash root from mem, memPos and memProof
         // - combine to actual state hash to verify left state
-        require(img.stack.toHash(0) == dispute.left.hash, "state hash not match");
+        require(img.stack.toHash() == dispute.left.hash, "state hash not match");
 
         IEthereumRuntime.EVMPreimage memory result = ethRuntime.execute(img);
         // TODO calculate state hash
-        bytes32 resultHash = result.stack.toHash(0);
+        bytes32 resultHash = result.stack.toHash();
 
         // TODO use actual state hash to verify right state
         if (resultHash == dispute.right.hash) {
