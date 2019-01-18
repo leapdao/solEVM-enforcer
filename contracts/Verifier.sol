@@ -169,7 +169,7 @@ contract Verifier is EVMConstants, Ownable {
      * to decide on the outcome.
      *
      * Requirements:
-     *  - last execution step must end with either REVERT or RETURN to be considered complete
+     *  - last execution step must end with either REVERT, RETURN or STOP to be considered complete
      *  - any execution step which does not have errno = 0 or errno = 0x07 (REVERT)
      *    is considered invalid
      *  - the left-most (first) execution step must be a `Merkelizer.initialStateHash`
@@ -207,7 +207,7 @@ contract Verifier is EVMConstants, Ownable {
                 opcode := mload(0)
             }
 
-            if (opcode != OP_REVERT && opcode != OP_RETURN) {
+            if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
                 return;
             }
         }
