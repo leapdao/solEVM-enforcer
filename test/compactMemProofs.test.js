@@ -20,13 +20,13 @@ contract('Compact Memory Proofs', function () {
     compactMemProofVerifier = await deployContract(CompactMemProofMock, ethRuntime.address);
   });
 
-  describe("setup", () => {
+  describe('setup', () => {
     it('should set the EthereumRuntime address correctly', async () => {
       assert.equal(await compactMemProofVerifier.ethRuntime(), ethRuntime.address);
     });
   });
 
-  describe("MLOAD", () => {
+  describe('MLOAD', () => {
     it('should verify a MLOAD operation with a compact memory proof', async () => {
       const actualMemArray = '0x' + word.repeat(4);
       const elements = extractMemElements(actualMemArray);
@@ -133,7 +133,7 @@ contract('Compact Memory Proofs', function () {
     });
   });
 
-  describe("MLOAD", () => {
+  describe('MLOAD', () => {
     it('should verify a MSTORE operation with a correct compact memory proof', async () => {
       const actualMemArray = '0x' + word.repeat(4);
 
@@ -296,7 +296,7 @@ contract('Compact Memory Proofs', function () {
     });
   });
 
-  describe("MSTORE8", () => {  
+  describe('MSTORE8', () => {
     it('should verify a MSTORE8 operation with a correct compact memory proof', async () => {
       const actualMemArray = '0x' + word.repeat(4);
 
