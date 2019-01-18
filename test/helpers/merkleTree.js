@@ -70,6 +70,11 @@ class MerkleTree {
       return null;
     }
   }
+
+  static hash (x) {
+    let hash = ethUtils.keccak256(x);
+    return '0x' + hash.toString('hex');
+  }
 }
 
 module.exports = MerkleTree;

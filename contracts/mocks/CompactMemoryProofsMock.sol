@@ -14,7 +14,7 @@ contract CompactMemoryProofsMock {
         ethRuntime = EthereumRuntime(_ethRuntime);
     }
 
-    function verify(
+    function verifyMload(
     	EthereumRuntime.EVMPreimage memory img,
         bytes32[] memory memProof,
         bytes32 rootMemHash,
@@ -27,5 +27,25 @@ contract CompactMemoryProofsMock {
         bytes32 leaf = mem.getRootHash();
 
         return MerkleProof.verify(memProof, rootMemHash, leaf, memPosition);
+    }
+
+    function verifyMstore(
+        EthereumRuntime.EVMPreimage memory img,
+        bytes32[] memory memProof,
+        bytes32 previousRootMemHash,
+        bytes32 newRootMemHash,
+        uint256 memPosition
+    ) public view returns(bool){
+        bytes32 leaf;
+        EVMMemory.Memory memory initMem = EVMMemory.fromArray(img.mem);
+        leaf = initMem.getRootHash();
+        require (MerkleProof.verify(memProof, previousRootMemHash, leaf, memPosition), "initial memory proof invalid");
+        
+        EthereumRuntime.EVMPreimage memory result = ethRuntime.execute(img);
+        require(result.mem.length == img.mem.length, 'operation accessed memory other than the leaf');
+        
+        EVMMemory.Memory memory finalMem = EVMMemory.fromArray(result.mem);
+        leaf = finalMem.getRootHash();
+        return MerkleProof.verify(memProof, newRootMemHash, leaf, memPosition);
     }
 }
