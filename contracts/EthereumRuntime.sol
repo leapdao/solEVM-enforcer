@@ -1777,6 +1777,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         state.returnData = state.mem.toArray(start, len);
     }
 
+    // solhint-disable-next-line function-max-lines
     function handleDELEGATECALL(EVM memory state) internal pure {
         EVMInput memory input;
 
