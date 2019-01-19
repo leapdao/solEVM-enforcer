@@ -14,7 +14,7 @@ contract EthereumRuntime is EVMRuntime, IEthereumRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
-    function execute(EVMPreimage memory img) public view returns (EVMResult memory) {
+    function execute(EVMPreimage memory img) public returns (EVMResult memory) {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
 

@@ -37,5 +37,5 @@ contract IEthereumRuntime {
         bytes32 hashValue;
     }
 
-    function execute(EVMPreimage memory) public view returns (EVMResult memory);
+    function execute(EVMPreimage memory) public returns (EVMResult memory);
 }

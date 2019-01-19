@@ -112,7 +112,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
-    function _call(EVMInput memory evmInput, CallType callType) internal view returns (EVM memory evm) {
+    function _call(EVMInput memory evmInput, CallType callType) internal returns (EVM memory evm) {
         evm.context = evmInput.context;
         evm.logHash = evmInput.logHash;
         if (evmInput.staticExec) {
@@ -180,7 +180,7 @@ contract EVMRuntime is EVMConstants {
         }
     }
 
-    function _create(EVMCreateInput memory evmInput) internal view returns (EVM memory evm, address addr) {
+    function _create(EVMCreateInput memory evmInput) internal returns (EVM memory evm, address addr) {
         evm.context = evmInput.context;
         evm.accounts = evmInput.accounts.copy();
         evm.logHash = evmInput.logHash;
@@ -230,7 +230,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
-    function _run(EVM memory evm, uint pc, uint pcStepCount) internal view {
+    function _run(EVM memory evm, uint pc, uint pcStepCount) internal {
         uint pcNext = 0;
         uint stepRun = 0;
 
@@ -243,7 +243,7 @@ contract EVMRuntime is EVMConstants {
             uint stackOut;
             uint gasFee;
             uint8 opcode = evm.code.getOpcodeAt(pc);
-            function(EVM memory) internal view opcodeHandler;
+            function(EVM memory) internal opcodeHandler;
 
             if (opcode == 0) {
                 opcodeHandler = handleSTOP;
@@ -876,7 +876,7 @@ contract EVMRuntime is EVMConstants {
 
     // ************************* Handlers ***************************
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECRECOVER(EVM memory state) internal pure {
+    function handlePreC_ECRECOVER(EVM memory state) internal {
         if (GAS_ECRECOVER > state.gas) {
             state.gas = 0;
             state.errno = ERROR_OUT_OF_GAS;
@@ -893,7 +893,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_SHA256(EVM memory state) internal pure {
+    function handlePreC_SHA256(EVM memory state) internal {
         uint gasFee = GAS_SHA256_BASE + (((state.data.length + 31) / 32) * GAS_SHA256_WORD);
 
         if (gasFee > state.gas) {
@@ -908,7 +908,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_RIPEMD160(EVM memory state) internal pure {
+    function handlePreC_RIPEMD160(EVM memory state) internal {
         uint gasFee = GAS_RIPEMD160_BASE + (((state.data.length + 31) / 32) * GAS_RIPEMD160_WORD);
 
         if (gasFee > state.gas) {
@@ -923,7 +923,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_IDENTITY(EVM memory state) internal pure {
+    function handlePreC_IDENTITY(EVM memory state) internal {
         uint gasFee = GAS_IDENTITY_BASE + (((state.data.length + 31) / 32) * GAS_IDENTITY_WORD);
 
         if (gasFee > state.gas) {
@@ -937,36 +937,36 @@ contract EVMRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_MODEXP(EVM memory state) internal pure {
+    function handlePreC_MODEXP(EVM memory state) internal {
         // TODO
         state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECADD(EVM memory state) internal pure {
+    function handlePreC_ECADD(EVM memory state) internal {
         // TODO
         state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECMUL(EVM memory state) internal pure {
+    function handlePreC_ECMUL(EVM memory state) internal {
         // TODO
         state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function handlePreC_ECPAIRING(EVM memory state) internal pure {
+    function handlePreC_ECPAIRING(EVM memory state) internal {
         // TODO
         state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
     }
     // 0x0X
 
     // solhint-disable-next-line no-empty-blocks
-    function handleSTOP(EVM memory state) internal pure {
+    function handleSTOP(EVM memory state) internal {
 
     }
 
-    function handleADD(EVM memory state) internal pure {
+    function handleADD(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -976,7 +976,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleMUL(EVM memory state) internal pure {
+    function handleMUL(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -986,7 +986,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSUB(EVM memory state) internal pure {
+    function handleSUB(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -996,7 +996,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleDIV(EVM memory state) internal pure {
+    function handleDIV(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1006,7 +1006,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSDIV(EVM memory state) internal pure {
+    function handleSDIV(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1016,7 +1016,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleMOD(EVM memory state) internal pure {
+    function handleMOD(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1026,7 +1026,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSMOD(EVM memory state) internal pure {
+    function handleSMOD(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1036,7 +1036,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleADDMOD(EVM memory state) internal pure {
+    function handleADDMOD(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint m = state.stack.pop();
@@ -1047,7 +1047,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleMULMOD(EVM memory state) internal pure {
+    function handleMULMOD(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint m = state.stack.pop();
@@ -1058,7 +1058,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleEXP(EVM memory state) internal pure {
+    function handleEXP(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c = 0;
@@ -1087,7 +1087,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSIGNEXTEND(EVM memory state) internal pure {
+    function handleSIGNEXTEND(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1097,7 +1097,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSHL(EVM memory state) internal pure {
+    function handleSHL(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1107,7 +1107,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSHR(EVM memory state) internal pure {
+    function handleSHR(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1117,7 +1117,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSAR(EVM memory state) internal pure {
+    function handleSAR(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1128,7 +1128,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // 0x1X
-    function handleLT(EVM memory state) internal pure {
+    function handleLT(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1138,7 +1138,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleGT(EVM memory state) internal pure {
+    function handleGT(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1148,7 +1148,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSLT(EVM memory state) internal pure {
+    function handleSLT(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1158,7 +1158,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleSGT(EVM memory state) internal pure {
+    function handleSGT(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1168,7 +1168,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleEQ(EVM memory state) internal pure {
+    function handleEQ(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1178,7 +1178,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleISZERO(EVM memory state) internal pure {
+    function handleISZERO(EVM memory state) internal {
         uint data = state.stack.pop();
         uint res;
         assembly {
@@ -1187,7 +1187,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(res);
     }
 
-    function handleAND(EVM memory state) internal pure {
+    function handleAND(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1197,7 +1197,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleOR(EVM memory state) internal pure {
+    function handleOR(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1207,7 +1207,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleXOR(EVM memory state) internal pure {
+    function handleXOR(EVM memory state) internal {
         uint a = state.stack.pop();
         uint b = state.stack.pop();
         uint c;
@@ -1217,7 +1217,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(c);
     }
 
-    function handleNOT(EVM memory state) internal pure {
+    function handleNOT(EVM memory state) internal {
         uint data = state.stack.pop();
         uint res;
         assembly {
@@ -1226,7 +1226,7 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(res);
     }
 
-    function handleBYTE(EVM memory state) internal pure {
+    function handleBYTE(EVM memory state) internal {
         uint n = state.stack.pop();
         uint x = state.stack.pop();
         uint b;
@@ -1237,7 +1237,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // 0x2X
-    function handleSHA3(EVM memory state) internal pure {
+    function handleSHA3(EVM memory state) internal {
         uint p = state.stack.pop();
         uint n = state.stack.pop();
         uint res = GAS_SHA3 +
@@ -1260,27 +1260,27 @@ contract EVMRuntime is EVMConstants {
     }
 
     // 0x3X
-    function handleADDRESS(EVM memory state) internal pure {
+    function handleADDRESS(EVM memory state) internal {
         state.stack.push(uint(state.target.addr));
     }
 
-    function handleBALANCE(EVM memory state) internal pure {
+    function handleBALANCE(EVM memory state) internal {
         state.stack.push(state.accounts.get(address(state.stack.pop())).balance);
     }
 
-    function handleORIGIN(EVM memory state) internal pure {
+    function handleORIGIN(EVM memory state) internal {
         state.stack.push(uint(state.context.origin));
     }
 
-    function handleCALLER(EVM memory state) internal pure {
+    function handleCALLER(EVM memory state) internal {
         state.stack.push(uint(state.caller.addr));
     }
 
-    function handleCALLVALUE(EVM memory state) internal pure {
+    function handleCALLVALUE(EVM memory state) internal {
         state.stack.push(state.value);
     }
 
-    function handleCALLDATALOAD(EVM memory state) internal pure {
+    function handleCALLDATALOAD(EVM memory state) internal {
         uint addr = state.stack.pop();
         bytes memory data = state.data;
         uint val;
@@ -1299,11 +1299,11 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(val);
     }
 
-    function handleCALLDATASIZE(EVM memory state) internal pure {
+    function handleCALLDATASIZE(EVM memory state) internal {
         state.stack.push(state.data.length);
     }
 
-    function handleCALLDATACOPY(EVM memory state) internal pure {
+    function handleCALLDATACOPY(EVM memory state) internal {
         uint mAddr = state.stack.pop();
         uint dAddr = state.stack.pop();
         uint len = state.stack.pop();
@@ -1326,11 +1326,11 @@ contract EVMRuntime is EVMConstants {
         );
     }
 
-    function handleCODESIZE(EVM memory state) internal pure {
+    function handleCODESIZE(EVM memory state) internal {
         state.stack.push(state.code.length);
     }
 
-    function handleCODECOPY(EVM memory state) internal view {
+    function handleCODECOPY(EVM memory state) internal {
         uint mAddr = state.stack.pop();
         uint cAddr = state.stack.pop();
         uint len = state.stack.pop();
@@ -1353,15 +1353,15 @@ contract EVMRuntime is EVMConstants {
         state.mem.storeBytes(state.code.toBytes(), cAddr, mAddr, len);
     }
 
-    function handleGASPRICE(EVM memory state) internal pure {
+    function handleGASPRICE(EVM memory state) internal {
         state.stack.push(state.context.gasPrice);
     }
 
-    function handleEXTCODESIZE(EVM memory state) internal pure {
+    function handleEXTCODESIZE(EVM memory state) internal {
         state.stack.push(state.accounts.get(address(state.stack.pop())).code.length);
     }
 
-    function handleEXTCODECOPY(EVM memory state) internal view {
+    function handleEXTCODECOPY(EVM memory state) internal {
         bytes memory code = state.accounts.get(address(state.stack.pop())).code.toBytes();
         uint mAddr = state.stack.pop();
         uint dAddr = state.stack.pop();
@@ -1385,11 +1385,11 @@ contract EVMRuntime is EVMConstants {
         state.mem.storeBytes(code, dAddr, mAddr, len);
     }
 
-    function handleRETURNDATASIZE(EVM memory state) internal pure {
+    function handleRETURNDATASIZE(EVM memory state) internal {
         state.stack.push(state.lastRet.length);
     }
 
-    function handleRETURNDATACOPY(EVM memory state) internal pure {
+    function handleRETURNDATACOPY(EVM memory state) internal {
         uint mAddr = state.stack.pop();
         uint rAddr = state.stack.pop();
         uint len = state.stack.pop();
@@ -1413,41 +1413,41 @@ contract EVMRuntime is EVMConstants {
     }
 
     // 0x4X
-    function handleBLOCKHASH(EVM memory state) internal pure {
+    function handleBLOCKHASH(EVM memory state) internal {
         state.stack.pop();
         state.stack.push(0);
     }
 
-    function handleCOINBASE(EVM memory state) internal pure {
+    function handleCOINBASE(EVM memory state) internal {
         state.stack.push(state.context.coinBase);
     }
 
-    function handleTIMESTAMP(EVM memory state) internal pure {
+    function handleTIMESTAMP(EVM memory state) internal {
         state.stack.push(state.context.time);
     }
 
-    function handleNUMBER(EVM memory state) internal pure {
+    function handleNUMBER(EVM memory state) internal {
         state.stack.push(state.context.blockNumber);
     }
 
-    function handleDIFFICULTY(EVM memory state) internal pure {
+    function handleDIFFICULTY(EVM memory state) internal {
         state.stack.push(state.context.difficulty);
     }
 
-    function handleGASLIMIT(EVM memory state) internal pure {
+    function handleGASLIMIT(EVM memory state) internal {
         state.stack.push(state.context.gasLimit);
     }
 
     // 0x5X
-    function handlePOP(EVM memory state) internal pure {
+    function handlePOP(EVM memory state) internal {
         state.stack.pop();
     }
 
-    function handleMLOAD(EVM memory state) internal pure {
+    function handleMLOAD(EVM memory state) internal {
         state.stack.push(state.mem.load(state.stack.pop()));
     }
 
-    function handleMSTORE(EVM memory state) internal pure {
+    function handleMSTORE(EVM memory state) internal {
         uint addr = state.stack.pop();
         uint val = state.stack.pop();
 
@@ -1464,7 +1464,7 @@ contract EVMRuntime is EVMConstants {
         state.mem.store(addr, val);
     }
 
-    function handleMSTORE8(EVM memory state) internal pure {
+    function handleMSTORE8(EVM memory state) internal {
         uint addr = state.stack.pop();
         uint8 val = uint8(state.stack.pop());
 
@@ -1481,11 +1481,11 @@ contract EVMRuntime is EVMConstants {
         state.mem.store8(addr, val);
     }
 
-    function handleSLOAD(EVM memory state) internal pure {
+    function handleSLOAD(EVM memory state) internal {
         state.stack.push(state.target.stge.load(state.stack.pop()));
     }
 
-    function handleSSTORE(EVM memory state) internal pure {
+    function handleSSTORE(EVM memory state) internal {
         uint addr = state.stack.pop();
         uint val = state.stack.pop();
 
@@ -1505,7 +1505,7 @@ contract EVMRuntime is EVMConstants {
         state.target.stge.store(addr, val);
     }
 
-    function handleJUMP(EVM memory state) internal view {
+    function handleJUMP(EVM memory state) internal {
         uint dest = state.stack.pop();
         if (dest >= state.code.length || state.code.getOpcodeAt(dest) != OP_JUMPDEST) {
             state.errno = ERROR_INVALID_JUMP_DESTINATION;
@@ -1514,7 +1514,7 @@ contract EVMRuntime is EVMConstants {
         state.pc = dest;
     }
 
-    function handleJUMPI(EVM memory state) internal view {
+    function handleJUMPI(EVM memory state) internal {
         uint dest = state.stack.pop();
         uint cnd = state.stack.pop();
         if (cnd == 0) {
@@ -1528,25 +1528,25 @@ contract EVMRuntime is EVMConstants {
         state.pc = dest;
     }
 
-    function handlePC(EVM memory state) internal pure {
+    function handlePC(EVM memory state) internal {
         state.stack.push(state.pc);
     }
 
-    function handleMSIZE(EVM memory state) internal pure {
+    function handleMSIZE(EVM memory state) internal {
         state.stack.push(32 * state.mem.size);
     }
 
-    function handleGAS(EVM memory state) internal pure {
+    function handleGAS(EVM memory state) internal {
         state.stack.push(state.gas);
     }
 
     // solhint-disable-next-line no-empty-blocks
-    function handleJUMPDEST(EVM memory state) internal pure {
+    function handleJUMPDEST(EVM memory state) internal {
 
     }
 
     // 0x6X, 0x7X
-    function handlePUSH(EVM memory state) internal view {
+    function handlePUSH(EVM memory state) internal {
         assert(1 <= state.n && state.n <= 32);
         if (state.pc + state.n > state.code.length) {
             state.errno = ERROR_INDEX_OOB;
@@ -1556,19 +1556,19 @@ contract EVMRuntime is EVMConstants {
     }
 
     // 0x8X
-    function handleDUP(EVM memory state) internal pure {
+    function handleDUP(EVM memory state) internal {
         assert(1 <= state.n && state.n <= 16);
         state.stack.dup(state.n);
     }
 
     // 0x9X
-    function handleSWAP(EVM memory state) internal pure {
+    function handleSWAP(EVM memory state) internal {
         assert(1 <= state.n && state.n <= 16);
         state.stack.swap(state.n);
     }
 
     // 0xaX
-    function handleLOG(EVM memory state) internal pure {
+    function handleLOG(EVM memory state) internal {
         uint mAddr = state.stack.pop();
         uint mSize = state.stack.pop();
         uint gasFee = GAS_LOG +
@@ -1602,7 +1602,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // 0xfX
-    function handleCREATE(EVM memory state) internal view {
+    function handleCREATE(EVM memory state) internal {
         assert(!state.staticExec);
 
         EVMCreateInput memory input;
@@ -1641,12 +1641,12 @@ contract EVMRuntime is EVMConstants {
         state.gas = retEvm.gas;
     }
 
-    function handleCREATE2(EVM memory state) internal pure {
+    function handleCREATE2(EVM memory state) internal {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     // solhint-disable-next-line function-max-lines
-    function handleCALL(EVM memory state) internal view {
+    function handleCALL(EVM memory state) internal {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
@@ -1709,11 +1709,11 @@ contract EVMRuntime is EVMConstants {
         state.gas -= input.gas - retEvm.gas;
     }
 
-    function handleCALLCODE(EVM memory state) internal pure {
+    function handleCALLCODE(EVM memory state) internal {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
-    function handleRETURN(EVM memory state) internal pure {
+    function handleRETURN(EVM memory state) internal {
         uint start = state.stack.pop();
         uint len = state.stack.pop();
         uint gasFee = computeGasForMemory(state, start + len);
@@ -1729,7 +1729,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line function-max-lines
-    function handleDELEGATECALL(EVM memory state) internal view {
+    function handleDELEGATECALL(EVM memory state) internal {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
@@ -1783,7 +1783,7 @@ contract EVMRuntime is EVMConstants {
         state.gas -= input.gas - retEvm.gas;
     }
 
-    function handleSTATICCALL(EVM memory state) internal view {
+    function handleSTATICCALL(EVM memory state) internal {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
@@ -1829,7 +1829,7 @@ contract EVMRuntime is EVMConstants {
         state.gas -= input.gas - retEvm.gas;
     }
 
-    function handleREVERT(EVM memory state) internal pure {
+    function handleREVERT(EVM memory state) internal {
         uint start = state.stack.pop();
         uint len = state.stack.pop();
         uint gasFee = computeGasForMemory(state, start + len);
@@ -1845,11 +1845,11 @@ contract EVMRuntime is EVMConstants {
         state.errno = ERROR_STATE_REVERTED;
     }
 
-    function handleINVALID(EVM memory evm) internal pure {
+    function handleINVALID(EVM memory evm) internal {
         evm.errno = ERROR_INVALID_OPCODE;
     }
 
-    function handleSELFDESTRUCT(EVM memory state) internal pure {
+    function handleSELFDESTRUCT(EVM memory state) internal {
         // receiver
         EVMAccounts.Account memory acc = state.accounts.get(address(state.stack.pop()));
 
