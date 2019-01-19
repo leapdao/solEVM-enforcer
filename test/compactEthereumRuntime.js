@@ -95,7 +95,14 @@ contract('CompactRuntime', function () {
         const res = await rt.execute(
           {
             code: '0x' + code.join(''),
-            data, pc, gasLimit, stack, mem, accounts, accountsCode, logHash
+            data,
+            pc,
+            gasLimit,
+            stack,
+            mem,
+            accounts,
+            accountsCode,
+            logHash,
           }
         );
 
