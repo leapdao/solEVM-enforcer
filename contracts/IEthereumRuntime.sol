@@ -22,7 +22,6 @@ contract IEthereumRuntime {
 
     struct EVMResult {
         uint gas;
-        bytes code;
         bytes data;
         bytes lastRet;
         bytes returnData;

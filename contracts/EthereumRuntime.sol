@@ -155,7 +155,6 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         EVMResult memory resultState;
         
         resultState.gas = evm.gas;
-        resultState.code = evm.code;
         resultState.data = evm.data;
         resultState.lastRet = evm.lastRet;
         resultState.returnData = evm.returnData;
@@ -290,7 +289,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
         addr = newAddress;
     }
 
-    function stateHash(EVM memory evm, Context memory context) internal pure returns (bytes32) {
+    function stateHash(EVM memory evm, Context memory context) internal view returns (bytes32) {
         bytes32 contextHash = keccak256(abi.encodePacked(
             context.origin,
             context.gasPrice,
@@ -302,7 +301,7 @@ contract EthereumRuntime is EVMConstants, IEthereumRuntime {
 
         bytes32 dataHash = keccak256(abi.encodePacked(
             evm.gas,
-            evm.code,
+            evm.code.toBytes(),
             evm.data,
             evm.lastRet,
             evm.returnData,
