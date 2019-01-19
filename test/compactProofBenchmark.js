@@ -1,4 +1,4 @@
-import { deployContract } from './utils.js';
+import { deployContract, deployCode } from './utils.js';
 import { padUintArray } from './helpers/compactStateUtils.js';
 import { ethers } from 'ethers';
 
@@ -80,11 +80,12 @@ contract('CompactProofBenchmark', function () {
         sibling: HashZero,
       };
 
+      let codeContract = await deployCode([CONST.ADD]);
       let res = false;
       for (let i = 0; i < 1024; i++) {
         let tx = await mockExecute(
           {
-            code,
+            code: codeContract.address,
             stack,
             stepCount: 1,
           }
