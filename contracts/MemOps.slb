@@ -41,6 +41,7 @@ library MemOps {
         assembly {
             // free memory address 0x40 - constants doesn't work in inline assembly.
             addr := mload(0x40)
+            // addr is a free memory pointer 
             mstore(0x40, add(addr, numBytes))
         }
     }

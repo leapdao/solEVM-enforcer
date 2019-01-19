@@ -172,8 +172,9 @@ contract SampleVerifier is Ownable, IVerifier {
         // - calculate mem hash root from mem, memPos and memProof
         // - combine to actual state hash to verify left state
         require(img.stack.toHash() == dispute.left.hash, "state hash not match");
+        // require(img.hashValue == dispute.left.hash, "state hash not match");
 
-        IEthereumRuntime.EVMPreimage memory result = ethRuntime.execute(img);
+        IEthereumRuntime.EVMResult memory result = ethRuntime.execute(img);
         // TODO calculate state hash
         bytes32 resultHash = result.stack.toHash();
 
