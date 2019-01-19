@@ -5,7 +5,7 @@ pragma experimental ABIEncoderV2;
 contract IEthereumRuntime {
 
     struct EVMPreimage {
-        bytes code;
+        address code;
         bytes data;
         uint gasLimit;
         uint pc;
@@ -22,7 +22,6 @@ contract IEthereumRuntime {
 
     struct EVMResult {
         uint gas;
-        bytes code;
         bytes data;
         bytes lastRet;
         bytes returnData;
@@ -38,5 +37,5 @@ contract IEthereumRuntime {
         bytes32 hashValue;
     }
 
-    function execute(EVMPreimage memory) public pure returns (EVMResult memory);
+    function execute(EVMPreimage memory) public view returns (EVMResult memory);
 }

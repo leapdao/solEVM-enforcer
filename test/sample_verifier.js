@@ -1,5 +1,5 @@
 import assertRevert from './helpers/assertRevert.js';
-import { deployContract, wallets } from './utils.js';
+import { deployContract, deployCode, wallets } from './utils.js';
 import { ethers } from 'ethers';
 import { BLOCK_GAS_LIMIT } from './helpers/constants.js';
 import { hashUint256Array } from './helpers/hash.js';
@@ -75,12 +75,16 @@ contract('SampleVerifierMock', () => {
     return ethers.utils.formatBytes32String(Date.now().toString());
   };
 
+  let code;
+
   before(async () => {
     verifier = await deployContract(Verifier, 100);
     enforcer = await deployContract(Enforcer);
     ethRuntime = await deployContract(EthRuntime);
     await verifier.setEnforcer(enforcer.address);
     await verifier.setRuntime(ethRuntime.address);
+    // needs to be here
+    code = (await deployCode([OP.PUSH1, '03', OP.PUSH1, '05', OP.ADD])).address;
   });
 
   it('should have timeout set', async () => {
@@ -223,8 +227,6 @@ contract('SampleVerifierMock', () => {
   });
 
   describe('when FoundDiff', async () => {
-    const code = '0x' + OP.PUSH1 + '03' + OP.PUSH1 + '05' + OP.ADD;
-
     // TODO use state hash function
     let solverHash = hashUint256Array([8], 1, HashZero);
     let solverStep = 3;

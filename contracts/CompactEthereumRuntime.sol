@@ -8,6 +8,7 @@ import { EVMMemory } from "./EVMMemory.slb";
 import { CompactEVMStack } from "./CompactEVMStack.slb";
 import { EVMLogs } from "./EVMLogs.slb";
 import { EVMUtils } from "./EVMUtils.slb";
+import { EVMCode } from "./EVMCode.slb";
 
 
 contract CompactEthereumRuntime is EVMConstants {
@@ -44,6 +45,7 @@ contract CompactEthereumRuntime is EVMConstants {
     using EVMMemory for EVMMemory.Memory;
     using CompactEVMStack for CompactEVMStack.Stack;
     using EVMLogs for EVMLogs.Logs;
+    using EVMCode for EVMCode.Code;
 
     // ************* Used as input/output *************
     struct Context {
@@ -112,7 +114,7 @@ contract CompactEthereumRuntime is EVMConstants {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
-    function compactExecute(CompactEVMPreimage memory img) public pure returns (CompactEVMPreimage memory) {
+    function compactExecute(CompactEVMPreimage memory img) public view returns (CompactEVMPreimage memory) {
         EVM memory evm;
 
         evm.context = Context(
@@ -135,13 +137,13 @@ contract CompactEthereumRuntime is EVMConstants {
         caller.nonce = uint8(1);
 
         EVMAccounts.Account memory target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
-        target.code = img.code;
+        target.code = EVMCode.fromBytes(img.code);
 
         evm.caller = evm.accounts.get(DEFAULT_CALLER);
         // TODO touching accounts.
         evm.target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
 
-        evm.code = evm.target.code;
+        evm.code = img.code;
         evm.stack = img.stack;
         evm.mem = EVMMemory.fromArray(img.mem);
 
@@ -160,7 +162,7 @@ contract CompactEthereumRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
-    function _call(EVMInput memory evmInput, CallType callType) internal pure returns (EVM memory evm) {
+    function _call(EVMInput memory evmInput, CallType callType) internal view returns (EVM memory evm) {
         evm.context = evmInput.context;
         evm.logHash = evmInput.logHash;
         if (evmInput.staticExec) {
@@ -213,7 +215,7 @@ contract CompactEthereumRuntime is EVMConstants {
             if (evm.target.code.length == 0) {
                 return evm;
             }
-            evm.code = evm.target.code;
+            evm.code = evm.target.code.toBytes();
             if (evmInput.stack.size > 0) {
                 evm.stack = evmInput.stack;
             } else {
@@ -228,7 +230,7 @@ contract CompactEthereumRuntime is EVMConstants {
         }
     }
 
-    function _create(EVMCreateInput memory evmInput) internal pure returns (EVM memory evm, address addr) {
+    function _create(EVMCreateInput memory evmInput) internal view returns (EVM memory evm, address addr) {
         evm.context = evmInput.context;
         evm.accounts = evmInput.accounts.copy();
         evm.logHash = evmInput.logHash;
@@ -273,12 +275,12 @@ contract CompactEthereumRuntime is EVMConstants {
             evm.errno = ERROR_MAX_CODE_SIZE_EXCEEDED;
             return (evm, addr);
         }
-        newAcc.code = evm.returnData;
+        newAcc.code = EVMCode.fromBytes(evm.returnData);
         addr = newAddress;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
-    function _run(EVM memory evm, uint pc, uint pcStepCount) internal pure {
+    function _run(EVM memory evm, uint pc, uint pcStepCount) internal view {
         uint pcNext = 0;
         uint stepRun = 0;
 
@@ -291,7 +293,7 @@ contract CompactEthereumRuntime is EVMConstants {
             uint stackOut;
             uint gasFee;
             uint8 opcode = uint8(evm.code[pc]);
-            function(EVM memory) internal pure opcodeHandler;
+            function(EVM memory) internal view opcodeHandler;
 
             if (opcode == 0) {
                 opcodeHandler = handleSTOP;
@@ -1564,8 +1566,8 @@ contract CompactEthereumRuntime is EVMConstants {
         state.stack.push(state.accounts.get(address(state.stack.pop())).code.length);
     }
 
-    function handleEXTCODECOPY(EVM memory state) internal pure {
-        bytes memory code = state.accounts.get(address(state.stack.pop())).code;
+    function handleEXTCODECOPY(EVM memory state) internal view {
+        bytes memory code = state.accounts.get(address(state.stack.pop())).code.toBytes();
         uint mAddr = state.stack.pop();
         uint dAddr = state.stack.pop();
         uint len = state.stack.pop();
@@ -1805,7 +1807,7 @@ contract CompactEthereumRuntime is EVMConstants {
     }
 
     // 0xfX
-    function handleCREATE(EVM memory state) internal pure {
+    function handleCREATE(EVM memory state) internal view {
         assert(!state.staticExec);
 
         EVMCreateInput memory input;
@@ -1849,7 +1851,7 @@ contract CompactEthereumRuntime is EVMConstants {
     }
 
     // solhint-disable-next-line function-max-lines
-    function handleCALL(EVM memory state) internal pure {
+    function handleCALL(EVM memory state) internal view {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
@@ -1927,11 +1929,11 @@ contract CompactEthereumRuntime is EVMConstants {
         state.returnData = state.mem.toArray(start, len);
     }
 
-    function handleDELEGATECALL(EVM memory state) internal pure {
+    function handleDELEGATECALL(EVM memory state) internal view {
         EVMInput memory input;
 
         input.gas = state.stack.pop();
-        bytes memory oldCode = state.target.code;
+        EVMCode.Code memory oldCode = state.target.code;
         state.target.code = state.accounts.get(address(state.stack.pop())).code;
         input.target = state.target.addr;
 
@@ -1977,7 +1979,7 @@ contract CompactEthereumRuntime is EVMConstants {
         state.gas -= input.gas - retEvm.gas;
     }
 
-    function handleSTATICCALL(EVM memory state) internal pure {
+    function handleSTATICCALL(EVM memory state) internal view {
         EVMInput memory input;
 
         input.gas = state.stack.pop();

@@ -4,6 +4,16 @@ const OP = require('./helpers/constants');
 
 const stack16 = pushRange(1, 16);
 
+function split (str) {
+  const res = [];
+
+  for (let i = 0; i < str.length; i += 2) {
+    res.push(str.substring(i, i + 2));
+  }
+
+  return res;
+}
+
 export default [
   { code: [OP.PUSH1, '03', OP.PUSH1, '05', OP.ADD], step: 2 },
   { code: [OP.PUSH1, '03', OP.PUSH1, '05', OP.MUL], step: 2 },
@@ -71,7 +81,7 @@ export default [
 
   // Context and stack opcodes
 
-  { code: [OP.PUSH20, '4ae7b3e204fed41c82d57ecd2242470196d70d02', OP.BALANCE], step: 1 },
+  { code: [OP.PUSH20, ...split('4ae7b3e204fed41c82d57ecd2242470196d70d02'), OP.BALANCE], step: 1 },
   { code: [OP.GASPRICE, OP.POP, OP.ADDRESS], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.ORIGIN], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.CALLER], step: 2 },
@@ -140,24 +150,32 @@ export default [
   // Memory and stack (MLOAD, MSTORE, MSTORE8, MSIZE)
   // MSTORE
   {
-    code: [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE, OP.PUSH1, '01', OP.MLOAD, OP.POP, OP.MSIZE ],
+    code: [
+      OP.PUSH32,
+      ...split(leftPad('5567', 64)),
+      OP.PUSH1, '01', OP.MSTORE, OP.PUSH1, '01', OP.MLOAD, OP.POP, OP.MSIZE,
+    ],
     pc: 35,
     step: 2,
   },
   // MLOAD
   {
-    code: [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE, OP.PUSH1, '01', OP.MLOAD, OP.POP, OP.MSIZE ],
+    code: [
+      OP.PUSH32,
+      ...split(leftPad('5567', 64)),
+      OP.PUSH1, '01', OP.MSTORE, OP.PUSH1, '01', OP.MLOAD, OP.POP, OP.MSIZE,
+    ],
     pc: 38,
     step: 4,
   },
   // MSTORE8
   {
-    code: [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE8, OP.MSIZE ],
+    code: [ OP.PUSH32, ...split(leftPad('5567', 64)), OP.PUSH1, '01', OP.MSTORE8, OP.MSIZE ],
     pc: 35,
     step: 2,
   },
   // MSIZE
-  { code: [ OP.PUSH32, leftPad('5567', 64), OP.PUSH1, '01', OP.MSTORE8, OP.MSIZE ], step: 3 },
+  { code: [ OP.PUSH32, ...split(leftPad('5567', 64)), OP.PUSH1, '01', OP.MSTORE8, OP.MSIZE ], step: 3 },
 
   // Data, stack and memory type OP-codes (CALLDATACOPY)
   {
@@ -176,35 +194,45 @@ export default [
   // Context, stack and memory type OP-codes (LOG)
   {
     code: [
-      OP.PUSH32, '0102030405060708091011121314151617181920212223242526272829303132', OP.PUSH1, '00', OP.MSTORE,
+      OP.PUSH32,
+      ...split('0102030405060708091011121314151617181920212223242526272829303132'),
+      OP.PUSH1, '00', OP.MSTORE,
       OP.PUSH1, '04', OP.PUSH1, '04', OP.LOG0,
     ],
     step: 5,
   },
   {
     code: [
-      OP.PUSH32, '0102030405060708091011121314151617181920212223242526272829303132', OP.PUSH1, '00', OP.MSTORE,
+      OP.PUSH32,
+      ...split('0102030405060708091011121314151617181920212223242526272829303132'),
+      OP.PUSH1, '00', OP.MSTORE,
       OP.PUSH1, '05', OP.PUSH1, '04', OP.PUSH1, '02', OP.LOG1,
     ],
     step: 6,
   },
   {
     code: [
-      OP.PUSH32, '0102030405060708091011121314151617181920212223242526272829303132', OP.PUSH1, '00', OP.MSTORE,
+      OP.PUSH32,
+      ...split('0102030405060708091011121314151617181920212223242526272829303132'),
+      OP.PUSH1, '00', OP.MSTORE,
       OP.PUSH1, '06', OP.PUSH1, '05', OP.PUSH1, '04', OP.PUSH1, '02', OP.LOG2,
     ],
     step: 7,
   },
   {
     code: [
-      OP.PUSH32, '0102030405060708091011121314151617181920212223242526272829303132', OP.PUSH1, '00', OP.MSTORE,
+      OP.PUSH32,
+      ...split('0102030405060708091011121314151617181920212223242526272829303132'),
+      OP.PUSH1, '00', OP.MSTORE,
       OP.PUSH1, '07', OP.PUSH1, '06', OP.PUSH1, '05', OP.PUSH1, '04', OP.PUSH1, '02', OP.LOG3,
     ],
     step: 8,
   },
   {
     code: [
-      OP.PUSH32, '0102030405060708091011121314151617181920212223242526272829303132', OP.PUSH1, '00', OP.MSTORE,
+      OP.PUSH32,
+      ...split('0102030405060708091011121314151617181920212223242526272829303132'),
+      OP.PUSH1, '00', OP.MSTORE,
       OP.PUSH1, '08', OP.PUSH1, '07', OP.PUSH1, '06', OP.PUSH1, '05', OP.PUSH1, '04', OP.PUSH1, '02', OP.LOG4,
     ],
     step: 9,

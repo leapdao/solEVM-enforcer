@@ -92,7 +92,19 @@ contract('CompactRuntime', function () {
         const data = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const logHash = fixture.logHash;
-        const res = await rt.execute({ code, data, pc, gasLimit, stack, mem, accounts, accountsCode, logHash });
+        const res = await rt.execute(
+          {
+            code: '0x' + code.join(''),
+            data,
+            pc,
+            gasLimit,
+            stack,
+            mem,
+            accounts,
+            accountsCode,
+            logHash,
+          }
+        );
 
         if (fixture.result.stack) {
           assert.deepEqual(toStr(res.stack[2].slice(0, res.stack[3])), fixture.result.stack);
