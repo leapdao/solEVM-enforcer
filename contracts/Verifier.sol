@@ -1,15 +1,14 @@
 pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./EVMConstants.sol";
 import "./IEnforcer.sol";
 import "./IVerifier.sol";
-import "./IEthereumRuntime.sol";
+import "./EVMRuntime.sol";
 import "./Merkelizer.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
-contract Verifier is EVMConstants, Ownable {
+contract Verifier is Ownable, EVMRuntime {
     using Merkelizer for Merkelizer.ExecutionState;
 
     struct Proofs {
@@ -53,7 +52,6 @@ contract Verifier is EVMConstants, Ownable {
     uint256 public timeoutDuration;
 
     IEnforcer public enforcer;
-    IEthereumRuntime public ethRuntime;
 
     mapping (bytes32 => Dispute) public disputes;
 
@@ -79,10 +77,6 @@ contract Verifier is EVMConstants, Ownable {
 
     function setEnforcer(address _enforcer) public onlyOwner() {
         enforcer = IEnforcer(_enforcer);
-    }
-
-    function setRuntime(address _ethruntime) public onlyOwner() {
-        ethRuntime = IEthereumRuntime(_ethruntime);
     }
 
     /**
@@ -212,30 +206,47 @@ contract Verifier is EVMConstants, Ownable {
             }
         }
 
-        IEthereumRuntime.EVMPreimage memory img;
-        img.code = dispute.codeContractAddress;
-        img.data = _executionState.data;
-        img.pc = _executionState.pc;
-        img.stepCount = 1;
-        img.gasLimit = BLOCK_GAS_LIMIT;
-        img.gasRemaining = _executionState.gasRemaining;
-        img.stack = _executionState.stack;
-        img.mem = _executionState.mem;
-        img.logHash = _executionState.logHash;
+        EVM memory evm;
 
-        IEthereumRuntime.EVMResult memory resultState;
-        resultState = ethRuntime.execute(img);
+        evm.context = Context(
+            DEFAULT_CALLER,
+            0,
+            BLOCK_GAS_LIMIT,
+            0,
+            0,
+            0,
+            0
+        );
 
-        if (resultState.errno != 0 && resultState.errno != 0x07) {
+        evm.data = _executionState.data;
+        evm.gas = _executionState.gasRemaining;
+        evm.logHash = _executionState.logHash;
+
+        EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
+        caller.nonce = uint8(1);
+
+        EVMAccounts.Account memory target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
+        target.code = EVMCode.fromAddress(dispute.codeContractAddress);
+
+        evm.caller = evm.accounts.get(DEFAULT_CALLER);
+        evm.target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
+
+        evm.code = evm.target.code;
+        evm.stack = EVMStack.fromArray(_executionState.stack);
+        evm.mem = EVMMemory.fromArray(_executionState.mem);
+
+        _run(evm, _executionState.pc, 1);
+
+        if (evm.errno != 0 && evm.errno != 0x07) {
             return;
         }
 
-        _executionState.pc = resultState.pc;
-        _executionState.stack = resultState.stack;
-        _executionState.mem = resultState.mem;
-        _executionState.logHash = resultState.logHash;
-        _executionState.returnData = resultState.returnData;
-        _executionState.gasRemaining = resultState.gas;
+        _executionState.pc = evm.pc;
+        _executionState.stack = evm.stack.toArray();
+        _executionState.mem = evm.mem.toArray();
+        _executionState.logHash = evm.logHash;
+        _executionState.returnData = evm.returnData;
+        _executionState.gasRemaining = evm.gas;
 
         bytes32 hash = _executionState.stateHash(
             _executionState.stackHash(_proofs.stackHash),
