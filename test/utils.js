@@ -142,10 +142,9 @@ export const getCodeWithStep = (fixture) => {
     code = fixture;
   }
 
-  code = `0x${code.join('')}`;
-  const codeSize = (code.length - 2) / 2;
+  const codeSize = code.length;
   const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
-  const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
+  const opcodeUnderTest = opcodeNames[code[pc]];
   const step = fixture.step !== undefined ? fixture.step : 0;
   return { code, step, opcodeUnderTest };
 };
@@ -161,15 +160,14 @@ export const getCode = (fixture) => {
     code = fixture;
   }
 
-  code = `0x${code.join('')}`;
-  const codeSize = (code.length - 2) / 2;
+  const codeSize = code.length;
   const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
-  const opcodeUnderTest = opcodeNames[code.substring(2 + pc * 2, 2 + pc * 2 + 2)];
+  const opcodeUnderTest = opcodeNames[code[pc]];
   return { code, codeSize, pc: ~~pc, opcodeUnderTest };
 };
 export const wallets = [];
 
-const provider = new ethers.providers.Web3Provider(web3.currentProvider);
+export const provider = new ethers.providers.Web3Provider(web3.currentProvider);
 
 for (var i = 0; i < 10; i++) {
   const privateKey = '0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b750120' + i;
@@ -201,4 +199,29 @@ export function extractMemElements (mem) {
   }
   elements = elements.map(x => '0x' + x);
   return elements;
+}
+
+export async function deployCode (code) {
+  let codeLen = code.length.toString(16);
+
+  if (codeLen.length === 1) {
+    codeLen = '0' + codeLen;
+  }
+
+  let codeOffset = '0b';
+  let codeCopy = [
+    OP.PUSH1, codeLen,
+    OP.DUP1,
+    OP.PUSH1, codeOffset,
+    OP.PUSH1, '00',
+    OP.CODECOPY,
+    OP.PUSH1, '00',
+    OP.RETURN,
+  ];
+  const obj = {
+    abi: [],
+    bytecode: '0x' + codeCopy.join('') + code.join(''),
+  };
+
+  return deployContract(obj);
 }

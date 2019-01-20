@@ -4,18 +4,20 @@ pragma experimental ABIEncoderV2;
 import {MemOps} from "./MemOps.slb";
 import {EVMStorage} from "./EVMStorage.slb";
 import {EVMUtils} from "./EVMUtils.slb";
+import {EVMCode} from "./EVMCode.slb";
 
 
 library EVMAccounts {
 
     using EVMStorage for EVMStorage.Storage;
+    using EVMCode for EVMCode.Code;
 
     struct Account {
         address addr;
         uint balance;
         uint8 nonce;
         bool destroyed;
-        bytes code;
+        EVMCode.Code code;
         EVMStorage.Storage stge;
     }
 
@@ -105,7 +107,7 @@ library EVMAccounts {
         return accs;
     }
 
-    function toArray(Accounts memory self) internal pure returns (uint[] memory arr, bytes memory code) {
+    function toArray(Accounts memory self) internal view returns (uint[] memory arr, bytes memory code) {
         if (self.size == 0) {
             return (arr, code);
         }
@@ -145,7 +147,7 @@ library EVMAccounts {
                 arr[offset + 7 + 2*j] = stge[j].addr;
                 arr[offset + 7 + 2*j + 1] = stge[j].val;
             }
-            EVMUtils.copy(acc.code, code, 0, codeOffset, acc.code.length);
+            EVMUtils.copy(acc.code.toBytes(), code, 0, codeOffset, acc.code.length);
             offset += 7 + stge.length * 2;
             codeOffset += acc.code.length;
         }
@@ -166,8 +168,9 @@ library EVMAccounts {
             acc.nonce = uint8(accountsIn[offset + 2]);
             acc.destroyed = accountsIn[offset + 3] == 1;
             uint codeSize = accountsIn[offset + 5];
-            acc.code = new bytes(codeSize);
-            EVMUtils.copy(accountsCode, acc.code, accountsIn[offset + 4], 0, codeSize); // accountsIn[offset + 4] - code offset
+            bytes memory code = new bytes(codeSize);
+            EVMUtils.copy(accountsCode, code, accountsIn[offset + 4], 0, codeSize); // accountsIn[offset + 4] - code offset
+            acc.code = EVMCode.fromBytes(code);
             uint storageSize = accountsIn[offset + 6];
             for (uint i = 0; i < storageSize; i++) {
                 acc.stge.store(accountsIn[offset + 7 + 2*i], accountsIn[offset + 8 + 2*i]);

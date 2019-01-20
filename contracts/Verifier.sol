@@ -1,15 +1,14 @@
 pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./EVMConstants.sol";
 import "./IEnforcer.sol";
 import "./IVerifier.sol";
-import "./IEthereumRuntime.sol";
+import "./EVMRuntime.sol";
 import "./Merkelizer.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
-contract Verifier is EVMConstants, Ownable {
+contract Verifier is Ownable, EVMRuntime {
     using Merkelizer for Merkelizer.ExecutionState;
 
     struct Proofs {
@@ -53,7 +52,6 @@ contract Verifier is EVMConstants, Ownable {
     uint256 public timeoutDuration;
 
     IEnforcer public enforcer;
-    IEthereumRuntime public ethRuntime;
 
     mapping (bytes32 => Dispute) public disputes;
 
@@ -79,10 +77,6 @@ contract Verifier is EVMConstants, Ownable {
 
     function setEnforcer(address _enforcer) public onlyOwner() {
         enforcer = IEnforcer(_enforcer);
-    }
-
-    function setRuntime(address _ethruntime) public onlyOwner() {
-        ethRuntime = IEthereumRuntime(_ethruntime);
     }
 
     /**
@@ -169,7 +163,7 @@ contract Verifier is EVMConstants, Ownable {
      * to decide on the outcome.
      *
      * Requirements:
-     *  - last execution step must end with either REVERT or RETURN to be considered complete
+     *  - last execution step must end with either REVERT, RETURN or STOP to be considered complete
      *  - any execution step which does not have errno = 0 or errno = 0x07 (REVERT)
      *    is considered invalid
      *  - the left-most (first) execution step must be a `Merkelizer.initialStateHash`
@@ -197,73 +191,62 @@ contract Verifier is EVMConstants, Ownable {
             return;
         }
 
-        uint pc = _executionState.pc;
-        uint codeptr = 0;
-        uint codeSize = 0;
-        address codeContractAddress = dispute.codeContractAddress;
-
-        // TODO: what happens if the code make assumptions with OP.PC ?
-        //       should we pad the code array with zeros?
-        //       -
-        //       we can do some prechecks without running the evm for:
-        //       - JUMP, JUMPI
-        //       - CODESIZE
-        //       - maybe others too
-        if (_executionState.isCodeCompacted) {
-            uint pcEnd = _executionState.pcEnd;
-
-            if (pc == pcEnd) {
-                pcEnd += 1;
-            }
-
-            codeSize = pcEnd - pc;
-            codeptr = pc;
-            _executionState.pc = 0;
-        } else {
-            assembly {
-                codeSize := extcodesize(codeContractAddress)
-            }
-        }
-
-        bytes memory code = new bytes(codeSize);
-        assembly {
-            extcodecopy(codeContractAddress, add(code, 0x20), codeptr, codeSize)
-        }
-
         if ((dispute.state & END_OF_EXECUTION) != 0) {
-            if (uint8(code[_executionState.pc]) != OP_REVERT && uint8(code[_executionState.pc]) != OP_RETURN) {
+            address codeAddress = dispute.codeContractAddress;
+            uint pos = _executionState.pc;
+            uint8 opcode;
+
+            assembly {
+                extcodecopy(codeAddress, 31, pos, 1)
+                opcode := mload(0)
+            }
+
+            if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
                 return;
             }
         }
 
-        IEthereumRuntime.EVMPreimage memory img;
-        img.code = code;
-        img.data = _executionState.data;
-        img.pc = _executionState.pc;
-        img.stepCount = 1;
-        img.gasLimit = BLOCK_GAS_LIMIT;
-        img.gasRemaining = _executionState.gasRemaining;
-        img.stack = _executionState.stack;
-        img.mem = _executionState.mem;
-        img.logHash = _executionState.logHash;
+        EVM memory evm;
 
-        img = ethRuntime.execute(img);
+        evm.context = Context(
+            DEFAULT_CALLER,
+            0,
+            BLOCK_GAS_LIMIT,
+            0,
+            0,
+            0,
+            0
+        );
 
-        if (img.errno != 0 && img.errno != 0x07) {
+        evm.data = _executionState.data;
+        evm.gas = _executionState.gasRemaining;
+        evm.logHash = _executionState.logHash;
+
+        EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
+        caller.nonce = uint8(1);
+
+        EVMAccounts.Account memory target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
+        target.code = EVMCode.fromAddress(dispute.codeContractAddress);
+
+        evm.caller = evm.accounts.get(DEFAULT_CALLER);
+        evm.target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
+
+        evm.code = evm.target.code;
+        evm.stack = EVMStack.fromArray(_executionState.stack);
+        evm.mem = EVMMemory.fromArray(_executionState.mem);
+
+        _run(evm, _executionState.pc, 1);
+
+        if (evm.errno != 0 && evm.errno != 0x07) {
             return;
         }
 
-        _executionState.pc = img.pc;
-        _executionState.stack = img.stack;
-        _executionState.mem = img.mem;
-        _executionState.logHash = img.logHash;
-        _executionState.returnData = img.returnData;
-        _executionState.gasRemaining = img.gasRemaining;
-
-        // patch
-        if (_executionState.isCodeCompacted) {
-            _executionState.pc += pc;
-        }
+        _executionState.pc = evm.pc;
+        _executionState.stack = evm.stack.toArray();
+        _executionState.mem = evm.mem.toArray();
+        _executionState.logHash = evm.logHash;
+        _executionState.returnData = evm.returnData;
+        _executionState.gasRemaining = evm.gas;
 
         bytes32 hash = _executionState.stateHash(
             _executionState.stackHash(_proofs.stackHash),
@@ -281,7 +264,6 @@ contract Verifier is EVMConstants, Ownable {
         if (hash == dispute.challenger.right) {
             dispute.state |= CHALLENGER_VERIFIED;
         }
-
 
         if ((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0) {
             // both are verified, solver wins

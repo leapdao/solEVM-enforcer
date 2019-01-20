@@ -2,11 +2,8 @@
 import Merkelizer from '../utils/Merkelizer';
 
 import disputeFixtures from './dispute.fixtures';
-import { deployContract, wallets, txOverrides } from './utils';
+import { deployContract, wallets, txOverrides, deployCode } from './utils';
 
-const OP = require('./helpers/constants');
-
-const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 const Verifier = artifacts.require('Verifier.sol');
 
 // for additional logging
@@ -43,8 +40,6 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
       returnData: '0x' + input.returnData,
       logHash: '0x' + input.logHash,
       pc: input.pc,
-      pcEnd: execState.output.pc,
-      isCodeCompacted: !!input.isCodeCompacted,
       gasRemaining: input.gasRemaining,
     },
     txOverrides
@@ -208,37 +203,18 @@ async function disputeGame (
 }
 
 contract('Verifier', function () {
-  let evm;
   let verifier;
 
   before(async () => {
-    evm = await deployContract(EthereumRuntime);
     verifier = await deployContract(Verifier, 100);
 
     let tx = await verifier.setEnforcer(wallets[0].address);
-    await tx.wait();
-    tx = await verifier.setRuntime(evm.address);
     await tx.wait();
   });
 
   disputeFixtures(
     async (code, callData, solverSteps, challengerSteps, expectedWinner) => {
-      let codelen = (code.length).toString(16);
-      let codeOffset = '0b';
-      let codeCopy = [
-        OP.PUSH1, codelen,
-        OP.DUP1,
-        OP.PUSH1, codeOffset,
-        OP.PUSH1, '00',
-        OP.CODECOPY,
-        OP.PUSH1, '00',
-        OP.RETURN,
-      ];
-      const obj = {
-        abi: [],
-        bytecode: '0x' + codeCopy.join('') + code.join(''),
-      };
-      const codeContract = await deployContract(obj);
+      const codeContract = await deployCode(code);
 
       await disputeGame(
         verifier,

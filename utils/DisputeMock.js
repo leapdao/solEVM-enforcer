@@ -127,7 +127,7 @@ export default class DisputeMock {
    * to later decide on the outcome in `decideOutcome`
    *
    * Requirements:
-   *  - last execution step must end with either REVERT or RETURN to be considered complete
+   *  - last execution step must end with either REVERT, RETURN or STOP to be considered complete
    *  - any execution step which does not have errno = 0 or errno = 0x07 (REVERT)
    *    is considered invalid
    *  - the left-most (first) execution step must be a `Merkelizer.initialStateHash`
@@ -166,7 +166,7 @@ export default class DisputeMock {
     }
 
     if (this.isEndOfExecution) {
-      if (result.opcodeName !== 'REVERT' && result.opcodeName !== 'RETURN') {
+      if (result.opcodeName !== 'REVERT' && result.opcodeName !== 'RETURN' && result.opcodeName !== 'STOP') {
         return 'invalid';
       }
     }
