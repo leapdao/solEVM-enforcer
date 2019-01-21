@@ -45,7 +45,6 @@ contract('Runtime', function () {
         // 4. check that on-chain state is the same as off-chain
         // checking hashValue is enough to say that states are same
         assert.equal(onChainState.hashValue, afterState.hashValue, 'State Hash');
-        // assert.equal(onChainState.n, afterState.n, 'n');
       });
     });
   });

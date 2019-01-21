@@ -1,8 +1,23 @@
 const { BLOCK_GAS_LIMIT } = require('./constants');
+const ethers = require('ethers');
 
 export default class RuntimeAdapter {
   constructor (runtimeContract) {
-    this.runtimeContract = runtimeContract;
+    // explicit mark it as view, so we can just call the execute function
+    // TODO: ethers.js should provide the option to explicitly call a function
+    // https://github.com/ethers-io/ethers.js/issues/395
+
+    // Need to copy (read-only)
+    let abi = JSON.parse(JSON.stringify(runtimeContract.interface.abi));
+
+    abi[0].constant = true;
+    abi[0].stateMutability = 'view';
+
+    this.runtimeContract = new ethers.Contract(
+      runtimeContract.address,
+      abi,
+      runtimeContract.provider
+    );
   }
 
   execute ({ code, data, pc, stepCount, gasRemaining, gasLimit, stack, mem, accounts, accountsCode, logHash }) {
