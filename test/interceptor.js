@@ -6,6 +6,14 @@ const SpendingConditionMock = artifacts.require('SpendingConditionMock.sol');
 const Interceptor = artifacts.require('Interceptor.sol');
 
 contract('Interceptor', () => {
+  const receivers = [
+    wallets[0].address,
+    wallets[1].address,
+  ];
+  const txAmounts = [
+    0xffff,
+    0xfafa,
+  ];
   let tokenContract;
   let spendingCondition;
   let interceptor;
@@ -25,8 +33,9 @@ contract('Interceptor', () => {
       // tx = await tx.wait();
 
       let data = spendingCondition.interface.functions.test.encode(
-        [tokenContract.address, [wallets[0].address], [0xffff]]
+        [tokenContract.address, receivers, txAmounts]
       );
+      console.log(data)
 
       tx = await interceptor.run(
         {
@@ -34,6 +43,8 @@ contract('Interceptor', () => {
           spendingCondition: spendingCondition.address,
           tokenContract: tokenContract.address,
           bridgeContract: bridgeContract.address,
+          //receivers: receivers,
+          //amounts: txAmounts,
           callData: data,
         }
       );

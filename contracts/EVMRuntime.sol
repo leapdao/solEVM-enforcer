@@ -229,8 +229,6 @@ contract EVMRuntime is EVMConstants {
         addr = newAddress;
     }
 
-    event Loga(uint stepRun, uint pc, uint8 opcode, uint[] stack);
-
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
     function _run(EVM memory evm, uint pc, uint pcStepCount) internal {
         uint pcNext = 0;
@@ -784,7 +782,6 @@ contract EVMRuntime is EVMConstants {
                 gasFee = 0;
             }
 
-            emit Loga(stepRun, pc, opcode, evm.stack.toArray());
             if (gasFee != GAS_ADDITIONAL_HANDLING) {
                 if (gasFee > evm.gas) {
                     evm.errno = ERROR_OUT_OF_GAS;

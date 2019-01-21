@@ -10,20 +10,17 @@ import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
  *  https://github.com/leapdao/leap-contracts/blob/master/contracts/ExitHandler.sol
  *  https://docs.google.com/drawings/d/1bDlF7ORgQ4W1pkMNk0MoUb6nQFEq72f9ZjBVsKBvbyE/edit
  *  https://github.com/leapdao/leap-node/blob/feature/SpendingConditions/src/tx/applyTx/checkSpendCond.test.js
- *
+ *  https://github.com/leapdao/leap-contracts/blob/master/contracts/ExitHandler.sol#L310
  */
 contract Interceptor is Ownable, EVMRuntime {
 
     bytes4 constant internal FUNC_SIG_BALANCE_OF = hex'70a08231';
-
     bytes4 constant internal FUNC_SIG_TRANSFER = hex'a9059cbb';
+    bytes4 constant internal FUNC_SIG_SPENDING_TEST = hex'd7abb559';
 
     struct Input {
         address caller;
         address spendingCondition;
-        address tokenContract;
-        address bridgeContract;
-        // this should be tx inputs in the future
         bytes callData;
     }
 
@@ -35,6 +32,7 @@ contract Interceptor is Ownable, EVMRuntime {
     }
 
     event ResultEvent(Result res);
+    event Transfer(address indexed from, address indexed to, uint256 value);
 
     constructor() public Ownable() {
     }
@@ -63,10 +61,6 @@ contract Interceptor is Ownable, EVMRuntime {
 
         EVMAccounts.Account memory callerAcc = evm.accounts.get(input.caller);
         callerAcc.nonce = uint8(1);
-
-        EVMAccounts.Account memory tokenAcc = evm.accounts.get(input.tokenContract);
-        tokenAcc.code = EVMCode.fromAddress(input.tokenContract);
-        tokenAcc.nonce = uint8(1);
 
         evm.caller = callerAcc;
         evm.target = spendingAcc;
@@ -99,26 +93,17 @@ contract Interceptor is Ownable, EVMRuntime {
 
     /*
      * This is used to by solc to check if a address is indeed a contract (has code).
-     * We only allow our tokenContract & bridgeContract here.
      */
     function handleEXTCODESIZE(EVM memory state) internal {
-        Input memory input;
-        assembly {
-            // the position of Input struct from run()
-            input := 0x80
-        }
-        address target = address(state.stack.pop());
-
-        if (target != input.tokenContract && target != input.bridgeContract) {
-            state.stack.push(0);
-            return;
-        }
-
+        // the address
+        state.stack.pop();
+        // always return non-zero length
         state.stack.push(1);
     }
 
-    event Foo(address caller, address target, address spendingCondition, address tokenContract, bytes callData, bytes4 functionSig);
+    event Foo(address caller, address currentTarget, address target, bytes callData, bytes4 functionSig);
 
+    // solhint-disable-next-line function-max-lines
     function handleCall(EVM memory state, address target, uint inOffset, uint inSize) internal returns (bytes memory) {
         /*
          * TODO
@@ -154,22 +139,39 @@ contract Interceptor is Ownable, EVMRuntime {
 
         emit Foo(
             state.caller.addr,
+            state.target.addr,
             target,
-            input.spendingCondition,
-            input.tokenContract,
             state.mem.toArray(inOffset, inSize),
             functionSig
         );
 
         // TODO: do real checks
+        //       Verification should be done via the external TxLib
 
         if (functionSig == FUNC_SIG_TRANSFER) {
-            // emit a Transfer event here if successful
+            address to;
+            uint value;
+
+            assembly {
+                to := mload(add(dataPtr, 0x4))
+                value := mload(add(dataPtr, 0x24))
+            }
+
+            // TODO:
+            // if the function is `transfer()`, then the `from` would be the signer of the inputs (recovered from r, v, s)
+            emit Transfer(target, to, value);
+
             state.stack.push(1);
             return abi.encode(["bool"], [true]);
         }
 
         if (functionSig == FUNC_SIG_BALANCE_OF) {
+            address balanceOf;
+
+            assembly {
+                balanceOf := mload(add(dataPtr, 0x4))
+            }
+
             state.stack.push(1);
             return abi.encode(["uint256"], [0xffff]);
         }
