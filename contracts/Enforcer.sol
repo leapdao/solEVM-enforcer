@@ -86,22 +86,25 @@ contract Enforcer {
 
     // receive result from Verifier contract
     function result(bytes32 executionId, bool solverWon, address challenger) public onlyVerifier() {
-        require(executions[executionId].startBlock != 0);
-        require(executions[executionId].startBlock + challengePeriod > block.number);
+        Execution memory execution = executions[executionId];
+
+        require(execution.startBlock != 0, "InvalidExecution");
+        require(execution.startBlock + challengePeriod > block.number, "OverChallengePeriod");
 
         if (solverWon) {
             // slash deposit of challenger
             bonds[challenger] -= bondAmount;
+
+            address(bytes20(execution.solver)).transfer(bondAmount);
             emit Slashed(executionId, challenger);
         } else {
             // slash deposit of solver
-            bonds[executions[executionId].solver] -= bondAmount;
-            emit Slashed(executionId, executions[executionId].solver);
+            bonds[execution.solver] -= bondAmount;
+
+            address(bytes20(challenger)).transfer(bondAmount);
+            emit Slashed(executionId, execution.solver);
             // delete execution
             delete executions[executionId];
         }
-
-        bool success = address(0).send(bondAmount);
-        require(success == true);
     }
 }

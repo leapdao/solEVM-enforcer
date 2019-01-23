@@ -744,4 +744,10 @@ export default [
       gasUsed: 3,
     },
   },
+  {
+    code: OP.STOP,
+    result: {
+      pc: 1,
+    },
+  },
 ];

@@ -105,10 +105,10 @@ export default [
 
   // still poor test
   // TODO: init state with returnData first
-  { code: ['00', OP.RETURNDATASIZE], step: 0 },
+  { code: [OP.STOP, OP.RETURNDATASIZE], step: 1 },
 
   //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
-  { code: ['00', OP.CODESIZE], step: 0 },
+  { code: [OP.STOP, OP.CODESIZE], step: 1 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH1, '01', OP.POP], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH2, '01', '02'], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH3, '01', '02', '03'], pc: 2, step: 2 },

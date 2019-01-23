@@ -29,3 +29,9 @@ jobs:
       before_script:
         - wget 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.22-7fa3509e.tar.gz' -O - | tar -xz; mv geth-*/geth .
       script: PATH=`pwd`:$PATH ./scripts/test_geth.sh test/contracts/*
+
+    - stage: tests
+      name: "test ExecutionPoker cli tool"
+      script:
+        - npm run compile:contracts
+        - ./tools/executionPoker/bin.js build/contracts/SpendingConditionMock.json test 0xD8992E08C1Fb17775deF02e15B620A006c4726db [] []
