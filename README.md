@@ -38,7 +38,7 @@ npm install
 npm test
 ```
 
-## Runtime
+## Runtime - EVMRuntime.sol
 
 The runtime contract is `EVMRuntime.sol`. The contract is designed with extensibility in mind.
 The most basic contract which makes use of it is [EthereumRuntime.sol](https://github.com/leapdao/solEVM-enforcer/blob/master/contracts/EVMRuntime.sol),
@@ -46,6 +46,21 @@ the contract has an `execute` function which is used to run code.
 
 Other contracts which makes use of the `EVMRuntime` are:
 - [Verifier.sol](https://github.com/leapdao/solEVM-enforcer/blob/master/contracts/Verifier.sol)
+
+
+## OffchainStepper & Merkelizer | Based on ethereumvm-js :clap:
+
+It also exists a corresponding runtime implementation on the JS side.
+[You can take a look at the on-chain Verifier unit test on how it's used.](https://github.com/leapdao/solEVM-enforcer/blob/master/test/verifier.js)
+
+[The OffchainStepper mimics the EthereumRuntime contract](https://github.com/leapdao/solEVM-enforcer/blob/master/utils/OffchainStepper.js)
+and together with the [Merkelizer](https://github.com/leapdao/solEVM-enforcer/blob/master/utils/Merkelizer.js),
+creates a Merkle Root of the individual execution steps (before and after each opcode) given `code`, `data` and other runtime properties.
+
+The `OffchainStepper` & `Merkelizer` are *WIP* too, as they get further improved and refactored to get closer to the `EVMRuntime` class model.
+
+For the curious, there is also a [off-chain Dispute mock-implementation](https://github.com/leapdao/solEVM-enforcer/blob/master/utils/DisputeMock.js),
+with the same logic like the on-chain `Verifier` contract.
 
 
 #### Work In Progress
