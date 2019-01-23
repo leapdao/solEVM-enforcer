@@ -66,7 +66,9 @@ contract('Runtime', function () {
       assert.deepEqual(toNum(stack), [8]);
     });
 
-    fixtures.forEach(fixture => {
+    let totalGasUsed = 0;
+
+    fixtures.forEach((fixture, index) => {
       const { code, pc, opcodeUnderTest } = getCode(fixture);
 
       it(fixture.description || opcodeUnderTest, async () => {
@@ -77,25 +79,31 @@ contract('Runtime', function () {
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const logHash = fixture.logHash;
         const codeContract = await deployCode(code);
-        const res = await rt.execute(
-          {
-            code: codeContract.address,
-            data,
-            pc,
-            gasLimit,
-            stack,
-            mem,
-            accounts,
-            accountsCode,
-            logHash,
-          }
-        );
+        const args = {
+          code: codeContract.address,
+          data,
+          pc,
+          gasLimit,
+          stack,
+          mem,
+          accounts,
+          accountsCode,
+          logHash,
+        };
+        const res = await rt.execute(args);
+        const gasUsed = (await (await rt.execute(args, true)).wait()).gasUsed.toNumber();
+
+        totalGasUsed += gasUsed;
+        console.log(fixture.description || opcodeUnderTest, 'gasUsed', gasUsed);
+        if (index + 1 === fixtures.length) {
+          console.log('totalGasUsed', totalGasUsed);
+        }
 
         if (fixture.result.stack) {
-          assert.deepEqual(toStr(res.stack), fixture.result.stack);
+          assert.deepEqual(toStr(res.stack), fixture.result.stack, 'stack');
         }
         if (fixture.result.memory) {
-          assert.deepEqual(res.mem, fixture.result.memory);
+          assert.deepEqual(res.mem, fixture.result.memory, 'memory');
         }
         if (fixture.result.accounts) {
           const accounts = Array.from(fixture.result.accounts);
@@ -114,10 +122,10 @@ contract('Runtime', function () {
             const expectedAccount = accsMap[account.address];
             assert.isTrue(!!expectedAccount);
             if (account.balance) {
-              assert.equal(expectedAccount.balance, account.balance);
+              assert.equal(expectedAccount.balance, account.balance, 'account balance');
             }
             if (account.storage) {
-              assert.deepEqual(expectedAccount.storage, account.storage);
+              assert.deepEqual(expectedAccount.storage, account.storage, 'account storage');
             }
           });
         }

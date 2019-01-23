@@ -6,17 +6,20 @@ import { EVMCode } from "./EVMCode.slb";
 import { EVMStack } from "./EVMStack.slb";
 import { EVMMemory } from "./EVMMemory.slb";
 import { EVMAccounts } from "./EVMAccounts.slb";
-import { EVMRuntime } from "./EVMRuntime.sol";
+import { HydratedRuntime } from "./HydratedRuntime.sol";
 import { IEthereumRuntime } from "./IEthereumRuntime.sol";
 
 
-contract EthereumRuntime is EVMRuntime, IEthereumRuntime {
+contract EthereumRuntime is HydratedRuntime, IEthereumRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
     function execute(EVMPreimage memory img) public returns (EVMResult memory) {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
+
+        HydratedState memory hydratedState = initHydratedState(evm);
+        hydratedState.logHash = img.logHash;
 
         evm.context = Context(
             DEFAULT_CALLER,
@@ -31,7 +34,6 @@ contract EthereumRuntime is EVMRuntime, IEthereumRuntime {
 
         evm.data = img.data;
         evm.gas = img.gasRemaining;
-        evm.logHash = img.logHash;
 
         evm.accounts = EVMAccounts.fromArray(img.accounts, img.accountsCode);
         EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
@@ -60,7 +62,7 @@ contract EthereumRuntime is EVMRuntime, IEthereumRuntime {
         resultState.returnData = evm.returnData;
         resultState.errno = evm.errno;
         (resultState.accounts, resultState.accountsCode) = evm.accounts.toArray();
-        resultState.logHash = evm.logHash;
+        resultState.logHash = hydratedState.logHash;
         resultState.mem = EVMMemory.toArray(evm.mem);
         resultState.stack = EVMStack.toArray(evm.stack);
         resultState.depth = evm.depth;
@@ -90,9 +92,11 @@ contract EthereumRuntime is EVMRuntime, IEthereumRuntime {
             evm.accounts.size
         ));
 
+        HydratedState memory hydratedState = getHydratedState(evm);
+
         bytes32 hashValue = keccak256(abi.encodePacked(
             dataHash,
-            evm.logHash,
+            hydratedState.logHash,
             evm.mem.size,
             evm.stack.size,
             evm.depth,
