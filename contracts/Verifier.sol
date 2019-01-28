@@ -237,7 +237,7 @@ contract Verifier is Ownable, EVMRuntime {
 
         _run(evm, _executionState.pc, 1);
 
-        if (evm.errno != 0 && evm.errno != 0x07) {
+        if (evm.errno != NO_ERROR && evm.errno != ERROR_STATE_REVERTED) {
             return;
         }
 
