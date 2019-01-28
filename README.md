@@ -8,6 +8,7 @@ The **EVM Enforcer** is a computation verification engine that allows on-chain e
 
 Anyone who solved some off-chain execution can register a result with the *Enforcer contract*. A challenge period starts during which challengers can open disputes over the presented results. Disputes are delegated to the *Verifier contract* where solver and challenger play an interactive execution verification game. If the challenger wins, the execution results are deleted and the solver looses a bond. If the solver is able to defend the execution results throughout the challenge period, the result is accepted.
 
+
 ## FAQ
 
 - **What is the relationship to solEVM?**
@@ -16,6 +17,7 @@ The EVM enforcer is built on [Andreas Olofsson](https://github.com/androlo)'s [s
 [Truebit](http://truebit.io)'s interactive computation verification game uses a [WebAssembly](https://webassembly.org/) VM. We allow to run EVM bytecode. 
 - **What do you use this for?**
 We use this to enforce the correctness of transaction in [Plasma Leap](https://ethresear.ch/t/plasma-leap-a-state-enabled-computing-model-for-plasma/3539).
+
 
 ## Contributions
 
@@ -26,141 +28,52 @@ You are very welcome to contribute by:
 
 Please make sure to read the contribution guidelines.
 
+
 ## Setup
 
 Currently there are only tests using truffle. You can run the tests like this:
 
 ```
-npm install --global lerna
 npm install
 npm test
 ```
 
-## Runtime
+## Runtime - EVMRuntime.sol
 
-First of all, the `EthereumRuntime` code is designed to run on a constantinople net, with all constantinople features. The `genesis.json` file in the root folder can be used to configure the geth EVM (through the `--prestate` option).
+The runtime contract is `EVMRuntime.sol`. The contract is designed with extensibility in mind.
+The most basic contract which makes use of it is [EthereumRuntime.sol](https://github.com/leapdao/solEVM-enforcer/blob/master/contracts/EVMRuntime.sol),
+the contract has an `execute` function which is used to run code.
 
-The executable contract is `EthereumRuntime.sol`. The contract has an `execute` method which is used to run code. It has many overloaded versions, but the simplest version takes two arguments - `code` and `data`.
+Other contracts which makes use of the `EVMRuntime` are:
+- [Verifier.sol](https://github.com/leapdao/solEVM-enforcer/blob/master/contracts/Verifier.sol)
 
-`code` is the bytecode to run.
 
-`data` is the calldata.
+## OffchainStepper & Merkelizer | Based on ethereumvm-js :clap:
 
-The solidity type for both of them is `bytes memory`.
+It also exists a corresponding runtime implementation on the JS side.
+[You can take a look at the on-chain Verifier unit test on how it's used.](https://github.com/leapdao/solEVM-enforcer/blob/master/test/verifier.js)
 
-```
-// Execute the given code and call-data.
-    function execute(bytes memory code, bytes memory data) public pure returns (Result memory state);
+[The OffchainStepper mimics the EthereumRuntime contract](https://github.com/leapdao/solEVM-enforcer/blob/master/utils/OffchainStepper.js)
+and together with the [Merkelizer](https://github.com/leapdao/solEVM-enforcer/blob/master/utils/Merkelizer.js),
+creates a Merkle Root of the individual execution steps (before and after each opcode) given `code`, `data` and other runtime properties.
 
-    // Execute the given transaction.
-    function execute(TxInput memory input) public pure returns (Result memory result);
+The `OffchainStepper` & `Merkelizer` are *WIP* too, as they get further improved and refactored to get closer to the `EVMRuntime` class model.
 
-    // Execute the given transaction in the given context.
-    function execute(TxInput memory input, Context memory context) public pure returns (Result memory result);
+For the curious, there is also a [off-chain Dispute mock-implementation](https://github.com/leapdao/solEVM-enforcer/blob/master/utils/DisputeMock.js),
+with the same logic like the on-chain `Verifier` contract.
 
-```
 
-The other alternatives have two objects, `TxInput` and `Context`:
+#### Work In Progress
 
-```
-    struct TxInput {
-        uint64 gas;
-        uint gasPrice;
-        address caller;
-        uint callerBalance;
-        uint value;
-        address target;
-        uint targetBalance;
-        bytes targetCode;
-        bytes data;
-        bool staticExec;
-    }
-```
+The design decision that the `EVMRuntime.sol` will be the base 'class' for contracts needing a runtime environment is final,
+though the whole interface design is not final yet.
 
-The `gas` and `gasPrice` fields are reserved but never used, since gas is not yet supported. All the other params are obvious except for `staticExec` which should be set to `true` if the call should be executed as a `STATICCALL`, i.e. what used to be called a read-only call (as opposed to a transaction).
+It is planned that the `struct EVM` will hold a pointer to memory where users can point to their custom data / structure,
+this property gives the most flexibility for developers working with the `EVMRuntime` without hitting contract size-, maximal stack depth or other limitations.
 
-```
-struct Context {
-    address origin;
-    uint gasPrice;
-    uint gasLimit;
-    uint coinBase;
-    uint blockNumber;
-    uint time;
-    uint difficulty;
-}
-```
 
-These fields all speak for themselves.
 
-NOTE: There is no actual `CREATE` operation taking place for the contract account in which the code is run, i.e. the code to execute would normally be runtime code; however, the code being run can create new contracts.
-
-The return value from the execute functions is a struct on the form:
-
-```
-struct Result {
-    uint errno;
-    uint errpc;
-    bytes returnData;
-    uint[] stack;
-    bytes mem;
-    uint[] accounts;
-    bytes accountsCode;
-    uint[] logs;
-    bytes logsData;
-}
-```
-
-`errno` - an error code. If execution was normal, this is set to 0.
-
-`errpc` - the program counter at the time when execution stopped.
-
-`returnData` - the return data. It will be empty if no data was returned.
-
-`stack` - The stack when execution stopped.
-
-`mem` - The memory when execution stopped.
-
-`accounts` - Account data packed into an uint-array, omitting the account code.
-
-`accountsCode` - The combined code for all accounts.
-
-`logs` - Logs packed into an uint-array, omitting the log data.
-
-`logsData` - The combined data for all logs.
-
-Note that `errpc` is only meant to be used when the error is non-zero, in which case it will be the program counter at the time when the error was thrown.
-
-There is a javascript (typescript) adapter at `script/adapter.ts` which allow you to run the execute function from within this library, and automatically format input and output parameters. The return data is formatted as such:
-
-```
-{
-    errno: number,
-    errpc: number,
-    returnData: string (hex),
-    stack: [BigNumber],
-    mem: string (hex),
-    accounts: [{
-        address: string (hex),
-        balance: BigNumber,
-        nonce: BigNumber,
-        destroyed: boolean
-        storage: [{
-            address: BigNumber,
-            value: BigNumber
-        }]
-    }]
-    logs: [{
-        account: string (hex)
-        topics: [BigNumber] (size 4)
-        data: string (hex)
-    }]
-}
-```
-
-There is a pretty-print function in the adapter as well.
-
-#### Accounts
+### Accounts - EVMAccounts.slb
 
 Accounts are on the following format:
 
@@ -182,7 +95,7 @@ account : {
 
 The `destroyed` flag is used to indicate whether or not a (contract) account has been destroyed during execution. This can only happen if `SELFDESTRUCT` is called in that contract.
 
-When executing code, two accounts will always be created - the caller account, and the contract account used to run the provided code. In the simple "code + data" call, the caller and contract account are assigned default addresses.
+In the simple `EthereumRuntime.execute` call, the caller and contract account are assigned default addresses.
 
 In contract code, accounts and account storage are both arrays instead of maps. Technically they are implemented as (singly) linked lists. This will be improved later.
 
@@ -208,7 +121,10 @@ The size of an account is thus: `7 + storageEntries*2`.
 
 The `accounts` array is a series of accounts: `[account0, account1, ... ]`
 
-### Logs
+
+### Logs - EVMLogs.slb
+
+`EVMLogs.slb` is a helper library to deal with LOG events.
 
 Logs are on the following format:
 
@@ -235,6 +151,7 @@ The "raw" int arrays in the return object has a log packed in the following way:
 - `5`: data starting index (in combined 'logsData' array).
 
 - `6`: data size.
+
 
 ### Blockchain
 
