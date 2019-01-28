@@ -48,7 +48,7 @@ Other contracts which makes use of the `EVMRuntime` are:
 - [Verifier.sol](https://github.com/leapdao/solEVM-enforcer/blob/master/contracts/Verifier.sol)
 
 
-## OffchainStepper & Merkelizer | Based on ethereumvm-js :clap:
+## Off-chain Interpreter & Merkelizer | Based on ethereumvm-js :clap:
 
 It also exists a corresponding runtime implementation on the JS side.
 [You can take a look at the on-chain Verifier unit test on how it's used.](https://github.com/leapdao/solEVM-enforcer/blob/master/test/verifier.js)
