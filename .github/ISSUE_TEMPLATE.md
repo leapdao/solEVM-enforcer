@@ -1,4 +1,4 @@
-!--
+<!--
 # Simple Summary
 This policy allows to write out rewards to complete required tasks. Completed tasks are payed by the Escrow council to the claiming member.
 
