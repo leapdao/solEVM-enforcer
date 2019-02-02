@@ -1,7 +1,6 @@
-import { BLOCK_GAS_LIMIT } from './helpers/constants';
 import { hexRange, range, toBN } from './utils';
 
-const OP = require('./helpers/constants');
+const OP = require('./../utils/constants');
 
 const DEFAULT_CONTRACT_ADDRESS = `0x${OP.DEFAULT_CONTRACT_ADDRESS}`;
 const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
@@ -113,7 +112,7 @@ export default [
   { code: OP.TIMESTAMP, result: { stack: ['0'], gasUsed: 2 } },
   { code: OP.NUMBER, result: { stack: ['0'], gasUsed: 2 } },
   { code: OP.DIFFICULTY, result: { stack: ['0'], gasUsed: 2 } },
-  { code: OP.GASLIMIT, result: { stack: [toBN(BLOCK_GAS_LIMIT).toString()], gasUsed: 2 } },
+  { code: OP.GASLIMIT, result: { stack: [toBN(OP.BLOCK_GAS_LIMIT).toString()], gasUsed: 2 } },
   { code: OP.GASLIMIT, gasLimit: 100, result: { stack: ['100'], gasUsed: 2 } },
   { code: [OP.PC, OP.GASPRICE, OP.POP], pc: '0', result: { stack: ['0'], gasUsed: 6 } }, // PC
   // ethereumvm-js throws out-of-gas with a very low gasLimit (10), even if gasUsed is <10

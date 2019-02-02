@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 const EthereumRuntime = artifacts.require('EthereumRuntime');
 const CompactEthereumRuntime = artifacts.require('CompactEthereumRuntime');
 const CompactProofMock = artifacts.require('CompactProofMock');
-const CONST = require('./helpers/constants');
+const CONST = require('./../utils/constants');
 const HashZero = ethers.constants.HashZero;
 
 let compactProofMock;

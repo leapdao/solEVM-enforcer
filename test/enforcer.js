@@ -3,7 +3,7 @@ import { deployContract, wallets, txOverrides } from './utils';
 import Merkelizer from '../utils/Merkelizer';
 import OffchainStepper from '../utils/OffchainStepper';
 
-const OP = require('./helpers/constants');
+const OP = require('./../utils/constants');
 
 const Enforcer = artifacts.require('./Enforcer.sol');
 const VerifierMock = artifacts.require('./mocks/VerifierMock.sol');

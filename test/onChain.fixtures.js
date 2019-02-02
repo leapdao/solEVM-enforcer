@@ -1,6 +1,6 @@
 import { range, leftPad, pushRange } from './utils';
 
-const OP = require('./helpers/constants');
+const OP = require('./../utils/constants');
 
 const stack16 = pushRange(1, 16);
 

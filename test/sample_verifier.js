@@ -1,10 +1,9 @@
 import assertRevert from './helpers/assertRevert.js';
 import { deployContract, deployCode, wallets } from './utils.js';
 import { ethers } from 'ethers';
-import { BLOCK_GAS_LIMIT } from './helpers/constants.js';
 import { hashUint256Array } from './helpers/hash.js';
 
-const OP = require('./helpers/constants');
+const OP = require('./../utils/constants');
 const Verifier = artifacts.require('./SampleVerifierMock');
 // const Verifier = artifacts.require('./SampleVerifier');
 const Enforcer = artifacts.require('./EnforcerMock');
@@ -261,8 +260,8 @@ contract('SampleVerifierMock', () => {
           pc: 4,
           errno: 0,
           stepCount: 1,
-          gasLimit: BLOCK_GAS_LIMIT,
-          gasRemaining: BLOCK_GAS_LIMIT,
+          gasLimit: OP.BLOCK_GAS_LIMIT,
+          gasRemaining: OP.BLOCK_GAS_LIMIT,
           stack: [5, 3],
           mem: '0x',
           accounts: [],
@@ -286,8 +285,8 @@ contract('SampleVerifierMock', () => {
           pc: 4,
           errno: 0,
           stepCount: 1,
-          gasLimit: BLOCK_GAS_LIMIT,
-          gasRemaining: BLOCK_GAS_LIMIT,
+          gasLimit: OP.BLOCK_GAS_LIMIT,
+          gasRemaining: OP.BLOCK_GAS_LIMIT,
           stack: [5, 4],
           mem: '0x',
           accounts: [],
@@ -311,8 +310,8 @@ contract('SampleVerifierMock', () => {
           pc: 4,
           errno: 0,
           stepCount: 2,
-          gasLimit: BLOCK_GAS_LIMIT,
-          gasRemaining: BLOCK_GAS_LIMIT,
+          gasLimit: OP.BLOCK_GAS_LIMIT,
+          gasRemaining: OP.BLOCK_GAS_LIMIT,
           stack: [5, 3],
           mem: '0x',
           accounts: [],

@@ -1,8 +1,8 @@
 import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract, deployCode } from './utils';
 import fixtures from './fixtures';
-import Runtime from './helpers/runtimeAdapter';
+import Runtime from './../utils/EthereumRuntimeAdapter';
 
-const OP = require('./helpers/constants');
+const OP = require('./../utils/constants');
 const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');

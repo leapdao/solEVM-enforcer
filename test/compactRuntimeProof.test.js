@@ -8,7 +8,7 @@ import assertRevert from './helpers/assertRevert.js';
 import Runtime from './helpers/compactRuntimeAdapter';
 
 const EthereumRuntime = artifacts.require('CompactEthereumRuntime');
-const CONST = require('./helpers/constants');
+const CONST = require('./../utils/constants');
 const HashZero = ethers.constants.HashZero;
 
 contract('CompactRuntimeProof', function () {

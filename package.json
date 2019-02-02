@@ -37,9 +37,6 @@
     "eslint-plugin-node": "^5.2.1",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
-    "ethereumjs-util": "^6.0.0",
-    "ethers": "^4.0.13",
-    "ethjs-abi": "^0.2.1",
     "ganache-cli": "=6.2.5",
     "solhint": "^1.2.1",
     "truffle": "=5.0.0"
@@ -48,6 +45,7 @@
   "license": "ISC",
   "dependencies": {
     "ethereumjs-vm": "github:pinkiebell/ethereumjs-vm#distR1",
-    "openzeppelin-solidity": "=2.1.1"
+    "openzeppelin-solidity": "=2.1.1",
+    "ethers": "^4.0.13"
   }
 }

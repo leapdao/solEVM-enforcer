@@ -2,7 +2,7 @@
 const VM = require('ethereumjs-vm');
 const BN = VM.deps.ethUtil.BN;
 const ethers = require('ethers');
-const OP = require('../test/helpers/constants');
+const OP = require('./constants');
 
 const toHex = arr => arr.map(e => '0x' + e.toString(16));
 const MEMORY_OPCODES =
