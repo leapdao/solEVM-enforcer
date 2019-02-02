@@ -4,7 +4,7 @@ import { padUintArray } from './helpers/compactState.js';
 import fixtures from './fixtures';
 import Runtime from './helpers/compactRuntimeAdapter';
 
-const OP = require('./helpers/constants');
+const OP = require('./../utils/constants');
 const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
 
 const EthereumRuntime = artifacts.require('CompactEthereumRuntime');

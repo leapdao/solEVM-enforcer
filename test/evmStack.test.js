@@ -1,10 +1,9 @@
-import EVMInvalid from './helpers/EVMInvalid';
 
 const EVMStackMock = artifacts.require('EVMStackMock.sol');
 const assert = require('assert');
 
 contract('TestEVMStack', function () {
-  const errObj = { message: new RegExp(EVMInvalid) };
+  const errObj = { message: new RegExp('invalid opcode') };
 
   let stack;
   before(async () => {

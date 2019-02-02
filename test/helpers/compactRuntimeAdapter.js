@@ -1,5 +1,5 @@
 
-const { BLOCK_GAS_LIMIT } = require('./constants');
+const { BLOCK_GAS_LIMIT } = require('./../../utils/constants');
 
 export default class CompactRuntimeAdapter {
   constructor (runtimeContract) {

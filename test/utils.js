@@ -1,4 +1,4 @@
-const OP = require('./helpers/constants');
+const OP = require('./../utils/constants');
 const ethers = require('ethers');
 const { PUSH1 } = OP;
 
