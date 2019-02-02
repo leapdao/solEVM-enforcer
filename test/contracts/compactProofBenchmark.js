@@ -1,11 +1,11 @@
-import { deployContract, deployCode } from './utils.js';
-import { padUintArray } from './helpers/compactStateUtils.js';
+import { deployContract, deployCode } from './../helpers/utils.js';
+import { padUintArray } from './../helpers/compactStateUtils.js';
 import { ethers } from 'ethers';
 
 const EthereumRuntime = artifacts.require('EthereumRuntime');
 const CompactEthereumRuntime = artifacts.require('CompactEthereumRuntime');
 const CompactProofMock = artifacts.require('CompactProofMock');
-const CONST = require('./../utils/constants');
+const CONST = require('./../../utils/constants');
 const HashZero = ethers.constants.HashZero;
 
 let compactProofMock;

@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 
 import "truffle/Assert.sol";
-import {CompactEVMStack} from "../contracts/CompactEVMStack.slb";
+import {CompactEVMStack} from "../../contracts/CompactEVMStack.slb";
 
 
 contract TestCompactEVMStack {

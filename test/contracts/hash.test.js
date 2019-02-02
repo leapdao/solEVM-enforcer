@@ -1,5 +1,5 @@
-import { hashUint256Array, hashSibling, hashStack } from './helpers/hash';
-import { deployContract } from './utils.js';
+import { hashUint256Array, hashSibling, hashStack } from './../helpers/hash';
+import { deployContract } from './../helpers/utils.js';
 import { ethers } from 'ethers';
 
 const HashMock = artifacts.require('HashMock.sol');

@@ -1,14 +1,14 @@
-import { deployContract } from './utils.js';
-import { hashUint256Array, hashSibling, hashStack } from './helpers/hash.js';
-import { padUintArray } from './helpers/compactState.js';
+import { deployContract } from './../helpers/utils.js';
+import { hashUint256Array, hashSibling, hashStack } from './../helpers/hash.js';
+import { padUintArray } from './../helpers/compactState.js';
 import { ethers } from 'ethers';
 
-import assertInvalid from './helpers/assertInvalid.js';
-import assertRevert from './helpers/assertRevert.js';
-import Runtime from './helpers/compactRuntimeAdapter';
+import assertInvalid from './../helpers/assertInvalid.js';
+import assertRevert from './../helpers/assertRevert.js';
+import Runtime from './../helpers/compactRuntimeAdapter';
 
 const EthereumRuntime = artifacts.require('CompactEthereumRuntime');
-const CONST = require('./../utils/constants');
+const CONST = require('./../../utils/constants');
 const HashZero = ethers.constants.HashZero;
 
 contract('CompactRuntimeProof', function () {
