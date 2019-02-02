@@ -1,9 +1,9 @@
-import assertRevert from './helpers/assertRevert.js';
-import { deployContract, deployCode, wallets } from './utils.js';
+import assertRevert from './../helpers/assertRevert.js';
+import { deployContract, deployCode, wallets } from './../helpers/utils.js';
 import { ethers } from 'ethers';
-import { hashUint256Array } from './helpers/hash.js';
+import { hashUint256Array } from './../helpers/hash.js';
 
-const OP = require('./../utils/constants');
+const OP = require('./../../utils/constants');
 const Verifier = artifacts.require('./SampleVerifierMock');
 // const Verifier = artifacts.require('./SampleVerifier');
 const Enforcer = artifacts.require('./EnforcerMock');

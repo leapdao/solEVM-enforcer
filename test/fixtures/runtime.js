@@ -1,6 +1,6 @@
-import { hexRange, range, toBN } from './utils';
+import { hexRange, range, toBN } from './../helpers/utils';
 
-const OP = require('./../utils/constants');
+const OP = require('./../../utils/constants');
 
 const DEFAULT_CONTRACT_ADDRESS = `0x${OP.DEFAULT_CONTRACT_ADDRESS}`;
 const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;

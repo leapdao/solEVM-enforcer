@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 
 import "truffle/Assert.sol";
-import {MemOps} from "../contracts/MemOps.slb";
+import {MemOps} from "../../contracts/MemOps.slb";
 
 
 contract TestMemOps {

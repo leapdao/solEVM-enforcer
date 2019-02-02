@@ -1,9 +1,10 @@
 
-import Merkelizer from '../utils/Merkelizer';
-import DisputeMock from '../utils/DisputeMock';
-import OffchainStepper from '../utils/OffchainStepper';
-import disputeFixtures from './dispute.fixtures';
+import Merkelizer from './../../utils/Merkelizer';
+import DisputeMock from './../../utils/DisputeMock';
+import OffchainStepper from './../../utils/OffchainStepper';
+import disputeFixtures from './../fixtures/dispute';
 
+const assert = require('assert');
 // for additional logging
 const DEBUG = false;
 
@@ -157,7 +158,7 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
   }
 }
 
-contract('JS DisputeMock', function () {
+describe('JS DisputeMock', function () {
   disputeFixtures(
     async (code, callData, solverSteps, challengerSteps, expectedWinner) => {
       await disputeGame(code, callData, solverSteps, challengerSteps, expectedWinner);

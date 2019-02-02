@@ -1,7 +1,7 @@
-import { getCodeWithStep, deployContract, deployCode } from './utils';
+import { getCodeWithStep, deployContract, deployCode } from './../helpers/utils';
 
-import onChainFixtures from './onChain.fixtures';
-import Runtime from './../utils/EthereumRuntimeAdapter';
+import onChainFixtures from './../fixtures/onChain';
+import Runtime from './../../utils/EthereumRuntimeAdapter';
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 

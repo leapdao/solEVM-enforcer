@@ -1,10 +1,10 @@
-import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract } from './utils';
-import { padUintArray } from './helpers/compactState.js';
+import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract } from './../helpers/utils';
+import { padUintArray } from './../helpers/compactState.js';
 
-import fixtures from './fixtures';
-import Runtime from './helpers/compactRuntimeAdapter';
+import fixtures from './../fixtures/runtime';
+import Runtime from './../helpers/compactRuntimeAdapter';
 
-const OP = require('./../utils/constants');
+const OP = require('./../../utils/constants');
 const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
 
 const EthereumRuntime = artifacts.require('CompactEthereumRuntime');

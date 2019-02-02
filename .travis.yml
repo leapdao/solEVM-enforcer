@@ -5,12 +5,16 @@ cache: npm
 jobs:
   include:
     - stage: tests
-      name: "Linter"
+      name: "lint:all"
       script: npm run lint:all
 
     - stage: tests
-      name: "Unit tests"
-      script: npm run test
+      name: "test:contracts"
+      script: npm run test:contracts
+
+    - stage: tests
+      name: "test:utils"
+      script: npm run test:utils
 
     - stage: tests
       name: "Solidity Coverage"

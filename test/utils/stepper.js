@@ -1,14 +1,15 @@
 
-import { getCode, toBN } from './utils';
-import OffchainStepper from '../utils/OffchainStepper';
-import fixtures from './fixtures';
+import { getCode, toBN } from './../helpers/utils';
+import OffchainStepper from './../../utils/OffchainStepper';
+import fixtures from './../fixtures/runtime';
 
+const assert = require('assert');
 const ethers = require('ethers');
 
 const fromHextoStr = arr => arr.map(e => toBN(e).toString());
 const fromMixedToHex = arr => arr.map(e => toBN(e).toHexString('hex'));
 
-contract('JS Stepper', function () {
+describe('JS Stepper', function () {
   describe('fixtures', async () => {
     fixtures.forEach(fixture => {
       const { pc, opcodeUnderTest } = getCode(fixture);

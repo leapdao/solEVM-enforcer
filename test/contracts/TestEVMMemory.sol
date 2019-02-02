@@ -3,8 +3,8 @@ pragma experimental ABIEncoderV2;
 
 
 import "truffle/Assert.sol";
-import {EVMMemory} from "../contracts/EVMMemory.slb";
-import {MemOps} from "../contracts/MemOps.slb";
+import {EVMMemory} from "../../contracts/EVMMemory.slb";
+import {MemOps} from "../../contracts/MemOps.slb";
 
 
 contract TestEVMMemory {

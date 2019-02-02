@@ -1,8 +1,8 @@
 
-import Merkelizer from '../utils/Merkelizer';
+import Merkelizer from './../../utils/Merkelizer';
 
-import disputeFixtures from './dispute.fixtures';
-import { deployContract, wallets, txOverrides, deployCode } from './utils';
+import disputeFixtures from './../fixtures/dispute';
+import { deployContract, wallets, txOverrides, deployCode } from './../helpers/utils';
 
 const Verifier = artifacts.require('Verifier.sol');
 

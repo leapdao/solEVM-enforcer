@@ -1,7 +1,7 @@
 
-import OffchainStepper from '../utils/OffchainStepper';
+import OffchainStepper from './../../utils/OffchainStepper';
 
-const OP = require('./../utils/constants');
+const OP = require('./../../utils/constants');
 
 export default (callback) => {
   describe('Fixture for Dispute/Verifier Logic #1', function () {
