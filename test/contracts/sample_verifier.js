@@ -1,4 +1,3 @@
-import assertRevert from './../helpers/assertRevert.js';
 import { deployContract, deployCode, wallets } from './../helpers/utils.js';
 import { ethers } from 'ethers';
 import { hashUint256Array } from './../helpers/hash.js';
@@ -9,6 +8,7 @@ const Verifier = artifacts.require('./SampleVerifierMock');
 const Enforcer = artifacts.require('./EnforcerMock');
 const EthRuntime = artifacts.require('./EthereumRuntime');
 const HashZero = ethers.constants.HashZero;
+const assertRejects = require('assert').rejects;
 
 const DisputeState = {
   Initialised: 0,
@@ -132,7 +132,7 @@ contract('SampleVerifierMock', () => {
     it('cannot process with incorrect start proofs', async () => {
       // change enforcer to EnforcerMock address
       await verifier.setEnforcer(enforcer.address);
-      assertRevert(verifier.solverProofs(disputeId, [sampleState2], sampleState2, [sampleState], sampleState));
+      await assertRejects(verifier.solverProofs(disputeId, [sampleState2], sampleState2, [sampleState], sampleState));
       await verifier.setEnforcer(wallets[0].address);
       let dispute = await parseDispute(disputeId);
       assert.equal(dispute.state, DisputeState.Initialised, 'state not Initialised');
@@ -142,7 +142,7 @@ contract('SampleVerifierMock', () => {
     it('cannot process with incorrect end proofs', async () => {
       // change enforcer to EnforcerMock address
       await verifier.setEnforcer(enforcer.address);
-      assertRevert(verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2));
+      await assertRejects(verifier.solverProofs(disputeId, [sampleState], sampleState, [sampleState2], sampleState2));
       await verifier.setEnforcer(wallets[0].address);
       let dispute = await parseDispute(disputeId);
       assert.equal(dispute.state, DisputeState.Initialised, 'state not Initialised');
@@ -182,7 +182,7 @@ contract('SampleVerifierMock', () => {
         );
         let disputeId = await getDisputeIdFromEvent(tx);
 
-        assertRevert(verifier.claimTimeout(disputeId));
+        await assertRejects(verifier.claimTimeout(disputeId));
 
         await verifier.setState(disputeId, state);
         await verifier.setTimeout(
@@ -208,7 +208,7 @@ contract('SampleVerifierMock', () => {
       );
       let disputeId = await getDisputeIdFromEvent(tx);
 
-      assertRevert(verifier.claimTimeout(disputeId));
+      await assertRejects(verifier.claimTimeout(disputeId));
 
       await verifier.setState(disputeId, DisputeState.ChallengerTurn);
       await verifier.setTimeout(
@@ -302,7 +302,7 @@ contract('SampleVerifierMock', () => {
 
     it('revert when require to run more than 1 step', async () => {
       await verifier.setLeft(disputeId, solverHash, 4);
-      assertRevert(verifier.detailExecution(
+      await assertRejects(verifier.detailExecution(
         disputeId,
         {
           code: code,
