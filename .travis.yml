@@ -23,3 +23,9 @@ jobs:
         - npm install solidity-coverage
         - npm run coverage
         - ./node_modules/.bin/codecov -f coverage/lcov.info
+
+    - stage: tests
+      name: "test:contracts with geth"
+      before_script:
+        - wget 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.22-7fa3509e.tar.gz' -O - | tar -xz; mv geth-*/geth .
+      script: PATH=`pwd`:$PATH ./scripts/test_geth.sh test/contracts/*

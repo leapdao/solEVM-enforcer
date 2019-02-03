@@ -3,13 +3,14 @@ import { hashUint256Array, hashSibling, hashStack } from './../helpers/hash.js';
 import { padUintArray } from './../helpers/compactState.js';
 import { ethers } from 'ethers';
 
-import assertInvalid from './../helpers/assertInvalid.js';
+// import assertInvalid from './../helpers/assertInvalid.js';
 import assertRevert from './../helpers/assertRevert.js';
 import Runtime from './../helpers/compactRuntimeAdapter';
 
 const EthereumRuntime = artifacts.require('CompactEthereumRuntime');
 const CONST = require('./../../utils/constants');
 const HashZero = ethers.constants.HashZero;
+const assertReject = require('assert').rejects;
 
 contract('CompactRuntimeProof', function () {
   let rt;
@@ -55,7 +56,9 @@ contract('CompactRuntimeProof', function () {
     });
 
     it('revert when stack not enough', async () => {
-      assertInvalid(rt.execute(
+      // geth seems to just return a 'call exception'
+      // assertInvalid(rt.execute(
+      await assertReject(rt.execute(
         {
           code,
           stack: {
