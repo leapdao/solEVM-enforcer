@@ -1,15 +1,21 @@
 {
-  "name": "solevm-truffle",
+  "name": "solEVM-enforcer",
   "version": "0.1.0",
-  "description": "solevm with truffle tests",
-  "main": "truffle-config.js",
+  "description": "The EVM Enforcer is a computation verification engine that allows on-chain enforcement of off-chain EVM execution.",
+  "author": "LeapDAO",
+  "license": "MPL-2.0",
+  "keywords": [
+    "evm",
+    "solidity",
+    "truebit"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leapdao/solEVM-enforcer.git"
+  },
   "directories": {
     "test": "test"
   },
-  "files": [
-    "contracts",
-    "test"
-  ],
   "scripts": {
     "test": "npm run test:contracts && npm run test:utils",
     "test:contracts": "scripts/test.sh test/contracts/*",
@@ -24,11 +30,6 @@
     "version": "scripts/version.js",
     "coverage": "scripts/coverage.sh"
   },
-  "keywords": [
-    "evm",
-    "solidity",
-    "truebit"
-  ],
   "devDependencies": {
     "@babel/core": "^7.2.2",
     "@babel/polyfill": "^7.2.5",
@@ -44,8 +45,6 @@
     "solhint": "^1.2.1",
     "truffle": "=5.0.0"
   },
-  "author": "johannbarbie@me.com",
-  "license": "ISC",
   "dependencies": {
     "ethereumjs-vm": "github:pinkiebell/ethereumjs-vm#distR1",
     "openzeppelin-solidity": "=2.1.1",
