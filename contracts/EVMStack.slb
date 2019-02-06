@@ -6,6 +6,9 @@ import {MemOps} from "./MemOps.slb";
 
 library EVMStack {
 
+    // TODO: make that programmable?
+    // possible could look like:
+    // EVMRuntime:defaultStackSize() < could be overwritten 
     uint constant internal INITIAL_CAP = 64;
     uint constant internal MAX_SIZE = 1024;
 

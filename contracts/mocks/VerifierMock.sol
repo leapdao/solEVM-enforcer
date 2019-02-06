@@ -1,59 +1,46 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "../IVerifier.sol";
-import "../IEnforcer.sol";
-import "../IEthereumRuntime.sol";
+import "../Enforcer.sol";
 
 
-contract VerifierMock is Ownable, IVerifier {
-    uint256 public queryPeriod;
-    IEnforcer public enforcer;
-    IEthereumRuntime public ethereumRuntime;
+contract VerifierMock {
+    Enforcer public enforcer;
 
     struct Dispute {
-        uint256 lastQueryBlock;
-        address challenger;
         bytes32 executionId;
+        address challenger;
     }
 
     mapping(bytes32 => Dispute) public disputes;
 
-    event DisputeStart(bytes32 indexed _disputeId);
-
-    constructor(uint256 _queryPeriod) public {
-        queryPeriod = _queryPeriod;
+    function setEnforcer(address _enforcer) public {
+        enforcer = Enforcer(_enforcer);
     }
 
-    function setEnforcer(address _enforcer) public onlyOwner() {
-        enforcer = IEnforcer(_enforcer);
+    function initGame(
+        bytes32 executionId,
+        bytes32 initialStateHash,
+        bytes32 solverHashRoot,
+        uint256 solverExecutionLength,
+        bytes32 challengerHashRoot,
+        address challenger,
+        address codeContractAddress
+    ) public returns (bytes32 disputeId) {
+        disputeId = keccak256(
+            abi.encodePacked(
+                executionId,
+                initialStateHash,
+                solverHashRoot,
+                solverExecutionLength,
+                challengerHashRoot
+            )
+        );
+
+        disputes[disputeId] = Dispute(executionId, challenger);
     }
 
-    /**
-    * @dev Throws if called by any account other than the owner.
-    */
-    modifier onlyEnforcer() {
-        require(msg.sender == address(enforcer));
-        _;
-    }
-
-    // solhint-disable no-unused-vars
-    function initGame(bytes32 _executionId, bytes32 _solverHash, uint256 _solverExecutionLength,
-        bytes32 _challengerHash, uint256 _challengerExecutionLength, address _challenger) public onlyEnforcer() {
-        bytes32 disputeId = keccak256(abi.encodePacked(_executionId, _challenger));
-        require(disputes[disputeId].lastQueryBlock == 0);
-        emit DisputeStart(disputeId);
-        disputes[disputeId] = Dispute(block.number, _challenger, _executionId);
-    }
-    // solhint-enable no-unused-vars
-
-    function result(bytes32 _disputeId, bool _winner) public {
-        require(disputes[_disputeId].lastQueryBlock > 0);
-        enforcer.result(disputes[_disputeId].executionId, _winner, disputes[_disputeId].challenger);
-    }
-
-    // solhint-disable-next-line no-empty-blocks
-    function runStep(bytes32 _disputeId, IEthereumRuntime.EVMPreimage memory) public {
+    function result(bytes32 disputeId, bool winner) public {
+        enforcer.result(disputes[disputeId].executionId, winner, disputes[disputeId].challenger);
     }
 }

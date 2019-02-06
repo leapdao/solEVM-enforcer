@@ -7,10 +7,42 @@ import { EVMStack } from "./EVMStack.slb";
 import { EVMMemory } from "./EVMMemory.slb";
 import { EVMAccounts } from "./EVMAccounts.slb";
 import { HydratedRuntime } from "./HydratedRuntime.sol";
-import { IEthereumRuntime } from "./IEthereumRuntime.sol";
 
 
-contract EthereumRuntime is HydratedRuntime, IEthereumRuntime {
+contract EthereumRuntime is HydratedRuntime {
+
+    struct EVMPreimage {
+        address code;
+        bytes data;
+        uint gasLimit;
+        uint pc;
+        uint8 errno;
+        uint gasRemaining;
+        uint stepCount;
+        uint[] stack;
+        bytes mem;
+        uint[] accounts;
+        bytes accountsCode;
+        bytes returnData;
+        bytes32 logHash;
+    }
+
+    struct EVMResult {
+        uint gas;
+        bytes data;
+        bytes lastRet;
+        bytes returnData;
+        uint8 errno;
+        uint[] accounts;
+        bytes accountsCode;
+        bytes mem;
+        uint[] stack;
+        uint16 depth;
+        // uint n;
+        uint pc;
+        bytes32 logHash;
+        bytes32 hashValue;
+    }
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
