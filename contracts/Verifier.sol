@@ -3,12 +3,12 @@ pragma experimental ABIEncoderV2;
 
 import "./IEnforcer.sol";
 import "./IVerifier.sol";
-import "./EVMRuntime.sol";
+import "./HydratedRuntime.sol";
 import "./Merkelizer.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
-contract Verifier is Ownable, EVMRuntime {
+contract Verifier is Ownable, HydratedRuntime {
     using Merkelizer for Merkelizer.ExecutionState;
 
     struct Proofs {
@@ -207,6 +207,11 @@ contract Verifier is Ownable, EVMRuntime {
         }
 
         EVM memory evm;
+        HydratedState memory hydratedState = initHydratedState(evm);
+
+        hydratedState.stackHash = _proofs.stackHash;
+        hydratedState.memHash = _proofs.memHash;
+        hydratedState.logHash = _executionState.logHash;
 
         evm.context = Context(
             DEFAULT_CALLER,
@@ -220,7 +225,6 @@ contract Verifier is Ownable, EVMRuntime {
 
         evm.data = _executionState.data;
         evm.gas = _executionState.gasRemaining;
-        evm.logHash = _executionState.logHash;
 
         EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
         caller.nonce = uint8(1);
@@ -242,15 +246,14 @@ contract Verifier is Ownable, EVMRuntime {
         }
 
         _executionState.pc = evm.pc;
-        _executionState.stack = evm.stack.toArray();
-        _executionState.mem = evm.mem.toArray();
-        _executionState.logHash = evm.logHash;
+        _executionState.logHash = hydratedState.logHash;
         _executionState.returnData = evm.returnData;
         _executionState.gasRemaining = evm.gas;
 
         bytes32 hash = _executionState.stateHash(
-            _executionState.stackHash(_proofs.stackHash),
-            _proofs.memHash, _proofs.dataHash
+            hydratedState.stackHash,
+            hydratedState.memHash,
+            _proofs.dataHash
         );
 
         if (hash != dispute.solver.right && hash != dispute.challenger.right) {

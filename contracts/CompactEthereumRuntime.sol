@@ -1456,7 +1456,7 @@ contract CompactEthereumRuntime is EVMConstants {
         }
         state.gas -= res;
 
-        uint mp = state.mem.memUPtr(p);
+        uint mp = state.mem.memUPtr(p, n);
 
         assembly {
             res := keccak256(mp, n)

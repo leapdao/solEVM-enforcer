@@ -3,5 +3,5 @@ module.exports = {
   testCommand: '../node_modules/.bin/truffle test --network coverage test/contracts/*',
   norpc: true,
   deepSkip: true,
-  skipFiles: ['EthereumRuntime.sol', 'IEthereumRuntime.sol', 'CompactEthereumRuntime.sol', 'EVMRuntime.sol'],
+  skipFiles: ['CompactEthereumRuntime.sol', 'EVMRuntime.sol'],
 };

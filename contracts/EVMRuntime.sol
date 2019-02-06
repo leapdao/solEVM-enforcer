@@ -32,7 +32,6 @@ contract EVMRuntime is EVMConstants {
     using EVMLogs for EVMLogs.Logs;
     using EVMCode for EVMCode.Code;
 
-    // ************* Used as input/output *************
     struct Context {
         address origin;
         uint gasPrice;
@@ -43,100 +42,45 @@ contract EVMRuntime is EVMConstants {
         uint difficulty;
     }
 
-    struct TxInput {
-        uint gas;
-        uint gasPrice;
-        address caller;
-        uint callerBalance;
-        uint value;
-        address target;
-        uint targetBalance;
-        bytes targetCode;
-        bytes data;
-        bool staticExec;
-    }
-
-    // ************* Only used internally *************
-    struct EVMInput {
-        uint gas;
-        uint value;
-        bytes data;
-        address caller;
-        address target;
-        Context context;
-        EVMAccounts.Accounts accounts;
-        bytes32 logHash;
-        bool staticExec;
-
-        EVMMemory.Memory mem;
-        EVMStack.Stack stack;
-        uint pcStart;
-        uint pcStepCount;
-    }
-
-    struct EVMCreateInput {
-        uint gas;
-        uint value;
-        EVMCode.Code code;
-        address caller;
-        address target;
-        Context context;
-        EVMAccounts.Accounts accounts;
-        bytes32 logHash;
-    }
-
     struct EVM {
+        uint customDataPtr;
         uint gas;
         uint value;
-        EVMCode.Code code;
-        bytes data;
-        bytes lastRet;
-        bytes returnData;
+        bool staticExec;
         uint8 errno;
-
-        EVMAccounts.Accounts accounts;
-        bytes32 logHash;
-        Context context;
-        EVMMemory.Memory mem;
-        EVMStack.Stack stack;
-
         // TODO: max 1024;
         uint16 depth;
-
-        EVMAccounts.Account caller;
-        EVMAccounts.Account target;
         uint n;
         uint pc;
 
-        bool staticExec;
+        bytes data;
+        bytes lastRet;
+        bytes returnData;
+
+        EVMCode.Code code;
+        EVMAccounts.Accounts accounts;
+        Context context;
+        EVMMemory.Memory mem;
+        EVMStack.Stack stack;
+
+        EVMAccounts.Account caller;
+        EVMAccounts.Account target;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines
-    function _call(EVMInput memory evmInput, CallType callType) internal returns (EVM memory evm) {
-        evm.context = evmInput.context;
-        evm.logHash = evmInput.logHash;
-        if (evmInput.staticExec) {
-            evm.accounts = evmInput.accounts;
-        } else {
-            evm.accounts = evmInput.accounts.copy();
-        }
-        evm.value = evmInput.value;
-        evm.gas = evmInput.gas;
-        evm.data = evmInput.data;
-        evm.caller = evm.accounts.get(evmInput.caller);
-        // TODO touching accounts.
-        evm.target = evm.accounts.get(evmInput.target);
-        evm.staticExec = evmInput.staticExec;
+    function _call(EVM memory parentState, EVM memory evm, CallType callType) internal {
+        evm.customDataPtr = parentState.customDataPtr;
+        evm.context = parentState.context;
 
         // Transfer value. TODO if callcode is added
         if (callType != CallType.DelegateCall && evm.value > 0) {
             if (evm.staticExec) {
                 evm.errno = ERROR_ILLEGAL_WRITE_OPERATION;
-                return evm;
+                return;
             }
             if (evm.caller.balance < evm.value) {
                 evm.errno = ERROR_INSUFFICIENT_FUNDS;
-                return evm;
+                return;
             }
             evm.caller.balance -= evm.value;
             evm.target.balance += evm.value;
@@ -161,72 +105,59 @@ contract EVMRuntime is EVMConstants {
                 handlePreC_ECPAIRING(evm);
             }
         } else {
-            // If there is no code to run, just continue. TODO
             if (evm.target.code.length == 0) {
-                return evm;
+                return;
             }
+
             evm.code = evm.target.code;
-            if (evmInput.stack.size > 0) {
-                evm.stack = evmInput.stack;
-            } else {
-                evm.stack = EVMStack.newStack();
-            }
-            if (evmInput.mem.size > 0) {
-                evm.mem = evmInput.mem;
-            } else {
-                evm.mem = EVMMemory.newMemory();
-            }
-            _run(evm, evmInput.pcStart, evmInput.pcStepCount);
+            evm.stack = EVMStack.newStack();
+            evm.mem = EVMMemory.newMemory();
+
+            _run(evm, 0, 0);
         }
     }
 
-    function _create(EVMCreateInput memory evmInput) internal returns (EVM memory evm, address addr) {
-        evm.context = evmInput.context;
-        evm.accounts = evmInput.accounts.copy();
-        evm.logHash = evmInput.logHash;
-        evm.value = evmInput.value;
-        evm.gas = evmInput.gas;
-        evm.caller = evm.accounts.get(evmInput.caller);
+    function _create(EVM memory parentState, EVM memory evm) internal {
+        evm.customDataPtr = parentState.customDataPtr;
+        evm.context = parentState.context;
+        evm.gas = parentState.gas;
 
-        // Increase the nonce. TODO
+        // Increase the nonce.
         evm.caller.nonce++;
 
-        // Transfer value check. TODO
+        // Transfer value check.
         if (evm.value > 0) {
             if (evm.caller.balance < evm.value) {
                 evm.errno = ERROR_INSUFFICIENT_FUNDS;
-                return (evm, addr);
+                return;
             }
         }
 
         address newAddress = EVMUtils.newAddress(evm.caller.addr, evm.caller.nonce);
         EVMAccounts.Account memory newAcc = evm.accounts.get(newAddress);
 
-        // TODO
         if (newAcc.nonce != 0) {
             evm.errno = ERROR_CONTRACT_CREATION_COLLISION;
-            return (evm, addr);
+            return;
         }
 
         evm.caller.balance -= evm.value;
         newAcc.balance += evm.value;
 
         evm.target = newAcc;
-        evm.code = evmInput.code;
         evm.stack = EVMStack.newStack();
         evm.mem = EVMMemory.newMemory();
+
         _run(evm, 0, 0);
 
-        // TODO
         if (evm.errno != NO_ERROR) {
-            return (evm, addr);
+            return;
         }
         if (evm.returnData.length > MAX_CODE_SIZE) {
             evm.errno = ERROR_MAX_CODE_SIZE_EXCEEDED;
-            return (evm, addr);
+            return;
         }
         newAcc.code = EVMCode.fromBytes(evm.returnData);
-        addr = newAddress;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
@@ -1251,7 +1182,7 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= res;
 
-        uint mp = state.mem.memUPtr(p);
+        uint mp = state.mem.memUPtr(p, n);
 
         assembly {
             res := keccak256(mp, n)
@@ -1590,24 +1521,15 @@ contract EVMRuntime is EVMConstants {
         for (uint i = 0; i < state.n; i++) {
             log.topics[i] = state.stack.pop();
         }
-
-        state.logHash = keccak256(
-            abi.encodePacked(
-                state.logHash,
-                log.account,
-                log.topics,
-                log.data
-            )
-        );
     }
 
     // 0xfX
     function handleCREATE(EVM memory state) internal {
         assert(!state.staticExec);
 
-        EVMCreateInput memory input;
-        input.gas = state.gas;
-        input.value = state.stack.pop();
+        EVM memory retEvm;
+
+        retEvm.value = state.stack.pop();
 
         uint memOffset = state.stack.pop();
         uint memSize = state.stack.pop();
@@ -1618,25 +1540,21 @@ contract EVMRuntime is EVMConstants {
             state.errno = ERROR_OUT_OF_GAS;
             return;
         }
-        input.gas -= gasFee;
+        state.gas -= gasFee;
 
-        input.code = EVMCode.fromBytes(state.mem.toArray(memOffset, memSize));
-        input.caller = state.target.addr;
-        input.context = state.context;
-        input.accounts = state.accounts;
-        input.logHash = state.logHash;
+        retEvm.code = EVMCode.fromBytes(state.mem.toArray(memOffset, memSize));
+        retEvm.accounts = state.accounts.copy();
+        retEvm.caller = retEvm.accounts.get(state.target.addr);
 
-        EVM memory retEvm;
-        address newAddress;
-        (retEvm, newAddress) = _create(input);
+        _create(state, retEvm);
+
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
         } else {
-            state.stack.push(uint(newAddress));
+            state.stack.push(uint(retEvm.target.addr));
             state.accounts = retEvm.accounts;
-            state.caller = state.accounts.get(state.caller.addr);
-            state.target = state.accounts.get(state.target.addr);
-            state.logHash = retEvm.logHash;
+            state.caller = state.caller;
+            state.target = state.target;
         }
         state.gas = retEvm.gas;
     }
@@ -1647,12 +1565,20 @@ contract EVMRuntime is EVMConstants {
 
     // solhint-disable-next-line function-max-lines
     function handleCALL(EVM memory state) internal {
-        EVMInput memory input;
+        EVM memory retEvm;
 
-        input.gas = state.stack.pop();
-        input.caller = state.target.addr;
-        input.target = address(state.stack.pop());
-        input.value = state.stack.pop();
+        retEvm.gas = state.stack.pop();
+        retEvm.staticExec = state.staticExec;
+
+        if (retEvm.staticExec) {
+            retEvm.accounts = state.accounts;
+        } else {
+            retEvm.accounts = state.accounts.copy();
+        }
+
+        retEvm.caller = retEvm.accounts.get(state.target.addr);
+        retEvm.target = retEvm.accounts.get(address(state.stack.pop()));
+        retEvm.value = state.stack.pop();
 
         uint inOffset = state.stack.pop();
         uint inSize = state.stack.pop();
@@ -1662,14 +1588,12 @@ contract EVMRuntime is EVMConstants {
         uint gasFee = GAS_CALL +
             computeGasForMemory(state, retOffset + retSize, inOffset + inSize);
 
-        if (input.value != 0) {
+        if (retEvm.value != 0) {
             gasFee += GAS_CALLVALUE;
             state.gas += GAS_CALLSTIPEND;
-            input.gas += GAS_CALLSTIPEND;
+            retEvm.gas += GAS_CALLSTIPEND;
 
-            EVMAccounts.Account memory acc = state.accounts.get(input.target);
-
-            if (acc.nonce == 0) {
+            if (retEvm.target.nonce == 0) {
                 gasFee += GAS_NEWACCOUNT;
             }
         }
@@ -1681,18 +1605,16 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= gasFee;
 
-        if (input.gas > state.gas) {
-            input.gas = state.gas;
+        if (retEvm.gas > state.gas) {
+            retEvm.gas = state.gas;
         }
+        state.gas -= retEvm.gas;
 
-        input.data = state.mem.toArray(inOffset, inSize);
-        input.context = state.context;
-        input.accounts = state.accounts;
-        input.logHash = state.logHash;
-        input.staticExec = state.staticExec;
+        retEvm.data = state.mem.toArray(inOffset, inSize);
 
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.Call);
+        _call(state, retEvm, CallType.Call);
+
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
@@ -1704,9 +1626,8 @@ contract EVMRuntime is EVMConstants {
             state.accounts = retEvm.accounts;
             state.caller = state.accounts.get(state.caller.addr);
             state.target = state.accounts.get(state.target.addr);
-            state.logHash = retEvm.logHash;
         }
-        state.gas -= input.gas - retEvm.gas;
+        state.gas += retEvm.gas;
     }
 
     function handleCALLCODE(EVM memory state) internal {
@@ -1730,12 +1651,22 @@ contract EVMRuntime is EVMConstants {
 
     // solhint-disable-next-line function-max-lines
     function handleDELEGATECALL(EVM memory state) internal {
-        EVMInput memory input;
+        EVM memory retEvm;
 
-        input.gas = state.stack.pop();
+        retEvm.gas = state.stack.pop();
+
         EVMCode.Code memory oldCode = state.target.code;
         state.target.code = state.accounts.get(address(state.stack.pop())).code;
-        input.target = state.target.addr;
+        retEvm.staticExec = state.staticExec;
+
+        if (retEvm.staticExec) {
+            retEvm.accounts = state.accounts;
+        } else {
+            retEvm.accounts = state.accounts.copy();
+        }
+
+        retEvm.target = retEvm.accounts.get(state.target.addr);
+        retEvm.caller = retEvm.accounts.get(state.caller.addr);
 
         uint inOffset = state.stack.pop();
         uint inSize = state.stack.pop();
@@ -1752,20 +1683,16 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= gasFee;
 
-        if (input.gas > state.gas) {
-            input.gas = state.gas;
+        if (retEvm.gas > state.gas) {
+            retEvm.gas = state.gas;
         }
+        state.gas -= retEvm.gas;
 
-        input.data = state.mem.toArray(inOffset, inSize);
-        input.value = state.value;
-        input.caller = state.caller.addr;
-        input.context = state.context;
-        input.accounts = state.accounts;
-        input.logHash = state.logHash;
-        input.staticExec = state.staticExec;
+        retEvm.data = state.mem.toArray(inOffset, inSize);
+        retEvm.value = state.value;
 
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.DelegateCall);
+        _call(state, retEvm, CallType.DelegateCall);
 
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
@@ -1777,18 +1704,19 @@ contract EVMRuntime is EVMConstants {
             state.accounts = retEvm.accounts;
             state.caller = state.accounts.get(state.caller.addr);
             state.target = state.accounts.get(state.target.addr);
-            state.logHash = retEvm.logHash;
         }
         state.target.code = oldCode;
-        state.gas -= input.gas - retEvm.gas;
+        state.gas += retEvm.gas;
     }
 
     function handleSTATICCALL(EVM memory state) internal {
-        EVMInput memory input;
+        EVM memory retEvm;
 
-        input.gas = state.stack.pop();
-        input.caller = state.target.addr;
-        input.target = address(state.stack.pop());
+        retEvm.gas = state.stack.pop();
+        retEvm.staticExec = true;
+        retEvm.accounts = state.accounts;
+        retEvm.caller = retEvm.accounts.get(state.target.addr);
+        retEvm.target = retEvm.accounts.get(address(state.stack.pop()));
 
         uint inOffset = state.stack.pop();
         uint inSize = state.stack.pop();
@@ -1805,18 +1733,16 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= gasFee;
 
-        if (input.gas > state.gas) {
-            input.gas = state.gas;
+        if (retEvm.gas > state.gas) {
+            retEvm.gas = state.gas;
         }
+        state.gas -= retEvm.gas;
 
-        input.data = state.mem.toArray(inOffset, inSize);
-        input.context = state.context;
-        input.accounts = state.accounts;
-        input.logHash = state.logHash;
-        input.staticExec = true;
+        retEvm.data = state.mem.toArray(inOffset, inSize);
 
         // solhint-disable-next-line avoid-low-level-calls
-        EVM memory retEvm = _call(input, CallType.StaticCall);
+        _call(state, retEvm, CallType.StaticCall);
+
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
             state.lastRet = new bytes(0);
@@ -1824,9 +1750,8 @@ contract EVMRuntime is EVMConstants {
             state.stack.push(1);
             state.mem.storeBytesAndPadWithZeroes(retEvm.returnData, 0, retOffset, retSize);
             state.lastRet = retEvm.returnData;
-            state.logHash = retEvm.logHash;
         }
-        state.gas -= input.gas - retEvm.gas;
+        state.gas += retEvm.gas;
     }
 
     function handleREVERT(EVM memory state) internal {
