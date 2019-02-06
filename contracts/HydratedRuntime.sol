@@ -1,12 +1,6 @@
 pragma solidity 0.5.2;
 pragma experimental ABIEncoderV2;
 
-
-import "./EVMCode.slb";
-import "./EVMStack.slb";
-import "./EVMMemory.slb";
-import "./EVMAccounts.slb";
-import "./EVMLogs.slb";
 import "./EVMRuntime.sol";
 
 
