@@ -2,9 +2,10 @@
 import Merkelizer from './../../utils/Merkelizer';
 
 import disputeFixtures from './../fixtures/dispute';
-import { deployContract, wallets, txOverrides, deployCode } from './../helpers/utils';
+import { deployContract, txOverrides, deployCode } from './../helpers/utils';
 
 const Verifier = artifacts.require('Verifier.sol');
+const Enforcer = artifacts.require('Enforcer.sol');
 
 // for additional logging
 const DEBUG = false;
@@ -15,12 +16,12 @@ function debugLog (...args) {
   }
 }
 
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const prevOutput = computationPath.left.executionState.output;
   const execState = computationPath.right.executionState;
   const input = execState.input;
-  const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
-
   const proofs = {
     stackHash: Merkelizer.stackHash(
       prevOutput.stack.slice(0, prevOutput.stack.length - input.compactStack.length)
@@ -59,7 +60,7 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
 }
 
 async function disputeGame (
-  verifier, codeContract, code, callData, solverSteps, challengerSteps, expectedWinner, expectedError
+  enforcer, verifier, codeContract, code, callData, solverSteps, challengerSteps, expectedWinner, expectedError
 ) {
   try {
     const solverMerkle = new Merkelizer().run(solverSteps, code, callData);
@@ -80,15 +81,22 @@ async function disputeGame (
       challengerComputationPath = challengerMerkle.tree[solverMerkle.depth][0];
     }
 
-    let tx = await verifier.initGame(
-      Merkelizer.initialStateHash(code, callData).hash,
+    const bondAmount = await enforcer.bondAmount();
+
+    let tx = await enforcer.register(
+      codeContract,
+      callData,
       solverComputationPath.hash,
       solverSteps.length,
+      { value: bondAmount, gasLimit: 0xffffffff }
+    );
+
+    tx = await tx.wait();
+    tx = await enforcer.dispute(
+      codeContract,
+      callData,
       challengerComputationPath.hash,
-      // challenger address
-      wallets[1].address,
-      // code contract address
-      codeContract
+      { value: bondAmount, gasLimit: 0xffffffff }
     );
 
     let dispute = await tx.wait();
@@ -203,12 +211,18 @@ async function disputeGame (
 }
 
 contract('Verifier', function () {
+  let enforcer;
   let verifier;
 
   before(async () => {
-    verifier = await deployContract(Verifier, 100);
+    const challengePeriod = 1000;
+    const bondAmount = 1;
 
-    let tx = await verifier.setEnforcer(wallets[0].address);
+    verifier = await deployContract(Verifier, challengePeriod);
+    enforcer = await deployContract(Enforcer, verifier.address, challengePeriod, bondAmount);
+
+    let tx = await verifier.setEnforcer(enforcer.address);
+
     await tx.wait();
   });
 
@@ -217,6 +231,7 @@ contract('Verifier', function () {
       const codeContract = await deployCode(code);
 
       await disputeGame(
+        enforcer,
         verifier,
         codeContract.address,
         code,

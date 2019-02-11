@@ -1,8 +1,7 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./IEnforcer.sol";
-import "./IVerifier.sol";
+import "./Enforcer.sol";
 import "./HydratedRuntime.sol";
 import "./Merkelizer.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
@@ -31,6 +30,7 @@ contract Verifier is Ownable, HydratedRuntime {
     uint8 constant internal INITIAL_STATE = START_OF_EXECUTION | END_OF_EXECUTION;
 
     struct Dispute {
+        bytes32 executionId;
         bytes32 initialStateHash;
         address codeContractAddress;
         address challengerAddr;
@@ -46,12 +46,11 @@ contract Verifier is Ownable, HydratedRuntime {
         uint256 timeout; // currently is block number
     }
 
-    event DisputeInitialised(bytes32 indexed disputeId, address challenger, bytes32 indexed executionId, uint256 timeout);
     event DisputeNewRound(bytes32 indexed disputeId, uint256 timeout, bytes32 solverPath, bytes32 challengerPath);
 
     uint256 public timeoutDuration;
 
-    IEnforcer public enforcer;
+    Enforcer public enforcer;
 
     mapping (bytes32 => Dispute) public disputes;
 
@@ -71,51 +70,52 @@ contract Verifier is Ownable, HydratedRuntime {
         _;
     }
 
-    constructor(uint256 _timeout) public Ownable() {
-        timeoutDuration = _timeout;
+    constructor(uint256 timeout) public Ownable() {
+        timeoutDuration = timeout;
     }
 
     function setEnforcer(address _enforcer) public onlyOwner() {
-        enforcer = IEnforcer(_enforcer);
+        enforcer = Enforcer(_enforcer);
     }
 
     /**
       * @dev init a new dispute, only callable by enforcer
       */
     function initGame(
-        bytes32 _initialStateHash,
-        bytes32 _solverHashRoot,
-        uint256 _solverExecutionLength,
-        bytes32 _challengerHashRoot,
-        address _challenger,
-        address _codeContractAddress
-    ) public onlyEnforcer() {
-        bytes32 disputeId = keccak256(
+        bytes32 executionId,
+        bytes32 initialStateHash,
+        bytes32 solverHashRoot,
+        uint256 solverExecutionLength,
+        bytes32 challengerHashRoot,
+        address challenger,
+        address codeContractAddress
+    ) public onlyEnforcer() returns (bytes32 disputeId) {
+        disputeId = keccak256(
             abi.encodePacked(
-                _initialStateHash,
-                _solverHashRoot,
-                _solverExecutionLength,
-                _challengerHashRoot
+                executionId,
+                initialStateHash,
+                solverHashRoot,
+                solverExecutionLength,
+                challengerHashRoot
             )
         );
 
         require(disputes[disputeId].timeout == 0, "already init");
         // do we want to prohibit early?
-        //require(_solverHashRoot != _challengerHashRoot, "nothing to challenge");
+        // require(solverHashRoot != challengerHashRoot, "nothing to challenge");
 
         disputes[disputeId] = Dispute(
-            _initialStateHash,
-            _codeContractAddress,
-            _challenger,
-            _solverHashRoot,
-            _challengerHashRoot,
-            ComputationPath(_solverHashRoot, _solverHashRoot),
-            ComputationPath(_challengerHashRoot, _challengerHashRoot),
+            executionId,
+            initialStateHash,
+            codeContractAddress,
+            challenger,
+            solverHashRoot,
+            challengerHashRoot,
+            ComputationPath(solverHashRoot, solverHashRoot),
+            ComputationPath(challengerHashRoot, challengerHashRoot),
             INITIAL_STATE,
             getTimeout()
         );
-
-        emit DisputeInitialised(disputeId, _challenger, _initialStateHash, disputes[disputeId].timeout);
     }
 
     /*
@@ -125,13 +125,13 @@ contract Verifier is Ownable, HydratedRuntime {
      * to `left`.
      */
     function respond(
-        bytes32 _disputeId,
-        ComputationPath memory _computationPath
-    ) public onlyPlaying(_disputeId) {
+        bytes32 disputeId,
+        ComputationPath memory computationPath
+    ) public onlyPlaying(disputeId) {
 
-        Dispute storage dispute = disputes[_disputeId];
+        Dispute storage dispute = disputes[disputeId];
 
-        bytes32 h = keccak256(abi.encodePacked(_computationPath.left, _computationPath.right));
+        bytes32 h = keccak256(abi.encodePacked(computationPath.left, computationPath.right));
 
         require(
             h == dispute.solverPath || h == dispute.challengerPath,
@@ -140,12 +140,12 @@ contract Verifier is Ownable, HydratedRuntime {
 
         if ((h == dispute.solver.left) || (h == dispute.solver.right)) {
             dispute.state |= SOLVER_RESPONDED;
-            dispute.solver = _computationPath;
+            dispute.solver = computationPath;
         }
 
         if ((h == dispute.challenger.left) || (h == dispute.challenger.right)) {
             dispute.state |= CHALLENGER_RESPONDED;
-            dispute.challenger = _computationPath;
+            dispute.challenger = computationPath;
         }
 
         // TODO: do we really want to refresh the timeout?
@@ -153,7 +153,7 @@ contract Verifier is Ownable, HydratedRuntime {
 
         if ((dispute.state & SOLVER_RESPONDED) != 0 && (dispute.state & CHALLENGER_RESPONDED) != 0) {
             updateRound(dispute);
-            emit DisputeNewRound(_disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+            emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
         }
     }
 
@@ -173,17 +173,17 @@ contract Verifier is Ownable, HydratedRuntime {
      */
     // solhint-disable-next-line code-complexity
     function submitProof(
-        bytes32 _disputeId,
-        Proofs memory _proofs,
-        Merkelizer.ExecutionState memory _executionState
+        bytes32 disputeId,
+        Proofs memory proofs,
+        Merkelizer.ExecutionState memory executionState
         // solhint-disable-next-line function-max-lines
-    ) public onlyPlaying(_disputeId) {
-        Dispute storage dispute = disputes[_disputeId];
+    ) public onlyPlaying(disputeId) {
+        Dispute storage dispute = disputes[disputeId];
 
-        bytes32 inputHash = _executionState.stateHash(
-            _executionState.stackHash(_proofs.stackHash),
-            _proofs.memHash,
-            _proofs.dataHash
+        bytes32 inputHash = executionState.stateHash(
+            executionState.stackHash(proofs.stackHash),
+            proofs.memHash,
+            proofs.dataHash
         );
 
         if ((inputHash != dispute.solver.left && inputHash != dispute.challenger.left) ||
@@ -193,7 +193,7 @@ contract Verifier is Ownable, HydratedRuntime {
 
         if ((dispute.state & END_OF_EXECUTION) != 0) {
             address codeAddress = dispute.codeContractAddress;
-            uint pos = _executionState.pc;
+            uint pos = executionState.pc;
             uint8 opcode;
 
             assembly {
@@ -209,9 +209,9 @@ contract Verifier is Ownable, HydratedRuntime {
         EVM memory evm;
         HydratedState memory hydratedState = initHydratedState(evm);
 
-        hydratedState.stackHash = _proofs.stackHash;
-        hydratedState.memHash = _proofs.memHash;
-        hydratedState.logHash = _executionState.logHash;
+        hydratedState.stackHash = proofs.stackHash;
+        hydratedState.memHash = proofs.memHash;
+        hydratedState.logHash = executionState.logHash;
 
         evm.context = Context(
             DEFAULT_CALLER,
@@ -223,8 +223,8 @@ contract Verifier is Ownable, HydratedRuntime {
             0
         );
 
-        evm.data = _executionState.data;
-        evm.gas = _executionState.gasRemaining;
+        evm.data = executionState.data;
+        evm.gas = executionState.gasRemaining;
 
         EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
         caller.nonce = uint8(1);
@@ -236,24 +236,24 @@ contract Verifier is Ownable, HydratedRuntime {
         evm.target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
 
         evm.code = evm.target.code;
-        evm.stack = EVMStack.fromArray(_executionState.stack);
-        evm.mem = EVMMemory.fromArray(_executionState.mem);
+        evm.stack = EVMStack.fromArray(executionState.stack);
+        evm.mem = EVMMemory.fromArray(executionState.mem);
 
-        _run(evm, _executionState.pc, 1);
+        _run(evm, executionState.pc, 1);
 
         if (evm.errno != NO_ERROR && evm.errno != ERROR_STATE_REVERTED) {
             return;
         }
 
-        _executionState.pc = evm.pc;
-        _executionState.logHash = hydratedState.logHash;
-        _executionState.returnData = evm.returnData;
-        _executionState.gasRemaining = evm.gas;
+        executionState.pc = evm.pc;
+        executionState.logHash = hydratedState.logHash;
+        executionState.returnData = evm.returnData;
+        executionState.gasRemaining = evm.gas;
 
-        bytes32 hash = _executionState.stateHash(
+        bytes32 hash = executionState.stateHash(
             hydratedState.stackHash,
             hydratedState.memHash,
-            _proofs.dataHash
+            proofs.dataHash
         );
 
         if (hash != dispute.solver.right && hash != dispute.challenger.right) {
@@ -270,12 +270,12 @@ contract Verifier is Ownable, HydratedRuntime {
 
         if ((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0) {
             // both are verified, solver wins
-            // enforcer.result(_disputeId, true, dispute.challengerAddr);
+            enforcer.result(dispute.executionId, true, dispute.challengerAddr);
         }
     }
 
-    function claimTimeout(bytes32 _disputeId) public {
-        Dispute storage dispute = disputes[_disputeId];
+    function claimTimeout(bytes32 disputeId) public {
+        Dispute storage dispute = disputes[disputeId];
 
         require(dispute.timeout > 0, "dispute not exit");
         require((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0, "already notified enforcer");
@@ -287,7 +287,7 @@ contract Verifier is Ownable, HydratedRuntime {
             solverWins = false;
         }
 
-        enforcer.result(_disputeId, solverWins, dispute.challengerAddr);
+        enforcer.result(dispute.executionId, solverWins, dispute.challengerAddr);
     }
 
     /**
@@ -297,27 +297,27 @@ contract Verifier is Ownable, HydratedRuntime {
         return block.number + timeoutDuration;
     }
 
-    function updateRound(Dispute storage _dispute) internal {
-        _dispute.state ^= SOLVER_RESPONDED | CHALLENGER_RESPONDED;
+    function updateRound(Dispute storage dispute) internal {
+        dispute.state ^= SOLVER_RESPONDED | CHALLENGER_RESPONDED;
 
-        if ((_dispute.solver.left == _dispute.challenger.left) &&
-            (_dispute.solver.right != 0) &&
-            (_dispute.challenger.right != 0)) {
+        if ((dispute.solver.left == dispute.challenger.left) &&
+            (dispute.solver.right != 0) &&
+            (dispute.challenger.right != 0)) {
             // following right
-            _dispute.solverPath = _dispute.solver.right;
-            _dispute.challengerPath = _dispute.challenger.right;
+            dispute.solverPath = dispute.solver.right;
+            dispute.challengerPath = dispute.challenger.right;
 
-            if ((_dispute.state & START_OF_EXECUTION) != 0) {
-                _dispute.state ^= START_OF_EXECUTION;
+            if ((dispute.state & START_OF_EXECUTION) != 0) {
+                dispute.state ^= START_OF_EXECUTION;
             }
         } else {
             // following left
-            _dispute.solverPath = _dispute.solver.left;
-            _dispute.challengerPath = _dispute.challenger.left;
+            dispute.solverPath = dispute.solver.left;
+            dispute.challengerPath = dispute.challenger.left;
 
-            if (_dispute.solver.right != 0) {
-                if ((_dispute.state & END_OF_EXECUTION) != 0) {
-                    _dispute.state ^= END_OF_EXECUTION;
+            if (dispute.solver.right != 0) {
+                if ((dispute.state & END_OF_EXECUTION) != 0) {
+                    dispute.state ^= END_OF_EXECUTION;
                 }
             }
         }

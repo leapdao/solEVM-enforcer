@@ -3,6 +3,7 @@ pragma experimental ABIEncoderV2;
 
 
 library Merkelizer {
+    uint constant internal DEFAULT_GAS = 0x0fffffffffffff;
 
     struct ExecutionState {
         bytes data;
@@ -70,5 +71,13 @@ library Merkelizer {
                 self.gasRemaining
             )
         );
+    }
+
+    function initialStateHash(bytes memory callData) internal pure returns (bytes32) {
+        ExecutionState memory e;
+        e.data = callData;
+        e.gasRemaining = DEFAULT_GAS;
+
+        return stateHash(e, 0, 0, 0);
     }
 }

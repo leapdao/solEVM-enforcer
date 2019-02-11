@@ -1,15 +1,15 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./ICallback.sol";
-import "./IVerifier.sol";
+import "./Verifier.sol";
+import "./Merkelizer.slb";
 
 
 contract Enforcer {
 
     uint256 public challengePeriod;
     uint256 public bondAmount;
-    IVerifier public verifier;
+    Verifier public verifier;
 
     struct Execution {
         uint256 startBlock;
@@ -29,64 +29,79 @@ contract Enforcer {
         _;
     }
 
-    event Registered(bytes32 indexed _executionId, address indexed _solver, bytes _code, bytes _callData);
-    event Slashed(bytes32 indexed _executionId, address indexed _address);
+    event Registered(bytes32 indexed executionId, address indexed solver, address codeContractAddress, bytes _callData);
+    event DisputeInitialised(bytes32 indexed disputeId, bytes32 indexed executionId);
+    event Slashed(bytes32 indexed executionId, address indexed _address);
 
     constructor(address _verifier, uint256 _challengePeriod, uint256 _bondAmount) public {
-        verifier = IVerifier(_verifier);
+        verifier = Verifier(_verifier);
         challengePeriod = _challengePeriod;
         bondAmount = _bondAmount;
     }
 
     // register a new execution
-    function register(bytes memory _code, bytes memory _callData, bytes32 _endHash, uint256 _executionLength)
-        public payable returns(bytes32 executionId)
+    function register(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionLength)
+        public payable
     {
         require(msg.value == bondAmount);
-        executionId = keccak256(abi.encodePacked(_code, _callData));
+
+        bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
+
         require(executions[executionId].startBlock == 0);
-        executions[executionId] = Execution(block.number, _endHash, _executionLength, msg.sender);
+        executions[executionId] = Execution(block.number, endHash, executionLength, msg.sender);
         bonds[msg.sender] += bondAmount;
-        emit Registered(executionId, msg.sender, _code, _callData);
+
+        emit Registered(executionId, msg.sender, codeContractAddress, _callData);
     }
 
     // starts a new dispute
-    function dispute(bytes32 _executionId, bytes32 _endHash, uint256 _executionLength) public payable {
-        Execution storage execution = executions[_executionId];
+    function dispute(address codeContractAddress, bytes memory _callData, bytes32 endHash)
+        public payable
+    {
+        bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
+
+        Execution storage execution = executions[executionId];
+
         require(execution.startBlock != 0);
         require(execution.startBlock + challengePeriod > block.number);
         require(msg.value == bondAmount);
-        require(execution.endHash != _endHash);
+        // Do we want to prohibit early?
+        // require(execution.endHash != endHash);
+
         bonds[msg.sender] += bondAmount;
-        verifier.initGame(_executionId, execution.endHash, execution.executionLength, _endHash, _executionLength, msg.sender);
+
+        bytes32 disputeId = verifier.initGame(
+            executionId,
+            Merkelizer.initialStateHash(_callData),
+            execution.endHash,
+            execution.executionLength,
+            endHash,
+            // challenger
+            msg.sender,
+            codeContractAddress
+        );
+
+        emit DisputeInitialised(disputeId, executionId);
     }
 
     // receive result from Verifier contract
-    function result(bytes32 _executionId, bool _result, address _challenger) public onlyVerifier() {
-        require(executions[_executionId].startBlock != 0);
-        require(executions[_executionId].startBlock + challengePeriod > block.number);
-        if (_result == true) {
+    function result(bytes32 executionId, bool solverWon, address challenger) public onlyVerifier() {
+        require(executions[executionId].startBlock != 0);
+        require(executions[executionId].startBlock + challengePeriod > block.number);
+
+        if (solverWon) {
             // slash deposit of challenger
-            bonds[_challenger] -= bondAmount;
-            emit Slashed(_executionId, _challenger);
+            bonds[challenger] -= bondAmount;
+            emit Slashed(executionId, challenger);
         } else {
             // slash deposit of solver
-            bonds[executions[_executionId].solver] -= bondAmount;
-            emit Slashed(_executionId, executions[_executionId].solver);
+            bonds[executions[executionId].solver] -= bondAmount;
+            emit Slashed(executionId, executions[executionId].solver);
             // delete execution
-            delete executions[_executionId];
+            delete executions[executionId];
         }
+
         bool success = address(0).send(bondAmount);
         require(success == true);
     }
-
-    // tell Solver that execution passed
-    function finalize(bytes32 _executionId) public {
-        // check execution exists
-        require(executions[_executionId].startBlock != 0);
-        // check that dispute period is over
-        require(block.number >= executions[_executionId].startBlock + challengePeriod);
-        ICallback(executions[_executionId].solver).finalize.value(bondAmount)(_executionId);
-    }
-
 }
