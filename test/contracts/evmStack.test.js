@@ -34,4 +34,33 @@ contract('TestEVMStack', function () {
   it('dupThrowsOverflow', async function () {
     await assert.rejects(stack.dupThrowsOverflow());
   });
+
+  // if those calls fail, they will throw
+  it('testCreate', async function () {
+    await stack.testCreate();
+  });
+
+  it('testPush', async function () {
+    await stack.testPush();
+  });
+
+  it('testPop', async function () {
+    await stack.testPop();
+  });
+
+  it('testDup1', async function () {
+    await stack.testDup1();
+  });
+
+  it('testDup16', async function () {
+    await stack.testDup16();
+  });
+
+  it('testSwap1', async function () {
+    await stack.testSwap1();
+  });
+
+  it('testSwap16', async function () {
+    await stack.testSwap16();
+  });
 });

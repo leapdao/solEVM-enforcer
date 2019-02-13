@@ -1,7 +1,6 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import {MemOps} from "./MemOps.slb";
 import {EVMStorage} from "./EVMStorage.slb";
 import {EVMUtils} from "./EVMUtils.slb";
 import {EVMCode} from "./EVMCode.slb";
