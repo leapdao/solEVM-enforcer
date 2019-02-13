@@ -88,7 +88,7 @@ async function disputeGame (
       callData,
       solverComputationPath.hash,
       solverSteps.length,
-      { value: bondAmount, gasLimit: 0xffffffff }
+      { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
     );
 
     tx = await tx.wait();
@@ -96,7 +96,7 @@ async function disputeGame (
       codeContract,
       callData,
       challengerComputationPath.hash,
-      { value: bondAmount, gasLimit: 0xffffffff }
+      { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
     );
 
     let dispute = await tx.wait();
@@ -159,7 +159,8 @@ async function disputeGame (
           {
             left: solverComputationPath.left.hash,
             right: solverComputationPath.right.hash,
-          }
+          },
+          txOverrides
         );
         await tx.wait();
         dispute = await verifier.disputes(event.disputeId);
@@ -195,7 +196,8 @@ async function disputeGame (
           {
             left: challengerComputationPath.left.hash,
             right: challengerComputationPath.right.hash,
-          }
+          },
+          txOverrides
         );
         await tx.wait();
       }
