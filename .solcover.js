@@ -4,5 +4,5 @@ module.exports = {
   norpc: true,
   deepSkip: true,
   // EVMRuntime to big for coverage as of now
-  skipFiles: ['EVMRuntime.sol', 'mocks/'],
+  skipFiles: ['mocks/'],
 };
