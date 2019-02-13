@@ -278,8 +278,11 @@ contract Verifier is Ownable, HydratedRuntime {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.timeout > 0, "dispute not exit");
-        require((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0, "already notified enforcer");
         require(dispute.timeout < block.number, "not timed out yet");
+        require(
+            !((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0),
+            "already notified enforcer"
+        );
 
         bool solverWins = true;
 
