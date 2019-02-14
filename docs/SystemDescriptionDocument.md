@@ -10,7 +10,7 @@ This makes it possible to construct a merkle tree from all those state hashes, e
 To find the first convergence of the execution (the first mismatch), we start a round-based path walking,
 starting from the merkle root until we reach the leaves.
 
-For more information on how this works, take a look at `Merkelizer.md`.
+For more information on how this works, take a look at [Merkelizer.md](./Merkelizer.md).
 
 ## Example
 Let us assume a solver registers a execution result given the `code` to the program, any inputs (`callData`) and the merkle root hash of the execution.
