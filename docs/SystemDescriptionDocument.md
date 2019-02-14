@@ -1,6 +1,7 @@
 # Overview
 The goal of this project is to verify off-chain EVM computation on-chain.
-In our particular case, it is used to correctly exit spending conditions from a side-chain to the main-chain.
+In our particular case, it is used to correctly exit spending conditions from a side-chain to the main-chain
+and also a means of a PoS mechanism to secure the side-chain.
 
 Executing a program consists of many intermediate steps and in turn,
 the EVM consists of various elements which change their data after each single step (opcode) of the program.
