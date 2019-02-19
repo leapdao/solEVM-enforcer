@@ -133,6 +133,8 @@ export default class DisputeMock {
    * Note: if that doesn't happen, this will finally timeout
    */
   async submitProof (proofs, executionInput) {
+    executionInput.code = this.code;
+
     let stackHash = Merkelizer.stackHash(executionInput.stack, proofs.stackHash);
     let inputHash = Merkelizer.stateHash(executionInput, stackHash, proofs.memHash, proofs.dataHash);
 
@@ -141,9 +143,6 @@ export default class DisputeMock {
       return 'invalid';
     }
 
-    executionInput.code = this.code;
-
-    let pc = executionInput.pc;
     let result = await this.computeExecutionState(executionInput);
 
     if (result.errno !== 0 && result.errno !== 0x07) {

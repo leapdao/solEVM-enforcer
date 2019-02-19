@@ -31,14 +31,6 @@ const MEMORY_OPCODES =
     'MSTORE8',
   ];
 
-const CODE_OPCODES =
-  [
-    'CODECOPY',
-    'CODESIZE',
-    'JUMP',
-    'JUMPI',
-  ];
-
 // Supported by ethereumjs-vm
 const ERRNO_MAP =
   {
@@ -167,7 +159,7 @@ export default class OffchainStepper extends VM.MetaVM {
   }
 
   async runNextStep (runState) {
-   runState.stateManager.checkpoint(() => {});
+    runState.stateManager.checkpoint(() => {});
 
     let stack = toHex(runState.stack);
     let pc = runState.programCounter;
