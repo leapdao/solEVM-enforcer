@@ -193,7 +193,7 @@ export default class OffchainStepper {
 
     let errno = 0;
     if (exceptionError) {
-      // ethereumvm-js is appending the location for jumps ;)
+      // ethereumjs-vm is appending the location for jumps ;)
       const errorKeysLength = ERROR_KEYS.length;
       const errMsg = exceptionError.error
         ? exceptionError.error : exceptionError;
