@@ -15,7 +15,7 @@ describe('JS Stepper', function () {
       const { pc, opcodeUnderTest } = getCode(fixture);
 
       it(fixture.description || opcodeUnderTest, async () => {
-        const stepper = OffchainStepper;
+        const stepper = new OffchainStepper();
         const code = typeof fixture.code === 'object' ? fixture.code : [fixture.code];
         const stack = fromMixedToHex(fixture.stack || []);
         const mem = fixture.memory || '';
@@ -46,10 +46,10 @@ describe('JS Stepper', function () {
         }
 
         if (fixture.result.stack) {
-          assert.deepEqual(fromHextoStr(res.output.stack), fixture.result.stack, 'stack');
+          assert.deepEqual(fromHextoStr(res.stack), fixture.result.stack, 'stack');
         }
         if (fixture.result.memory) {
-          let padded = res.output.mem;
+          let padded = res.mem;
 
           while (padded.length % 64 !== 0) {
             padded += '00';
@@ -60,13 +60,13 @@ describe('JS Stepper', function () {
           assert.equal(gasUsed, fixture.result.gasUsed, 'gasUsed');
         }
         if (fixture.result.pc !== undefined) {
-          assert.equal(res.output.pc, fixture.result.pc, 'pc');
+          assert.equal(res.pc, fixture.result.pc, 'pc');
         }
         if (fixture.result.errno !== undefined) {
-          assert.equal(res.output.errno, fixture.result.errno, 'errno');
+          assert.equal(res.errno, fixture.result.errno, 'errno');
         }
         if (fixture.result.logHash) {
-          assert.equal(res.output.logHash, fixture.result.logHash.replace('0x', ''), 'logHash');
+          assert.equal(res.logHash, fixture.result.logHash.replace('0x', ''), 'logHash');
         }
         if (fixture.result.accounts) {
           const accsMap = res.accounts.reduce((m, a) => { m[a.address] = a; return m; }, {});

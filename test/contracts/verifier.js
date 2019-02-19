@@ -19,15 +19,14 @@ function debugLog (...args) {
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
-  const prevOutput = computationPath.left.executionState.output;
+  const prevOutput = computationPath.left.executionState;
   const execState = computationPath.right.executionState;
-  const input = execState.input;
   const proofs = {
     stackHash: Merkelizer.stackHash(
-      prevOutput.stack.slice(0, prevOutput.stack.length - input.compactStack.length)
+      prevOutput.stack.slice(0, prevOutput.stack.length - execState.compactStack.length)
     ),
     memHash: execState.isMemoryRequired ? ZERO_HASH : Merkelizer.memHash(prevOutput.mem),
-    dataHash: execState.isCallDataRequired ? ZERO_HASH : Merkelizer.dataHash(input.data),
+    dataHash: execState.isCallDataRequired ? ZERO_HASH : Merkelizer.dataHash(prevOutput.data),
   };
 
   let tx = await verifier.submitProof(
@@ -35,13 +34,13 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
     proofs,
     {
       // TODO: compact {returnData}, support for accounts
-      data: '0x' + (execState.isCallDataRequired ? input.data : ''),
-      stack: input.compactStack,
-      mem: '0x' + (execState.isMemoryRequired ? input.mem : ''),
-      returnData: '0x' + input.returnData,
-      logHash: '0x' + input.logHash,
-      pc: input.pc,
-      gasRemaining: input.gasRemaining,
+      data: '0x' + (execState.isCallDataRequired ? prevOutput.data : ''),
+      stack: execState.compactStack,
+      mem: '0x' + (execState.isMemoryRequired ? prevOutput.mem : ''),
+      returnData: '0x' + prevOutput.returnData,
+      logHash: '0x' + prevOutput.logHash,
+      pc: prevOutput.pc,
+      gasRemaining: prevOutput.gasRemaining,
     },
     txOverrides
   );

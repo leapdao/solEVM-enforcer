@@ -75,8 +75,10 @@ function NumToBuf32 (val) {
   return Buffer.from(val, 'hex');
 }
 
-export default class OffchainStepper {
-  static async initAccounts (evm, accounts) {
+export default class OffchainStepper extends VM.MetaVM {
+  async initAccounts (accounts) {
+    const self = this;
+
     return new Promise((resolve, reject) => {
       let openCallbacks = 0;
 
@@ -96,7 +98,7 @@ export default class OffchainStepper {
         account.balance = obj.balance | 0;
 
         // resolves immediately
-        evm.stateManager.putAccount(addr, account, () => {});
+        self.stateManager.putAccount(addr, account, () => {});
 
         if (obj.storage) {
           let storageLen = obj.storage.length;
@@ -105,7 +107,7 @@ export default class OffchainStepper {
             let store = obj.storage[storageLen];
 
             openCallbacks++;
-            evm.stateManager.putContractStorage(
+            self.stateManager.putContractStorage(
               addr,
               NumToBuf32(store.address | 0),
               NumToBuf32(store.value | 0),
@@ -117,7 +119,9 @@ export default class OffchainStepper {
     });
   }
 
-  static async dumpTouchedAccounts (evm) {
+  async dumpTouchedAccounts () {
+    const self = this;
+
     return new Promise(
       (resolve, reject) => {
         let res = [];
@@ -145,13 +149,13 @@ export default class OffchainStepper {
           };
           res.push(account);
 
-          evm.stateManager.dumpStorage(this, storageCallback.bind(account));
+          self.stateManager.dumpStorage(this, storageCallback.bind(account));
         }
 
-        evm.stateManager._touched.forEach(
+        self.stateManager._touched.forEach(
           (addr) => {
             openCallbacks++;
-            evm.stateManager.getAccount(addr, callback.bind(addr));
+            self.stateManager.getAccount(addr, callback.bind(addr));
           }
         );
 
@@ -162,33 +166,39 @@ export default class OffchainStepper {
     );
   }
 
-  static _finishPrevStep (context, _stack, _mem, pc, gasLeft, returnData, exceptionError) {
-    if (!context.steps.length) {
-      return;
+  async runNextStep (runState) {
+   runState.stateManager.checkpoint(() => {});
+
+    let stack = toHex(runState.stack);
+    let pc = runState.programCounter;
+    let gasLeft = runState.gasLeft.addn(0);
+    let exceptionError;
+
+    try {
+      await super.runNextStep(runState);
+    } catch (e) {
+      exceptionError = e;
     }
 
-    let prevStep = context.steps[context.steps.length - 1];
-    let isFullCodeNeeded = CODE_OPCODES.indexOf(prevStep.opcodeName) !== -1;
-
-    if (isFullCodeNeeded) {
-      prevStep.input.code = context.code;
-      prevStep.input.isCodeCompacted = false;
-    } else {
-      prevStep.input.code = context.code.slice(context.pc, pc);
-      prevStep.input.isCodeCompacted = true;
+    let isCallDataRequired = false;
+    let opcodeName = runState.opName;
+    if (opcodeName === 'CALLDATASIZE' ||
+      opcodeName === 'CALLDATACOPY' ||
+      opcodeName === 'CALLDATALOAD') {
+      isCallDataRequired = true;
     }
 
-    if (prevStep.output.compactStack.length) {
-      prevStep.output.compactStack = _stack.slice(-prevStep.output.compactStack.length);
+    let opcode = runState.opCode;
+    let stackFixed;
+
+    if (opcode >= OP_SWAP1 && opcode <= OP_SWAP16) {
+      let x = 16 - (OP_SWAP16 - opcode);
+      stackFixed = stack.slice(-(x * 2));
     }
 
-    prevStep.output.stack = _stack;
-    prevStep.output.mem = _mem;
-    prevStep.output.gasRemaining = gasLeft.toNumber();
-    prevStep.gasFee = context.gasLeft.sub(gasLeft).toNumber();
-
-    if (returnData) {
-      prevStep.output.returnData = returnData.toString('hex');
+    if (opcode >= OP_DUP1 && opcode <= OP_DUP16) {
+      let x = 16 - (OP_DUP16 - opcode);
+      stackFixed = stack.slice(-x);
     }
 
     let errno = 0;
@@ -206,118 +216,51 @@ export default class OffchainStepper {
           break;
         }
       }
-    }
-    prevStep.output.errno = errno;
-
-    if (prevStep.output.errno === 0 && prevStep.opcodeName !== 'RETURN') {
-      prevStep.output.pc = pc;
-    }
-  }
-
-  static _onStep (evt, context) {
-    if (context.inject) {
-      context.inject = false;
-
-      if (context.stack) {
-        let len = context.stack.length;
-        for (let i = 0; i < len; i++) {
-          evt.stack.push(new BN(context.stack[i].replace('0x', ''), 'hex'));
-        }
-        // For fixing the logic below
-        evt.opcode.out += len;
-      }
-      if (context.mem) {
-        const tmp = Buffer.from(context.mem.replace('0x', ''), 'hex');
-        const len = tmp.length;
-
-        for (let i = 0; i < len; i++) {
-          evt.memory.push(tmp[i]);
-          if (i % 32 === 0) {
-            evt.memoryWordCount.iaddn(1);
-          }
-        }
-      }
-
-      if (typeof context.gasRemaining !== 'undefined') {
-        evt.gasLeft.isub(evt.gasLeft.sub(new BN(context.gasRemaining)));
-      }
+      runState.vmError = true;
     }
 
-    evt.stateManager.checkpoint(() => {});
-
-    let isCallDataRequired = false;
-    let opcodeName = evt.opcode.name;
-    if (opcodeName === 'CALLDATASIZE' ||
-      opcodeName === 'CALLDATACOPY' ||
-      opcodeName === 'CALLDATALOAD') {
-      isCallDataRequired = true;
+    if (errno === 0 && opcodeName !== 'RETURN') {
+      pc = runState.programCounter;
     }
 
-    let opcode = evt.opcode.opcode;
-    let stackFixed;
-
-    if (opcode >= OP_SWAP1 && opcode <= OP_SWAP16) {
-      let x = 16 - (OP_SWAP16 - opcode);
-      stackFixed = toHex(evt.stack.slice(-(x * 2)));
+    // TODO: compact memory -& callData
+    const isMemoryRequired = MEMORY_OPCODES.indexOf(opcodeName) !== -1;
+    const compactStack = runState.stackIn ? stack.slice(-runState.stackIn) : (stackFixed || []);
+    const returnData = runState.returnValue ? runState.returnValue.toString('hex') : '';
+    const gasRemaining = runState.gasLeft.toNumber();
+    const gasFee = gasLeft.sub(runState.gasLeft).toNumber();
+    let mem = Buffer.from(runState.memory).toString('hex');
+    while ((mem.length % 64) !== 0) {
+      mem += '00';
     }
 
-    if (opcode >= OP_DUP1 && opcode <= OP_DUP16) {
-      let x = 16 - (OP_DUP16 - opcode);
-      stackFixed = toHex(evt.stack.slice(-x));
-    }
-
-    let isMemoryRequired = MEMORY_OPCODES.indexOf(opcodeName) !== -1;
-    let _stack = toHex(evt.stack);
-    let _mem = Buffer.from(evt.memory).toString('hex');
-
-    while ((_mem.length % 64) !== 0) {
-      _mem += '00';
-    }
-
-    let pc = evt.pc;
-    let step = {
+    stack = toHex(runState.stack);
+    runState.context.steps.push({
       opcodeName: opcodeName,
-      input: {
-        data: context.data,
-        stack: _stack,
-        compactStack: evt.opcode.in ? _stack.slice(-evt.opcode.in) : (stackFixed || []),
-        mem: _mem,
-        returnData: '',
-        pc: pc,
-        gasRemaining: evt.gasLeft.toNumber(),
-      },
-      output: {
-        data: context.data,
-        compactStack: new Array(evt.opcode.out),
-        mem: '',
-        returnData: '',
-        pc: pc,
-        errno: 0,
-        gasRemaining: 0,
-      },
       isCallDataRequired: isCallDataRequired,
       isMemoryRequired: isMemoryRequired,
-    };
-
-    this._finishPrevStep(context, _stack, _mem, pc, evt.gasLeft);
-
-    context.steps.push(step);
-
-    context.pc = pc;
-    context.gasLeft = evt.gasLeft;
+      gasFee: gasFee,
+      data: runState.context.data,
+      stack: stack,
+      compactStack: compactStack,
+      mem: mem,
+      returnData: returnData,
+      pc: pc,
+      errno: errno,
+      gasRemaining: gasRemaining,
+      logHash: runState.context.logHash,
+    });
   }
 
-  static async run ({ code, data, stack, mem, accounts, logHash, gasLimit, blockGasLimit, gasRemaining, pc }) {
+  async run ({ code, data, stack, mem, accounts, logHash, gasLimit, blockGasLimit, gasRemaining, pc }) {
     data = data ? data.replace('0x', '') : '';
     blockGasLimit = Buffer.from(
       (blockGasLimit || OP.BLOCK_GAS_LIMIT).toString(16).replace('0x', ''),
       'hex'
     );
 
-    const evm = new VM();
-
     if (accounts) {
-      await this.initAccounts(evm, accounts);
+      await this.initAccounts(accounts);
     }
 
     const context = {
@@ -329,10 +272,8 @@ export default class OffchainStepper {
       gasRemaining: gasRemaining,
       steps: [],
       gasLeft: null,
-      inject: true,
+      logHash: logHash || ZERO_HASH,
     };
-
-    evm.on('step', (evt) => this._onStep(evt, context));
 
     const defaultBlock = {
       header: {
@@ -341,88 +282,54 @@ export default class OffchainStepper {
       },
     };
 
-    const steps = await new Promise((resolve, reject) => {
-      evm.runCode(
-        {
-          code: Buffer.from(code.join(''), 'hex'),
-          data: Buffer.from(data, 'hex'),
-          gasLimit: Buffer.from(
-            (gasLimit || OP.BLOCK_GAS_LIMIT).toString(16).replace('0x', ''),
-            'hex'
-          ),
-          gasPrice: 0,
-          caller: DEFAULT_CALLER,
-          origin: DEFAULT_CALLER,
-          address: DEFAULT_CONTRACT_ADDRESS,
-          block: defaultBlock,
-          pc: context.pc,
-        },
-        (err, res) => {
-          if (err) {
-            // we handle execution errors further below
-          }
-
-          let _stack = toHex(res.runState.stack);
-          let _mem = Buffer.from(res.runState.memory).toString('hex');
-          let pc = res.runState.programCounter;
-          let gasLeft = res.runState.gasLeft;
-          let returnData = res.return;
-
-          while ((_mem.length % 64) !== 0) {
-            _mem += '00';
-          }
-
-          this._finishPrevStep(context, _stack, _mem, pc, gasLeft, returnData, res.exceptionError);
-
-          let len = context.steps.length;
-          let prevLogHash = logHash ? logHash.replace('0x', '') : ZERO_HASH;
-          for (let i = 0; i < len; i++) {
-            const step = context.steps[i];
-
-            step.input.logHash = prevLogHash;
-
-            if (step.opcodeName.startsWith('LOG')) {
-              let log = res.logs.pop();
-
-              if (!log) {
-                throw new Error('step with LOGx opcode but no log emitted');
-              }
-              step.log = log;
-
-              let topics = log[1];
-              while (topics.length !== 4) {
-                topics.push(0);
-              }
-              let hash = ethers.utils.solidityKeccak256(
-                ['bytes32', 'address', 'uint[4]', 'bytes'],
-                [
-                  '0x' + prevLogHash,
-                  '0x' + log[0].toString('hex'),
-                  topics,
-                  '0x' + log[2].toString('hex'),
-                ]
-              ).replace('0x', '');
-
-              step.output.logHash = hash;
-              prevLogHash = hash;
-              continue;
-            }
-
-            step.output.logHash = prevLogHash;
-          }
-
-          resolve(context.steps);
-        }
-      );
+    const runState = await this.initRunState({
+      code: Buffer.from(code.join(''), 'hex'),
+      data: Buffer.from(data, 'hex'),
+      gasLimit: Buffer.from(
+        (gasLimit || OP.BLOCK_GAS_LIMIT).toString(16).replace('0x', ''),
+        'hex'
+      ),
+      gasPrice: 0,
+      caller: DEFAULT_CALLER,
+      origin: DEFAULT_CALLER,
+      address: DEFAULT_CONTRACT_ADDRESS,
+      block: defaultBlock,
+      pc: context.pc,
     });
+    runState.context = context;
 
-    let i = steps.length;
+    if (context.stack) {
+      let len = context.stack.length;
+      for (let i = 0; i < len; i++) {
+        runState.stack.push(new BN(context.stack[i].replace('0x', ''), 'hex'));
+      }
+    }
+    if (context.mem) {
+      const tmp = Buffer.from(context.mem.replace('0x', ''), 'hex');
+      const len = tmp.length;
+
+      for (let i = 0; i < len; i++) {
+        runState.memory.push(tmp[i]);
+        if (i % 32 === 0) {
+          runState.memoryWordCount.iaddn(1);
+        }
+      }
+    }
+
+    if (typeof context.gasRemaining !== 'undefined') {
+      runState.gasLeft.isub(runState.gasLeft.sub(new BN(context.gasRemaining)));
+    }
+
+    await super.run(runState, 0);
+
+    const self = this;
+    let i = context.steps.length;
     while (i--) {
-      steps[i].accounts = await this.dumpTouchedAccounts(evm);
+      context.steps[i].accounts = await this.dumpTouchedAccounts();
 
       await new Promise(
         (resolve, reject) => {
-          evm.stateManager.revert(
+          self.stateManager.revert(
             () => {
               resolve(true);
             }
@@ -431,6 +338,31 @@ export default class OffchainStepper {
       );
     }
 
-    return steps;
+    return context.steps;
+  }
+
+  async handleLOG (runState) {
+    await super.handleLOG(runState);
+
+    let prevLogHash = runState.context.logHash.replace('0x', '');
+    let log = runState.logs[runState.logs.length - 1];
+
+    if (!log) {
+      throw new Error('step with LOGx opcode but no log emitted');
+    }
+
+    let topics = log[1];
+    while (topics.length !== 4) {
+      topics.push(0);
+    }
+    runState.context.logHash = ethers.utils.solidityKeccak256(
+      ['bytes32', 'address', 'uint[4]', 'bytes'],
+      [
+        '0x' + prevLogHash,
+        '0x' + log[0].toString('hex'),
+        topics,
+        '0x' + log[2].toString('hex'),
+      ]
+    ).replace('0x', '');
   }
 }

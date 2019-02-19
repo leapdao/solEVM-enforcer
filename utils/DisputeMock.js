@@ -104,18 +104,16 @@ export default class DisputeMock {
     const steps = await this.evm.run(args);
     const r = steps[0] ||
       {
-        output: {
-          code: args.code,
-          data: '',
-          compactStack: [],
-          stack: [],
-          mem: '',
-          returnData: '',
-          pc: 0,
-          errno: 0xff,
-          logHash: '',
-          gasRemaining: 0,
-        },
+        code: args.code,
+        data: '',
+        compactStack: [],
+        stack: [],
+        mem: '',
+        returnData: '',
+        pc: 0,
+        errno: 0xff,
+        logHash: '',
+        gasRemaining: 0,
       };
 
     return r;
@@ -143,25 +141,12 @@ export default class DisputeMock {
       return 'invalid';
     }
 
+    executionInput.code = this.code;
+
     let pc = executionInput.pc;
-    let code = this.code;
-    // TODO: what happens if the code make assumptions with OP.PC ?
-    //       should we pad the code array with zeros?
-    if (executionInput.isCodeCompacted) {
-      let pcEnd = executionInput.pcEnd;
-
-      if (executionInput.pc === pcEnd) {
-        pcEnd += 1;
-      }
-
-      code = this.code.slice(executionInput.pc, pcEnd);
-      executionInput.pc = 0;
-    }
-    executionInput.code = code;
-
     let result = await this.computeExecutionState(executionInput);
 
-    if (result.output.errno !== 0 && result.output.errno !== 0x07) {
+    if (result.errno !== 0 && result.errno !== 0x07) {
       return 'invalid';
     }
 
@@ -171,13 +156,8 @@ export default class DisputeMock {
       }
     }
 
-    // patch
-    if (executionInput.isCodeCompacted) {
-      result.output.pc += pc;
-    }
-
-    stackHash = Merkelizer.stackHash(result.output.stack, proofs.stackHash);
-    let hash = Merkelizer.stateHash(result.output, stackHash, proofs.memHash, proofs.dataHash);
+    stackHash = Merkelizer.stackHash(result.stack, proofs.stackHash);
+    let hash = Merkelizer.stateHash(result, stackHash, proofs.memHash, proofs.dataHash);
 
     // eslint-disable-next-line no-constant-condition
     if (0) {

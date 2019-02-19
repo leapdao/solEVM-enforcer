@@ -15,38 +15,35 @@ function debugLog (...args) {
 }
 
 function submitProofHelper (dispute, code, computationPath) {
-  const prevOutput = computationPath.left.executionState.output;
+  const prevOutput = computationPath.left.executionState;
   const execState = computationPath.right.executionState;
-  const input = execState.input;
 
   const proofs = {
     stackHash: Merkelizer.stackHash(
-      prevOutput.stack.slice(0, prevOutput.stack.length - input.compactStack.length)
+      prevOutput.stack.slice(0, prevOutput.stack.length - execState.compactStack.length)
     ),
     memHash: execState.isMemoryRequired ? '' : Merkelizer.memHash(prevOutput.mem),
-    dataHash: execState.isCallDataRequired ? '' : Merkelizer.dataHash(input.data),
+    dataHash: execState.isCallDataRequired ? '' : Merkelizer.dataHash(prevOutput.data),
   };
 
   return dispute.submitProof(
     proofs,
     {
       // TODO: compact {returnData}, support for accounts
-      data: execState.isCallDataRequired ? input.data : '',
-      stack: input.compactStack,
-      mem: execState.isMemoryRequired ? input.mem : '',
-      returnData: input.returnData,
-      logHash: input.logHash,
-      pc: input.pc,
-      pcEnd: execState.output.pc,
-      isCodeCompacted: input.isCodeCompacted,
-      gasRemaining: input.gasRemaining,
+      data: execState.isCallDataRequired ? prevOutput.data : '',
+      stack: execState.compactStack,
+      mem: execState.isMemoryRequired ? prevOutput.mem : '',
+      returnData: prevOutput.returnData,
+      logHash: prevOutput.logHash,
+      pc: prevOutput.pc,
+      gasRemaining: prevOutput.gasRemaining,
     }
   );
 }
 
 async function disputeGame (code, callData, solverSteps, challengerSteps, expectedWinner, expectedError) {
   try {
-    const stepper = OffchainStepper;
+    const stepper = new OffchainStepper();
     const solverMerkle = new Merkelizer().run(solverSteps, code, callData);
     const challengerMerkle = new Merkelizer().run(challengerSteps, code, callData);
 
