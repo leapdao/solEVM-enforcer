@@ -7,18 +7,16 @@ export default class Merkelizer {
     const DEFAULT_GAS = 0x0fffffffffffff;
     const res = {
       executionState: {
-        output: {
-          code: code,
-          data: callData.replace('0x', ''),
-          compactStack: [],
-          stack: [],
-          mem: '',
-          returnData: '',
-          logHash: ZERO_HASH.replace('0x', ''),
-          pc: 0,
-          errno: 0,
-          gasRemaining: DEFAULT_GAS,
-        },
+        code: code,
+        data: callData.replace('0x', ''),
+        compactStack: [],
+        stack: [],
+        mem: '',
+        returnData: '',
+        logHash: ZERO_HASH.replace('0x', ''),
+        pc: 0,
+        errno: 0,
+        gasRemaining: DEFAULT_GAS,
       },
     };
 
@@ -26,7 +24,7 @@ export default class Merkelizer {
     //   This value needs to be taken into account for the dispute logic (timeout function).
     //   If the first (left-most) hash is not the same as this,
     //   then the solution from that player is invalid
-    res.hash = this.stateHash(res.executionState.output);
+    res.hash = this.stateHash(res.executionState);
 
     return res;
   }
@@ -159,7 +157,7 @@ export default class Merkelizer {
 
     for (let i = 0; i < len; i++) {
       let exec = executions[i];
-      let hash = this.constructor.stateHash(exec.output);
+      let hash = this.constructor.stateHash(exec);
       let llen = leaves.push(
         {
           left: prevLeaf.right,

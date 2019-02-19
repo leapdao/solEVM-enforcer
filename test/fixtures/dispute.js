@@ -41,9 +41,10 @@ export default (callback) => {
 
     let steps;
     let copy;
+    const stepper = new OffchainStepper();
 
     before(async () => {
-      steps = await OffchainStepper.run({ code, data });
+      steps = await stepper.run({ code, data });
       copy = JSON.stringify(steps);
     });
 
@@ -53,15 +54,15 @@ export default (callback) => {
 
     it('challenger has an output error somewhere', async () => {
       let wrongExecution = JSON.parse(copy);
-      wrongExecution[6].output.compactStack.push('01');
-      wrongExecution[6].output.stack.push('01');
+      wrongExecution[6].compactStack.push('01');
+      wrongExecution[6].stack.push('01');
       await callback(code, data, steps, wrongExecution, 'solver');
     });
 
     it('solver has an output error somewhere', async () => {
       let wrongExecution = JSON.parse(copy);
-      wrongExecution[6].output.compactStack.push('01');
-      wrongExecution[6].output.stack.push('01');
+      wrongExecution[6].compactStack.push('01');
+      wrongExecution[6].stack.push('01');
       await callback(code, data, wrongExecution, steps, 'challenger');
     });
 
@@ -92,7 +93,7 @@ export default (callback) => {
     it('challenger wrong memory output', async () => {
       let wrongExecution = JSON.parse(copy);
       for (let i = 1; i < wrongExecution.length; i += 2) {
-        wrongExecution[i].output.mem += '00';
+        wrongExecution[i].mem += '00';
       }
       await callback(code, data, steps, wrongExecution, 'solver');
     });
@@ -100,7 +101,7 @@ export default (callback) => {
     it('solver wrong memory output', async () => {
       let wrongExecution = JSON.parse(copy);
       for (let i = 1; i < wrongExecution.length; i += 2) {
-        wrongExecution[i].output.mem += '00';
+        wrongExecution[i].mem += '00';
       }
       await callback(code, data, wrongExecution, steps, 'challenger');
     });
@@ -108,8 +109,8 @@ export default (callback) => {
     it('challenger wrong stack output', async () => {
       let wrongExecution = JSON.parse(copy);
       for (let i = 1; i < wrongExecution.length; i += 2) {
-        wrongExecution[i].output.compactStack.push('00');
-        wrongExecution[i].output.stack.push('00');
+        wrongExecution[i].compactStack.push('00');
+        wrongExecution[i].stack.push('00');
       }
       await callback(code, data, steps, wrongExecution, 'solver');
     });
@@ -117,8 +118,8 @@ export default (callback) => {
     it('solver wrong stack output', async () => {
       let wrongExecution = JSON.parse(copy);
       for (let i = 1; i < wrongExecution.length; i += 2) {
-        wrongExecution[i].output.compactStack.push('00');
-        wrongExecution[i].output.stack.push('00');
+        wrongExecution[i].compactStack.push('00');
+        wrongExecution[i].stack.push('00');
       }
 
       await callback(code, data, wrongExecution, steps, 'challenger');
@@ -127,8 +128,8 @@ export default (callback) => {
     it('challenger wrong opcode', async () => {
       let wrongExecution = JSON.parse(copy);
       for (let i = 1; i < wrongExecution.length; i += 3) {
-        wrongExecution[i].output.code = ['01'];
-        wrongExecution[i].output.pc += 1;
+        wrongExecution[i].code = ['01'];
+        wrongExecution[i].pc += 1;
       }
       await callback(code, data, steps, wrongExecution, 'solver');
     });
@@ -136,8 +137,8 @@ export default (callback) => {
     it('solver wrong opcode', async () => {
       let wrongExecution = JSON.parse(copy);
       for (let i = 1; i < wrongExecution.length; i += 3) {
-        wrongExecution[i].output.code = ['01'];
-        wrongExecution[i].output.pc += 1;
+        wrongExecution[i].code = ['01'];
+        wrongExecution[i].pc += 1;
       }
       await callback(code, data, wrongExecution, steps, 'challenger');
     });
@@ -179,9 +180,10 @@ export default (callback) => {
     const data = '0x';
     let steps;
     let copy;
+    const stepper = new OffchainStepper();
 
     before(async () => {
-      steps = await OffchainStepper.run({ code });
+      steps = await stepper.run({ code });
       copy = JSON.stringify(steps);
     });
 
