@@ -5,16 +5,16 @@ and also a means of a PoS mechanism to secure the side-chain.
 
 Executing a program consists of many intermediate steps and in turn,
 the EVM consists of various elements which change their data after each single step (opcode) of the program.
-These intermediate states can be compared in an deterministic manner, by hashing the state of the EVM’s elements into a single state hash.
+These intermediate states can be compared in a deterministic manner, by hashing the state of the EVM’s elements into a single state hash.
 This makes it possible to construct a merkle tree from all those state hashes, each one of them representing a single execution step.
 
-To find the first convergence of the execution (the first mismatch), we start a round-based path walking,
+To find the first divergence of the execution (the first mismatch), we start a round-based path walking,
 starting from the merkle root until we reach the leaves.
 
 For more information on how this works, take a look at [Merkelizer.md](./Merkelizer.md).
 
 ## Example
-Let us assume a solver registers a execution result given the `code` to the program, any inputs (`callData`) and the merkle root hash of the execution.
+Let us assume a solver registers an execution result given the `code` of the program, inputs (`callData`) and the merkle root hash of the execution.
 A Verifier can now execute this program and compare if both merkle root hashes are the same.
 If the root hash are the same then both have the same result, if not, the Verifier can challenge the solver.
 
@@ -23,7 +23,7 @@ If the root hash are the same then both have the same result, if not, the Verifi
 
 ## Solver
 The solver registers execution result with the `Enforcer` contract.
-This is a requirement if the solver wants to exit a spending condition to the main-chain.
+This is a requirement if the solver wants to exit some tokens under a spending condition to the main-chain.
 
 ## Verifier / Challenger
 Potential verifiers can watch execution registrations and validate those off-chain.
@@ -46,8 +46,9 @@ the solver will automatically lose (`claimTimeout`).
 The verifier is incentified for the very fact that proving a execution wrong, the verifier gets the bond of the solver.
 (Solver's bond is slashed)
 
-If the challenger opens a dispute and stops playing the verification game, the solver will automatically win this dispute
-if the challenge reaches the challenge period (`claimTimeout`).
+If the challenger opens a dispute and stops playing the verification game or committed a wrong result,
+the solver will win this dispute if the challenge reaches the challenge period (`claimTimeout`) and
+gets the bond of the verifier (Verifier's bond is slashed).
 
 ## Notes
 Anyone who is aware of the computation path can play a particular challenge.
