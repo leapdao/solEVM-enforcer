@@ -3,11 +3,11 @@ const ethers = require('ethers');
 const { PUSH1 } = OP;
 
 export const toBN = require('ethers').utils.bigNumberify;
-
+export const toHEX = require('ethers').utils.hexlify;
 export const toNum = arr => arr.map(e => e.toNumber());
 
 export const toStr = arr => arr.map(e => e.toString());
-
+export const toHexa = arr => arr.map(e => toHEX(e));
 export const toHex = arr => arr.map(e => e.toString(16));
 
 export const leftPad = (n, width) => {

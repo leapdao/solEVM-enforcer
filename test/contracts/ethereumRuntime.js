@@ -95,11 +95,14 @@ contract('Runtime', function () {
 
         totalGasUsed += gasUsed;
         console.log(fixture.description || opcodeUnderTest, 'gasUsed', gasUsed);
+        
         if (index + 1 === fixtures.length) {
           console.log('totalGasUsed', totalGasUsed);
         }
 
         if (fixture.result.stack) {
+          console.log(toStr(res.stack));
+          console.log(fixture.result.stack);
           assert.deepEqual(toStr(res.stack), fixture.result.stack, 'stack');
         }
         if (fixture.result.memory) {
