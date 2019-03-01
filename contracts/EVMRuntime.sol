@@ -158,6 +158,7 @@ contract EVMRuntime is EVMConstants {
             return;
         }
         newAcc.code = EVMCode.fromBytes(evm.returnData);
+        newAcc.nonce = 1;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
@@ -386,6 +387,11 @@ contract EVMRuntime is EVMConstants {
                 stackIn = 3;
                 stackOut = 0;
                 gasFee = GAS_ADDITIONAL_HANDLING;
+            } else if (opcode == 63) {
+                opcodeHandler = handleEXTCODEHASH;
+                stackIn = 1;
+                stackOut = 1;
+                gasFee = GAS_EXTCODEHASH;
             } else if (opcode == 64) {
                 opcodeHandler = handleBLOCKHASH;
                 stackIn = 1;
@@ -1344,6 +1350,25 @@ contract EVMRuntime is EVMConstants {
             mAddr,
             len
         );
+    }
+
+    function handleEXTCODEHASH(EVM memory state) internal {
+        EVMAccounts.Account memory acc = state.accounts.get(address(state.stack.pop()));
+
+        if (acc.destroyed ||
+            (acc.nonce == 0 && acc.balance == 0 && acc.stge.size == 0 && acc.code.length == 0)) {
+            state.stack.push(0);
+            return;
+        }
+
+        bytes memory code = acc.code.toBytes();
+        uint res;
+
+        assembly {
+            res := keccak256(add(code, 0x20), mload(code))
+        }
+
+        state.stack.push(res);
     }
 
     // 0x4X

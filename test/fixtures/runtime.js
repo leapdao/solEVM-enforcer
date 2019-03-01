@@ -591,10 +591,10 @@ export default [
   {
     description: 'CALL ECRECOVER with input/output',
     code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [64, 32, 32, 0, 0, 1, 10000],
     result: {
-      gasUsed: 3709,
+      gasUsed: 3706,
     },
   },
   {
@@ -608,10 +608,10 @@ export default [
   {
     description: 'CALL SHA256 with input/output',
     code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [64, 32, 32, 0, 0, 2, 10000],
     result: {
-      gasUsed: 781,
+      gasUsed: 778,
     },
   },
   {
@@ -625,10 +625,10 @@ export default [
   {
     description: 'CALL RIPEMD160 with input/output',
     code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [64, 32, 32, 0, 0, 3, 10000],
     result: {
-      gasUsed: 1429,
+      gasUsed: 1426,
     },
   },
   {
@@ -642,71 +642,71 @@ export default [
   {
     description: 'CALL IDENTITY with input/output',
     code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [64, 32, 32, 0, 0, 4, 10000],
     result: {
-      gasUsed: 727,
+      gasUsed: 724,
     },
   },
   {
     description: 'CALL with value transfer & new account',
     code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [64, 32, 32, 0, 1234, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 32409,
+      gasUsed: 32406,
     },
   },
   {
     description: 'CALL without value transfer',
     code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [64, 32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 709,
+      gasUsed: 706,
     },
   },
   {
     code: OP.DELEGATECALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 706,
+      gasUsed: 703,
     },
   },
   {
     description: 'STATICCALL without input',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 706,
+      gasUsed: 703,
     },
   },
   {
     description: 'STATICCALL with out of range input',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [32, 32, 64, 48, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 712,
+      gasUsed: 709,
     },
   },
   {
     code: OP.CREATE,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [16, 0, 123],
     result: {
-      gasUsed: 32003,
+      gasUsed: 32000,
     },
   },
   {
     description: 'CREATE growing memory',
     code: OP.CREATE,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [16, 44, 123],
     result: {
-      gasUsed: 32006,
+      gasUsed: 32003,
     },
   },
   {
@@ -747,6 +747,26 @@ export default [
     code: OP.STOP,
     result: {
       pc: 1,
+    },
+  },
+  {
+    code: [OP.EXTCODEHASH],
+    stack: ['0x0002030405060708091011121314151617181920212223242526272829303100'],
+    pc: 0,
+    result: {
+      stack: ['0'],
+      gasUsed: 400,
+    },
+  },
+  {
+    description: 'CREATE EXTCODEHASH',
+    code: [OP.CREATE, OP.EXTCODEHASH],
+    stack: [1, 0, 0],
+    memory: '0x0002030405060708091011121314151617181920212223242526272829303100',
+    pc: 0,
+    result: {
+      stack: ['89477152217924674838424037953991966239322087453347756267410168184682657981552'],
+      gasUsed: 32400,
     },
   },
 ];

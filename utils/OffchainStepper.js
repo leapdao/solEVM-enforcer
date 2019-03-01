@@ -163,6 +163,11 @@ export default class OffchainStepper extends VM.MetaVM {
   }
 
   async runNextStep (runState) {
+    if (runState.depth !== 0) {
+      await super.runNextStep(runState);
+      return;
+    }
+
     runState.stateManager.checkpoint(() => {});
 
     let stack = toHex(runState.stack);
@@ -310,6 +315,10 @@ export default class OffchainStepper extends VM.MetaVM {
           runState.memoryWordCount.iaddn(1);
         }
       }
+
+      const words = runState.memoryWordCount;
+      // words * 3 + words ^2 / 512
+      runState.highestMemCost = words.muln(3).add(words.mul(words).divn(512));
     }
 
     if (typeof context.gasRemaining !== 'undefined') {

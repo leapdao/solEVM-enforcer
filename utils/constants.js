@@ -66,6 +66,7 @@ export const EXTCODESIZE = '3b';
 export const EXTCODECOPY = '3c';
 export const RETURNDATASIZE = '3d';
 export const RETURNDATACOPY = '3e';
+export const EXTCODEHASH = '3f';
 
 // Block information
 export const BLOCKHASH = '40';

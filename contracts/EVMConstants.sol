@@ -53,6 +53,7 @@ contract EVMConstants {
     uint8 constant internal OP_EXTCODECOPY = 0x3c;
     uint8 constant internal OP_RETURNDATASIZE = 0x3d;
     uint8 constant internal OP_RETURNDATACOPY = 0x3e;
+    uint8 constant internal OP_EXTCODEHASH = 0x3f;
 
     // Block information
     uint8 constant internal OP_BLOCKHASH = 0x40;
@@ -174,6 +175,7 @@ contract EVMConstants {
     uint16 constant internal GAS_HIGH = 10;
 
     uint16 constant internal GAS_EXTCODE = 700;
+    uint16 constant internal GAS_EXTCODEHASH = 400;
     uint16 constant internal GAS_BALANCE = 400;
     uint16 constant internal GAS_JUMPDEST = 1;
     uint16 constant internal GAS_SLOAD = 200;
