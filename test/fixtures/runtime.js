@@ -45,9 +45,9 @@ export default [
     result: { stack: ['1'], gasUsed: 3 },
   },
   { code: OP.BYTE, stack: ['3', '2'], result: { stack: ['0'], gasUsed: 3 } },
-  { code: OP.SHL, stack: [0x0001, 2], result: { stack: ['4'] } },
-  { code: OP.SHR, stack: [0x1000, 2], result: { stack: ['1024'] } },
-  { code: OP.SAR, stack: [0x1000, 2], result: { stack: ['1024'] } },
+  { code: OP.SHL, stack: [0x0001, 2], result: { stack: ['4'], gasUsed: 3 } },
+  { code: OP.SHR, stack: [0x1000, 2], result: { stack: ['1024'], gasUsed: 3 } },
+  { code: OP.SAR, stack: [0x1000, 2], result: { stack: ['1024'], gasUsed: 3 } },
   { code: OP.POP, stack: ['2', '3'], result: { stack: ['2'], gasUsed: 2 } },
   // 8x Duplication
   { code: OP.DUP1, stack: ['2'], result: { stack: ['2', '2'], gasUsed: 3 } },
