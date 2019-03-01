@@ -41,13 +41,13 @@
     "eslint-plugin-node": "^5.2.1",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
-    "ganache-cli": "=6.2.5",
+    "ganache-cli": "=6.4.0",
     "solhint": "^1.2.1",
     "truffle": "=5.0.0"
   },
   "dependencies": {
     "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r1",
-    "openzeppelin-solidity": "=2.1.1",
-    "ethers": "^4.0.13"
+    "ethers": "^4.0.13",
+    "openzeppelin-solidity": "=2.1.1"
   }
 }
