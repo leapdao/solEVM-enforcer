@@ -68,7 +68,7 @@ function NumToBuf32 (val) {
 }
 
 export default class OffchainStepper extends VM.MetaVM {
-  constructor() {
+  constructor () {
     super({ hardfork: 'petersburg' });
   }
 
