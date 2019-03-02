@@ -62,9 +62,9 @@ contract Enforcer {
 
         Execution storage execution = executions[executionId];
 
-        require(execution.startBlock != 0);
-        require(execution.startBlock + challengePeriod > block.number);
-        require(msg.value == bondAmount);
+        require(execution.startBlock != 0, "Execution does not existed");
+        require(execution.startBlock + challengePeriod > block.number, "Execution is out of challenge period");
+        require(msg.value == bondAmount, "Bond amount is required");
         // Do we want to prohibit early?
         // require(execution.endHash != endHash);
 
