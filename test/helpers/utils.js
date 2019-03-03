@@ -4,6 +4,8 @@ const { PUSH1 } = OP;
 
 export const toBN = require('ethers').utils.bigNumberify;
 
+export const toBytes32 = require('ethers').utils.formatBytes32String;
+
 export const toNum = arr => arr.map(e => e.toNumber());
 
 export const toStr = arr => arr.map(e => e.toString());

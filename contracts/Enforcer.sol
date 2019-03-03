@@ -86,8 +86,7 @@ contract Enforcer {
 
     // receive result from Verifier contract
     function result(bytes32 executionId, bool solverWon, address challenger) public onlyVerifier() {
-        require(executions[executionId].startBlock != 0);
-        require(executions[executionId].startBlock + challengePeriod > block.number);
+        require(executions[executionId].startBlock != 0, "Execution does not existed");
 
         if (solverWon) {
             // slash deposit of challenger
@@ -102,6 +101,6 @@ contract Enforcer {
         }
 
         bool success = address(0).send(bondAmount);
-        require(success == true);
+        require(success == true, "Cannot burn");
     }
 }
