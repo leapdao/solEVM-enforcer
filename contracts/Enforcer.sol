@@ -87,6 +87,7 @@ contract Enforcer {
     // receive result from Verifier contract
     function result(bytes32 executionId, bool solverWon, address challenger) public onlyVerifier() {
         require(executions[executionId].startBlock != 0, "Execution does not existed");
+        require(executions[executionId].startBlock + challengePeriod > block.number, "Execution is out of challenge period");
 
         if (solverWon) {
             // slash deposit of challenger

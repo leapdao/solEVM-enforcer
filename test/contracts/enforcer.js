@@ -191,9 +191,26 @@ contract('Enforcer', () => {
     await assertRevert(tx);
   });
 
-  it('allow submit result of valid execution and slash solver', async () => {
+  it('not allow submit result of execution after challenge period', async () => {
     let tx = await enforcer.register(
       enforcer.address, '0x04', endHash, executionLength,
+      { value: bondAmount, gasLimit: 0xfffffffffffff }
+    );
+    tx = await tx.wait();
+    const executionId = tx.events[0].args.executionId;
+
+    for (let i = 0; i < challengePeriod; i++) {
+      tx = await verifierMock.dummy();
+      await tx.wait();
+    }
+
+    tx = verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: 0xfffffffffffff });
+    await assertRevert(tx);
+  });
+
+  it('allow submit result of valid execution and slash solver', async () => {
+    let tx = await enforcer.register(
+      enforcer.address, '0x05', endHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     tx = await tx.wait();
@@ -209,14 +226,14 @@ contract('Enforcer', () => {
 
   it('allow submit result of valid execution and slash challenger', async () => {
     let tx = await enforcer.register(
-      enforcer.address, '0x05', endHash, executionLength,
+      enforcer.address, '0x06', endHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     tx = await tx.wait();
     const executionId = tx.events[0].args.executionId;
 
     tx = await enforcer.connect(challenger).dispute(
-      enforcer.address, '0x05', otherEndHash,
+      enforcer.address, '0x06', otherEndHash,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     tx = await tx.wait();
