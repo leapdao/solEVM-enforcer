@@ -62,9 +62,9 @@ contract Enforcer {
 
         Execution storage execution = executions[executionId];
 
-        require(execution.startBlock != 0);
-        require(execution.startBlock + challengePeriod > block.number);
-        require(msg.value == bondAmount);
+        require(execution.startBlock != 0, "Execution does not existed");
+        require(execution.startBlock + challengePeriod > block.number, "Execution is out of challenge period");
+        require(msg.value == bondAmount, "Bond amount is required");
         // Do we want to prohibit early?
         // require(execution.endHash != endHash);
 
@@ -86,8 +86,8 @@ contract Enforcer {
 
     // receive result from Verifier contract
     function result(bytes32 executionId, bool solverWon, address challenger) public onlyVerifier() {
-        require(executions[executionId].startBlock != 0);
-        require(executions[executionId].startBlock + challengePeriod > block.number);
+        require(executions[executionId].startBlock != 0, "Execution does not existed");
+        require(executions[executionId].startBlock + challengePeriod > block.number, "Execution is out of challenge period");
 
         if (solverWon) {
             // slash deposit of challenger
@@ -102,6 +102,6 @@ contract Enforcer {
         }
 
         bool success = address(0).send(bondAmount);
-        require(success == true);
+        require(success == true, "Cannot burn");
     }
 }
