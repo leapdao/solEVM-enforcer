@@ -20,7 +20,7 @@ jobs:
       name: "Solidity Coverage"
       script:
         - npm install codecov
-        - npm install https://github.com/leapdao/solidity-coverage.git#master
+        - npm install https://github.com/leapdao/solidity-coverage.git#testing
         - npm run coverage
         - ./node_modules/.bin/codecov -f coverage/lcov.info
 
