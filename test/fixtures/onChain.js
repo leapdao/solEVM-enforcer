@@ -34,9 +34,9 @@ module.exports = [
   { code: [OP.PUSH1, '02', OP.PUSH1, '03', OP.SGT], step: 2 },
   { code: [OP.PUSH1, '02', OP.PUSH1, '03', OP.EQ], step: 2 },
   { code: [OP.PUSH1, '02', OP.ISZERO], step: 1 },
-  { code: [OP.PUSH1, 0xfd, OP.PUSH1, 0xfc, OP.AND], step: 2 },
-  { code: [OP.PUSH1, 0xfd, OP.PUSH1, 0xfc, OP.OR], step: 2 },
-  { code: [OP.PUSH1, 0xfd, OP.PUSH1, 0xff, OP.XOR], step: 2 },
+  { code: [OP.PUSH1, 'fd', OP.PUSH1, 'fc', OP.AND], step: 2 },
+  { code: [OP.PUSH1, 'fd', OP.PUSH1, 'fc', OP.OR], step: 2 },
+  { code: [OP.PUSH1, 'fd', OP.PUSH1, 'ff', OP.XOR], step: 2 },
   { code: [OP.PUSH1, 'fe', OP.NOT], step: 1 },
   { code: [OP.PUSH1, '02', OP.PUSH1, '03', OP.BYTE], step: 2 },
   // TODO: need to compile for Constantinople
