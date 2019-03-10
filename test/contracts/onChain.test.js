@@ -1,8 +1,8 @@
-
-const { getCodeWithStep, deployContract, deployCode } = require('./../helpers/utils');
+const { getCodeWithStep, deployContract, deployCode, toBN } = require('./../helpers/utils');
 const onChainFixtures = require('./../fixtures/onChain');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
 
+const OP = require('./../../utils/constants');
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 
 contract('Runtime', function () {
@@ -55,30 +55,51 @@ contract('Runtime', function () {
             logHash: beforeState.logHash,
           }
         );
-        gasCost = onChainState.gas;
 
         // 4. check that on-chain state is the same as off-chain
         // checking hashValue is enough to say that states are same
         assert.equal(onChainState.hashValue, afterState.hashValue, 'State Hash');
 
+        // 5. run again with limited gas
+        if (onChainState.errno > 0) {
+          // skip test out of gas if already an error
+          return;
+        }
+        gasCost = onChainState.gas;
+        let limitedGas = toBN(OP.BLOCK_GAS_LIMIT) - gasCost - 1;
+        if (limitedGas < 0) limitedGas = 0;
+        console.log('Gas Cost', limitedGas);
+
         const oogState = await rt.execute(
           {
             code: codeContract.address,
             data,
-            pc: beforeState.pc,
-            stepCount: 1,
-            gasRemaining: beforeState.gas,
-            gasLimit: gasCost - 1,
-            stack: beforeState.stack,
-            mem: beforeState.mem,
-            accounts: beforeState.accounts,
-            accountsCode: beforeState.accountsCode,
-            logHash: beforeState.logHash,
+            pc: 0,
+            stepCount: 0,
+            gasRemaining: limitedGas,
           }
         );
-
-        assert.equal(oogState.errno, 13, 'Not out of gas');
+        assert.equal(oogState.errno, OP.ERROR_OUT_OF_GAS, 'Not out of gas');
       });
+    });
+  });
+
+  describe('Special tests', () => {
+    it('Stack overflow', async () => {
+      let code = [];
+      for (let i = 0; i < 1025; i++) {
+        code.push(OP.PUSH1, '00');
+      }
+      let codeContract = await deployCode(code);
+      const onChainState = await rt.execute(
+        {
+          code: codeContract.address,
+          data: '0x',
+          pc: 0,
+          stepCount: 0,
+        }
+      );
+      assert.equal(onChainState.errno, OP.ERROR_STACK_OVERFLOW);
     });
   });
 });

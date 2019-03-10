@@ -193,13 +193,16 @@ Utils.deployContract = async function (truffleContract, ...args) {
 Utils.deployCode = async function (code) {
   let codeLen = code.length.toString(16);
 
-  if (codeLen.length === 1) {
+  if (codeLen.length % 2 === 1) {
     codeLen = '0' + codeLen;
   }
 
-  let codeOffset = '0b';
+  let codeOffset = (10 + codeLen.length / 2).toString(16);
+  if (codeOffset.length % 2 === 1) {
+    codeOffset = '0' + codeOffset;
+  }
   let codeCopy = [
-    OP.PUSH1, codeLen,
+    OP[`PUSH${codeLen.length / 2}`], codeLen,
     OP.DUP1,
     OP.PUSH1, codeOffset,
     OP.PUSH1, '00',

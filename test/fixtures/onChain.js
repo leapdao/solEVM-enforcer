@@ -242,4 +242,6 @@ module.exports = [
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURN], step: 2 },
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.REVERT], step: 2 },
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURNDATACOPY], step: 3 },
+  // INVALID opcade
+  { code: ['fe', OP.RETURN], step: 1 },
 ];
