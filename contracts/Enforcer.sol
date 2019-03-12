@@ -62,9 +62,9 @@ contract Enforcer {
 
         Execution storage execution = executions[executionId];
 
-        require(execution.startBlock != 0);
-        require(execution.startBlock + challengePeriod > block.number);
-        require(msg.value == bondAmount);
+        require(execution.startBlock != 0, "Execution does not existed");
+        require(execution.startBlock + challengePeriod > block.number, "Execution is out of challenge period");
+        require(msg.value == bondAmount, "Bond amount is required");
         // Do we want to prohibit early?
         // require(execution.endHash != endHash);
 
@@ -88,8 +88,8 @@ contract Enforcer {
     function result(bytes32 executionId, bool solverWon, address challenger) public onlyVerifier() {
         Execution memory execution = executions[executionId];
 
-        require(execution.startBlock != 0, "InvalidExecution");
-        require(execution.startBlock + challengePeriod > block.number, "OverChallengePeriod");
+        require(execution.startBlock != 0, "Execution does not existed");
+        require(execution.startBlock + challengePeriod > block.number, "Execution is out of challenge period");
 
         if (solverWon) {
             // slash deposit of challenger
