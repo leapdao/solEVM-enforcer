@@ -19,26 +19,4 @@ contract SpendingConditionMock {
             nft.balanceOf(receivers[i]);
         }
     }
-
-    function fulfil(
-        // signature
-        bytes32 r, bytes32 s, uint8 v,
-        // input
-        address tokenAddr,
-        // outputs
-        address[] memory receivers,
-        uint256[] memory amounts) public
-    {
-        require(receivers.length == amounts.length);
-
-        // check signature
-        address signer = ecrecover(bytes32(bytes20(address(this))), v, r, s);
-        require(signer == SPENDER_ADDR);
-
-        // do transfer
-        IERC20 token = IERC20(tokenAddr);
-        for (uint i = 0; i < receivers.length; i++) {
-            token.transfer(receivers[i], amounts[i]);
-        }
-    }
 }
