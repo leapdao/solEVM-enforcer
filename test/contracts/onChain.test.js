@@ -68,7 +68,6 @@ contract('Runtime', function () {
         gasCost = onChainState.gas;
         let limitedGas = toBN(OP.BLOCK_GAS_LIMIT) - gasCost - 1;
         if (limitedGas < 0) limitedGas = 0;
-        console.log('Gas Cost', limitedGas);
 
         const oogState = await rt.execute(
           {
@@ -86,9 +85,9 @@ contract('Runtime', function () {
 
   describe('Special tests', () => {
     it('Stack overflow', async () => {
-      let code = [];
-      for (let i = 0; i < 1025; i++) {
-        code.push(OP.PUSH1, '00');
+      let code = [OP.PUSH1, '00'];
+      for (let i = 0; i < 1024; i++) {
+        code.push(OP.DUP1);
       }
       let codeContract = await deployCode(code);
       const onChainState = await rt.execute(

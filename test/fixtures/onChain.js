@@ -39,6 +39,7 @@ module.exports = [
   { code: [OP.PUSH1, 'fd', OP.PUSH1, 'ff', OP.XOR], step: 2 },
   { code: [OP.PUSH1, 'fe', OP.NOT], step: 1 },
   { code: [OP.PUSH1, '02', OP.PUSH1, '03', OP.BYTE], step: 2 },
+  { code: [OP.PUSH32, ...range(10, 41), OP.PUSH1, '00', OP.MSTORE, OP.PUSH1, '20', OP.PUSH1, '00', OP.SHA3], step: 5 },
   // TODO: need to compile for Constantinople
   // [0x0001, 2, OP.SHL],
   // [0x0001, 2, OP.SHR],,
