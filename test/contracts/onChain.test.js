@@ -29,6 +29,7 @@ contract('Runtime', function () {
             stepCount: step,
           }
         );
+
         // 2. export state right after the target opcode (this supposed to be off-chain)
         const afterState = await rt.execute(
           {
@@ -99,6 +100,22 @@ contract('Runtime', function () {
         }
       );
       assert.equal(onChainState.errno, OP.ERROR_STACK_OVERFLOW);
+    });
+
+    it('Limited gas', async () => {
+      let code = [OP.PUSH1, '00'];
+      let codeContract = await deployCode(code);
+      const onChainState = await rt.execute(
+        {
+          code: codeContract.address,
+          data: '0x',
+          pc: 0,
+          stepCount: 0,
+          gasRemaining: 2,
+          gasLimit: 1,
+        }
+      );
+      assert.equal(onChainState.errno, OP.ERROR_OUT_OF_GAS);
     });
   });
 });
