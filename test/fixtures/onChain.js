@@ -101,8 +101,11 @@ module.exports = [
   { code: [OP.GASPRICE, OP.PC, OP.POP], pc: 1, step: 1 }, // PC
   { code: [OP.GASPRICE, OP.GAS, OP.POP], pc: 1, step: 1 }, // GAS
 
-  { code: [OP.PUSH1, '00', OP.JUMPDEST, OP.PUSH1, '04', OP.JUMP, OP.JUMPDEST], pc: 5, step: 3 },
-  { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], step: 4 },
+  { code: [OP.JUMPDEST, OP.PUSH1, '00', OP.JUMP], step: 2 }, // jump
+  { code: [OP.JUMPDEST, OP.PUSH1, '01', OP.JUMP], step: 2 }, // jump err
+  { code: [OP.JUMPDEST, OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], step: 3 }, // not jump
+  { code: [OP.JUMPDEST, OP.PUSH1, '01', OP.PUSH1, '00', OP.JUMPI], step: 3 }, // jump
+  { code: [OP.JUMPDEST, OP.PUSH1, '01', OP.PUSH1, '01', OP.JUMPI], step: 3 }, // jump err
 
   // still poor test
   // TODO: init state with returnData first
@@ -142,6 +145,7 @@ module.exports = [
   { code: [OP.GASPRICE, OP.POP, OP.PUSH30, ...range(10, 39)], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH31, ...range(10, 40)], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 41)], pc: 2, step: 2 },
+  { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 40)], pc: 2, step: 2 }, // PUSH out of bound
 
   // Data and stack opcodes
 
@@ -187,9 +191,11 @@ module.exports = [
 
   // Code, stack and memory type OP-codes (CODECOPY)
   { code: [OP.PUSH1, '02', OP.PUSH1, '01', OP.PUSH1, '01', OP.CODECOPY], step: 3 },
+  { code: [OP.PUSH1, '07', OP.PUSH1, '01', OP.PUSH1, '01', OP.CODECOPY], step: 3 }, // out of bound
 
   // Storage and stack (SSTORE, SLOAD)
   { code: [OP.PUSH1, '00', OP.PUSH1, '05', OP.SSTORE], step: 2 },
+  { code: [OP.PUSH1, '01', OP.PUSH1, '05', OP.SSTORE], step: 2 }, // set non-zero value
   { code: [OP.PUSH1, '00', OP.PUSH1, '05', OP.SSTORE, OP.PUSH1, '00', OP.SLOAD], step: 4 },
 
   // Context, stack and memory type OP-codes (LOG)
@@ -244,5 +250,7 @@ module.exports = [
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.REVERT], step: 2 },
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURNDATACOPY], step: 3 },
   // INVALID opcade
-  { code: ['fe', OP.RETURN], step: 1 },
+  { code: [OP.GASPRICE, OP.INVALID], step: 1 },
+  // STOP
+  { code: [OP.GASPRICE, OP.STOP], step: 1 },
 ];

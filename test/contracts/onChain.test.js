@@ -41,7 +41,6 @@ contract('Runtime', function () {
         );
 
         // 3. init with beforeState and execute just one step (target opcode) (this supposed to be on-chain)
-        // console.log('Before', beforeState.stack);
         const onChainState = await rt.execute(
           {
             code: codeContract.address,
@@ -62,8 +61,8 @@ contract('Runtime', function () {
         assert.equal(onChainState.hashValue, afterState.hashValue, 'State Hash');
 
         // 5. run again with limited gas
-        if (onChainState.errno > 0) {
-          // skip test out of gas if already an error
+        if (onChainState.errno > 0 || onChainState.gas === beforeState.gas) {
+          // skip test out of gas if already an error or cost nothing
           return;
         }
         gasCost = onChainState.gas;
