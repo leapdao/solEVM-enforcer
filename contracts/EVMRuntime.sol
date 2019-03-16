@@ -774,6 +774,9 @@ contract EVMRuntime is EVMConstants {
             if (evm.errno == NO_ERROR) {
                 pc = pcNext;
             }
+            if (opcode == OP_STOP) {
+                break;
+            }
             stepRun = stepRun + 1;
         }
         evm.pc = pc;
