@@ -750,7 +750,7 @@ contract EVMRuntime is EVMConstants {
                 evm.pc = pc;
                 opcodeHandler(evm);
                 pcNext = evm.pc;
-            } else if (opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_STOP || opcode == OP_SELFDESTRUCT) {
+            } else if (opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_SELFDESTRUCT) {
                 opcodeHandler(evm);
                 break;
             } else {
