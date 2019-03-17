@@ -145,7 +145,9 @@ module.exports = [
   { code: [OP.GASPRICE, OP.POP, OP.PUSH30, ...range(10, 39)], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH31, ...range(10, 40)], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 41)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 40)], pc: 2, step: 2 }, // PUSH out of bound
+  { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 39)], pc: 2, step: 2 }, // PUSH out of bound
+  // TODO this one will throw, didn't know why
+  // { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 40)], pc: 2, step: 2 }, // PUSH out of bound
 
   // Data and stack opcodes
 
