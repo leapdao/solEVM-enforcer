@@ -1,7 +1,7 @@
 
-import Merkelizer from './Merkelizer';
+const Merkelizer = require('./Merkelizer');
 
-export default class DisputeMock {
+module.exports = class DisputeMock {
   constructor (solverComputationPath, challengerComputationPath, solverDepth, code, data, evm) {
     this.treeDepth = solverDepth;
 
@@ -193,4 +193,4 @@ export default class DisputeMock {
     // defaults to challenger
     return 'challenger';
   }
-}
+};

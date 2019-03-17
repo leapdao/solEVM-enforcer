@@ -1,8 +1,8 @@
 
-import Merkelizer from './../../utils/Merkelizer';
-import DisputeMock from './../../utils/DisputeMock';
-import OffchainStepper from './../../utils/OffchainStepper';
-import disputeFixtures from './../fixtures/dispute';
+const Merkelizer = require('./../../utils/Merkelizer');
+const DisputeMock = require('./../../utils/DisputeMock');
+const OffchainStepper = require('./../../utils/OffchainStepper');
+const disputeFixtures = require('./../fixtures/dispute');
 
 const assert = require('assert');
 // for additional logging

@@ -1,4 +1,4 @@
-export default async promise => {
+module.exports = async promise => {
   try {
     let tx = await promise;
     // geth doesn't fail immediately

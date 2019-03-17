@@ -67,7 +67,7 @@ function NumToBuf32 (val) {
   return Buffer.from(val, 'hex');
 }
 
-export default class OffchainStepper extends VM.MetaVM {
+module.exports = class OffchainStepper extends VM.MetaVM {
   constructor () {
     super({ hardfork: 'petersburg' });
   }
@@ -370,4 +370,4 @@ export default class OffchainStepper extends VM.MetaVM {
       ]
     ).replace('0x', '');
   }
-}
+};
