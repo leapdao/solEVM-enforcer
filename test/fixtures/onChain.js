@@ -92,7 +92,7 @@ module.exports = [
   // always 0 in current implementation
   // TODO: do we need it non-zero?
   { code: [OP.GASPRICE, OP.POP, OP.GASPRICE], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.BLOCKHASH], step: 2 },
+  { code: [OP.PUSH1, '00', OP.BLOCKHASH], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.COINBASE], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.TIMESTAMP], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.NUMBER], step: 2 },
@@ -249,7 +249,9 @@ module.exports = [
 
   // Return, Stack and Memory type OP-codes (RETURN, REVERT, RETURNDATACOPY)
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURN], step: 2 },
+  { code: [OP.PUSH1, '04', OP.PUSH1, '00', OP.RETURN], step: 2 }, // RETURN and expand memory
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.REVERT], step: 2 },
+  { code: [OP.PUSH1, '04', OP.PUSH1, '00', OP.REVERT], step: 2 }, // REVERT and expand memory
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURNDATACOPY], step: 3 },
   // INVALID opcade
   { code: [OP.GASPRICE, OP.INVALID], step: 1 },
