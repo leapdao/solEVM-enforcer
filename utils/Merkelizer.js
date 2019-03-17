@@ -2,7 +2,7 @@
 const ethers = require('ethers');
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-export default class Merkelizer {
+module.exports = class Merkelizer {
   static initialStateHash (code, callData) {
     const DEFAULT_GAS = 0x0fffffffffffff;
     const res = {
@@ -231,4 +231,4 @@ export default class Merkelizer {
       process.stdout.write('\n');
     }
   }
-}
+};

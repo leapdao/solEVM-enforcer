@@ -1,5 +1,5 @@
-import { range, leftPad, pushRange } from './../helpers/utils';
 
+const { range, leftPad, pushRange } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 
 const stack16 = pushRange(1, 16);
@@ -14,7 +14,7 @@ function split (str) {
   return res;
 }
 
-export default [
+module.exports = [
   { code: [OP.PUSH1, '03', OP.PUSH1, '05', OP.ADD], step: 2 },
   { code: [OP.PUSH1, '03', OP.PUSH1, '05', OP.MUL], step: 2 },
   { code: [OP.PUSH1, '05', OP.PUSH1, '03', OP.SUB], step: 2 },

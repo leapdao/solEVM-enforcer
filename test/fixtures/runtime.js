@@ -1,5 +1,5 @@
-import { hexRange, range, toBN } from './../helpers/utils';
 
+const { hexRange, range, toBN } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 
 const DEFAULT_CONTRACT_ADDRESS = `0x${OP.DEFAULT_CONTRACT_ADDRESS}`;
@@ -7,7 +7,7 @@ const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
 
 const stack16 = range(1, 16);
 
-export default [
+module.exports = [
   // 0x - arithmetic ops
   { code: OP.ADD, stack: ['3', '5'], result: { stack: ['8'], gasUsed: 3 } },
   { code: OP.MUL, stack: ['3', '5'], result: { stack: ['15'], gasUsed: 5 } },

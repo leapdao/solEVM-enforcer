@@ -2,33 +2,35 @@ const OP = require('./../../utils/constants');
 const ethers = require('ethers');
 const { PUSH1 } = OP;
 
-export const toBN = require('ethers').utils.bigNumberify;
+const Utils = {};
 
-export const toBytes32 = require('ethers').utils.formatBytes32String;
+Utils.toBN = require('ethers').utils.bigNumberify;
 
-export const toNum = arr => arr.map(e => e.toNumber());
+Utils.toBytes32 = require('ethers').utils.formatBytes32String;
 
-export const toStr = arr => arr.map(e => e.toString());
+Utils.toNum = arr => arr.map(e => e.toNumber());
 
-export const toHex = arr => arr.map(e => e.toString(16));
+Utils.toStr = arr => arr.map(e => e.toString());
 
-export const leftPad = (n, width) => {
+Utils.toHex = arr => arr.map(e => e.toString(16));
+
+Utils.leftPad = (n, width) => {
   n = '' + n;
   return n.length >= width ? n : new Array(width - n.length + 1).join(0) + n;
 };
 
-export const pushRange = (from, to) => Array.from(
+Utils.pushRange = (from, to) => Array.from(
   { length: (to - from + 1) * 2 },
-  (_, i) => i % 2 === 0 ? PUSH1 : leftPad(Math.floor((i / 2) + from), 2)
+  (_, i) => i % 2 === 0 ? PUSH1 : Utils.leftPad(Math.floor((i / 2) + from), 2)
 );
 
-export const range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => (i + from).toString());
+Utils.range = (from, to) => Array.from({ length: to - from + 1 }, (x, i) => (i + from).toString());
 
-export const hexRange = (from, to) => toBN('0x' + range(from, to).join('')).toString();
+Utils.hexRange = (from, to) => Utils.toBN('0x' + Utils.range(from, to).join('')).toString();
 
-export const opcodeNames = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
+Utils.opcodeNames = Object.keys(OP).reduce((s, k) => { s[OP[k]] = k; return s; }, {});
 
-export const encodeAccounts = (accounts) => {
+Utils.encodeAccounts = (accounts) => {
   accounts = accounts.map(account => {
     return Object.assign({
       nonce: 0,
@@ -64,7 +66,7 @@ export const encodeAccounts = (accounts) => {
   };
 };
 
-export const decodeAccounts = (accsArr, accsCode = '') => {
+Utils.decodeAccounts = (accsArr, accsCode = '') => {
   accsCode = accsCode.replace('0x', '');
 
   const accounts = [];
@@ -104,7 +106,7 @@ export const decodeAccounts = (accsArr, accsCode = '') => {
   return accounts;
 };
 
-export const decodeLogs = (logsArr, logsCode = '') => {
+Utils.decodeLogs = (logsArr, logsCode = '') => {
   if (logsCode && logsCode.length >= 2) {
     logsCode = logsCode.substr(2);
   }
@@ -113,14 +115,14 @@ export const decodeLogs = (logsArr, logsCode = '') => {
   let offset = 0;
 
   while (offset < logsArr.length) {
-    let addr = toBN(logsArr[offset]).toHexString();
+    let addr = Utils.toBN(logsArr[offset]).toHexString();
     const topics = [];
     topics.push(logsArr[offset + 1].toNumber());
     topics.push(logsArr[offset + 2].toNumber());
     topics.push(logsArr[offset + 3].toNumber());
     topics.push(logsArr[offset + 4].toNumber());
-    const dataIdx = toBN(logsArr[offset + 5]).toNumber();
-    const dataSize = toBN(logsArr[offset + 6]).toNumber();
+    const dataIdx = Utils.toBN(logsArr[offset + 5]).toNumber();
+    const dataSize = Utils.toBN(logsArr[offset + 6]).toNumber();
     const data = '0x' + logsCode.substr(2 * dataIdx, 2 * dataSize);
 
     logs.push({
@@ -133,7 +135,7 @@ export const decodeLogs = (logsArr, logsCode = '') => {
   return logs;
 };
 
-export const getCodeWithStep = (fixture) => {
+Utils.getCodeWithStep = (fixture) => {
   let code;
   if (!fixture.join) {
     code = fixture.code || [];
@@ -146,12 +148,12 @@ export const getCodeWithStep = (fixture) => {
 
   const codeSize = code.length;
   const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
-  const opcodeUnderTest = opcodeNames[code[pc]];
+  const opcodeUnderTest = Utils.opcodeNames[code[pc]];
   const step = fixture.step !== undefined ? fixture.step : 0;
   return { code, step, opcodeUnderTest };
 };
 
-export const getCode = (fixture) => {
+Utils.getCode = (fixture) => {
   let code;
   if (!fixture.join) {
     code = fixture.code || [];
@@ -164,38 +166,31 @@ export const getCode = (fixture) => {
 
   const codeSize = code.length;
   const pc = fixture.pc !== undefined ? fixture.pc : codeSize - 1;
-  const opcodeUnderTest = opcodeNames[code[pc]];
+  const opcodeUnderTest = Utils.opcodeNames[code[pc]];
   return { code, codeSize, pc: ~~pc, opcodeUnderTest };
 };
-export const wallets = [];
 
-export const provider =
+Utils.provider =
   typeof web3 !== 'undefined' ? new ethers.providers.Web3Provider(web3.currentProvider) : undefined;
 
-for (var i = 0; i < 10; i++) {
-  const privateKey = '0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b750120' + i;
-  const wallet = new ethers.Wallet(privateKey, provider);
-  wallets.push(wallet);
-}
-
-export const txOverrides = {
+Utils.txOverrides = {
   gasLimit: 0xfffffffffffff,
   gasPrice: 0x01,
 };
 
-export async function deployContract (truffleContract, ...args) {
+Utils.deployContract = async function (truffleContract, ...args) {
   let _factory = new ethers.ContractFactory(
     truffleContract.abi,
     truffleContract.bytecode,
-    wallets[0]
+    Utils.wallets[0]
   );
-  const contract = await _factory.deploy(...args, txOverrides);
+  const contract = await _factory.deploy(...args, Utils.txOverrides);
 
   await contract.deployed();
   return contract;
-}
+};
 
-export async function deployCode (code) {
+Utils.deployCode = async function (code) {
   let codeLen = code.length.toString(16);
 
   if (codeLen.length === 1) {
@@ -217,5 +212,15 @@ export async function deployCode (code) {
     bytecode: '0x' + codeCopy.join('') + code.join(''),
   };
 
-  return deployContract(obj);
+  return Utils.deployContract(obj);
+};
+
+Utils.wallets = [];
+
+for (var i = 0; i < 10; i++) {
+  const privateKey = '0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b750120' + i;
+  const wallet = new ethers.Wallet(privateKey, Utils.provider);
+  Utils.wallets.push(wallet);
 }
+
+module.exports = Utils;

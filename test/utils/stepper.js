@@ -1,7 +1,7 @@
 
-import { getCode, toBN } from './../helpers/utils';
-import OffchainStepper from './../../utils/OffchainStepper';
-import fixtures from './../fixtures/runtime';
+const { getCode, toBN } = require('./../helpers/utils');
+const OffchainStepper = require('./../../utils/OffchainStepper');
+const fixtures = require('./../fixtures/runtime');
 
 const assert = require('assert');
 const ethers = require('ethers');

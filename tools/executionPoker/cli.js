@@ -1,5 +1,5 @@
 
-import ExecutionPoker from './ExecutionPoker';
+const ExecutionPoker = require('./ExecutionPoker');
 
 const fs = require('fs');
 const ethers = require('ethers');
