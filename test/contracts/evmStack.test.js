@@ -1,5 +1,5 @@
 
-import { deployContract } from './../helpers/utils';
+const { deployContract } = require('./../helpers/utils');
 
 const EVMStackMock = artifacts.require('EVMStackMock.sol');
 const assert = require('assert');

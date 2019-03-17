@@ -1,8 +1,8 @@
 
-import Merkelizer from './../../utils/Merkelizer';
-import OffchainStepper from './../../utils/OffchainStepper';
+const Merkelizer = require('./../../utils/Merkelizer');
+const OffchainStepper = require('./../../utils/OffchainStepper');
 
-export default class ExecutionPoker {
+module.exports = class ExecutionPoker {
   constructor (enforcer, verifier, wallet, gasLimit, logTag) {
     this.enforcer = enforcer.connect(wallet);
     this.verifier = verifier.connect(wallet);
@@ -246,4 +246,4 @@ export default class ExecutionPoker {
 
     return { steps, merkle };
   }
-}
+};

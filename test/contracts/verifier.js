@@ -1,8 +1,7 @@
 
-import Merkelizer from './../../utils/Merkelizer';
-
-import disputeFixtures from './../fixtures/dispute';
-import { deployContract, txOverrides, deployCode } from './../helpers/utils';
+const Merkelizer = require('./../../utils/Merkelizer');
+const disputeFixtures = require('./../fixtures/dispute');
+const { deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 
 const Verifier = artifacts.require('Verifier.sol');
 const Enforcer = artifacts.require('Enforcer.sol');

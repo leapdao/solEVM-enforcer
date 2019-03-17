@@ -67,7 +67,7 @@ function NumToBuf32 (val) {
   return Buffer.from(val, 'hex');
 }
 
-export default class OffchainStepper extends VM.MetaVM {
+module.exports = class OffchainStepper extends VM.MetaVM {
   async initAccounts (accounts) {
     const self = this;
 
@@ -357,4 +357,4 @@ export default class OffchainStepper extends VM.MetaVM {
       ]
     ).replace('0x', '');
   }
-}
+};

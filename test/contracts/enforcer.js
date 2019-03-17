@@ -1,5 +1,5 @@
-import { toBytes32, wallets, deployContract, txOverrides } from './../helpers/utils';
-import assertRevert from '../helpers/assertRevert';
+const { toBytes32, wallets, deployContract, txOverrides } = require('./../helpers/utils');
+const assertRevert = require('./../helpers/assertRevert');
 
 const Enforcer = artifacts.require('./Enforcer.sol');
 const Verifier = artifacts.require('./Verifier.sol');

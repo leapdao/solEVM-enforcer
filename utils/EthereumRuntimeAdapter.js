@@ -1,7 +1,7 @@
 const { BLOCK_GAS_LIMIT } = require('./constants');
 const ethers = require('ethers');
 
-export default class EthereumRuntimeAdapter {
+module.exports = class EthereumRuntimeAdapter {
   constructor (runtimeContract) {
     // explicit mark it as view, so we can just call the execute function
     // TODO: ethers.js should provide the option to explicitly call a function
@@ -43,5 +43,5 @@ export default class EthereumRuntimeAdapter {
         logHash: logHash || '0x0000000000000000000000000000000000000000000000000000000000000000',
       }
     );
-  };
-}
+  }
+};

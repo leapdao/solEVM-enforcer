@@ -1,4 +1,4 @@
-export default async promise => {
+module.exports = async promise => {
   try {
     await promise;
     assert.fail('Expected invalid not received');

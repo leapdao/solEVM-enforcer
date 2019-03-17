@@ -1,8 +1,10 @@
-import { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract, deployCode } from './../helpers/utils';
-import fixtures from './../fixtures/runtime';
-import Runtime from './../../utils/EthereumRuntimeAdapter';
 
+const { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract, deployCode } =
+  require('./../helpers/utils');
+const fixtures = require('./../fixtures/runtime');
+const Runtime = require('./../../utils/EthereumRuntimeAdapter');
 const OP = require('./../../utils/constants');
+
 const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');

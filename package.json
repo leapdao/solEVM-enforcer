@@ -19,7 +19,7 @@
   "scripts": {
     "test": "npm run test:contracts && npm run test:utils",
     "test:contracts": "scripts/test.sh test/contracts/*",
-    "test:utils": "./node_modules/.bin/mocha --require @babel/register --require @babel/polyfill test/utils/",
+    "test:utils": "./node_modules/.bin/mocha test/utils/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:sol": "solhint contracts/*.{sol,slb}",
@@ -31,10 +31,6 @@
     "coverage": "scripts/coverage.sh"
   },
   "devDependencies": {
-    "@babel/core": "^7.2.2",
-    "@babel/polyfill": "^7.2.5",
-    "@babel/preset-env": "^7.2.3",
-    "@babel/register": "^7.0.0",
     "eslint": "^4.11.0",
     "eslint-config-standard": "^10.2.1",
     "eslint-plugin-import": "^2.8.0",
@@ -46,7 +42,7 @@
     "truffle": "=5.0.0"
   },
   "dependencies": {
-    "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r1",
+    "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r5",
     "openzeppelin-solidity": "=2.1.1",
     "ethers": "^4.0.13"
   }
