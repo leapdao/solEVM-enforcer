@@ -44,6 +44,7 @@
   "dependencies": {
     "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r5",
     "openzeppelin-solidity": "=2.1.1",
+    "ethers": "^4.0.13",
     "solidity-coverage": "git+https://github.com/leapdao/solidity-coverage.git#master"
   }
 }
