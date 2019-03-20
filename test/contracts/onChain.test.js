@@ -61,7 +61,7 @@ contract('Runtime', function () {
         assert.equal(onChainState.hashValue, afterState.hashValue, 'State Hash');
 
         // 5. run again with limited gas
-        if (onChainState.errno > 0 || onChainState.gas === beforeState.gas) {
+        if (onChainState.gas === beforeState.gas) {
           // skip test out of gas if already an error or cost nothing
           return;
         }
@@ -80,41 +80,6 @@ contract('Runtime', function () {
         );
         assert.equal(oogState.errno, OP.ERROR_OUT_OF_GAS, 'Not out of gas');
       });
-    });
-  });
-
-  describe('Special tests', () => {
-    it('Stack overflow', async () => {
-      let code = [OP.PUSH1, '00'];
-      for (let i = 0; i < 1024; i++) {
-        code.push(OP.DUP1);
-      }
-      let codeContract = await deployCode(code);
-      const onChainState = await rt.execute(
-        {
-          code: codeContract.address,
-          data: '0x',
-          pc: 0,
-          stepCount: 0,
-        }
-      );
-      assert.equal(onChainState.errno, OP.ERROR_STACK_OVERFLOW);
-    });
-
-    it('Limited gas', async () => {
-      let code = [OP.PUSH1, '00'];
-      let codeContract = await deployCode(code);
-      const onChainState = await rt.execute(
-        {
-          code: codeContract.address,
-          data: '0x',
-          pc: 0,
-          stepCount: 0,
-          gasRemaining: 2,
-          gasLimit: 1,
-        }
-      );
-      assert.equal(onChainState.errno, OP.ERROR_OUT_OF_GAS);
     });
   });
 });
