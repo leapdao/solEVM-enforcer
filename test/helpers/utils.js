@@ -42,7 +42,7 @@ Utils.encodeAccounts = (accounts) => {
   });
 
   const accountsOut = [];
-  let accountsCode = '';
+  let accountsCode = '0x';
   let codeOffset = 0;
   for (const account of accounts) {
     accountsOut.push(account.address);

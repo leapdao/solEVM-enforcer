@@ -1,4 +1,3 @@
-
 const { hexRange, range, toBN } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 
@@ -166,7 +165,7 @@ module.exports = [
   { code: OP.RETURNDATASIZE, result: { stack: ['0'], gasUsed: 2 } },
 
   //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
-  
+
   { code: OP.CODESIZE, result: { stack: ['1'], gasUsed: 2 } },
   { code: [OP.CODESIZE, OP.GASPRICE, OP.POP], pc: '0', result: { stack: ['3'], gasUsed: 6 } },
   { code: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16).toString()], gasUsed: 3 } },
@@ -203,7 +202,7 @@ module.exports = [
   { code: [OP.PUSH32, ...range(10, 41)], pc: '0', result: { stack: [hexRange(10, 41)], gasUsed: 3 } },
 
   // Data and stack opcodes
-  
+
   { code: OP.CALLDATALOAD,
     stack: ['1'],
     data: '0x123456',
@@ -566,7 +565,7 @@ module.exports = [
   {
     description: 'STATICCALL ECRECOVER with input/output',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    // mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [64, 32, 32, 0, 1, 10000],
     result: {
       gasUsed: 3709,
@@ -583,7 +582,7 @@ module.exports = [
   {
     description: 'STATICCALL SHA256 with input/output',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    // mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [64, 32, 32, 0, 2, 10000],
     result: {
       gasUsed: 781,
@@ -617,7 +616,7 @@ module.exports = [
   {
     description: 'STATICCALL IDENTITY with input/output',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    // mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [64, 32, 32, 0, 4, 10000],
     result: {
       gasUsed: 727,
@@ -625,16 +624,30 @@ module.exports = [
   },
   {
     code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [64, 32, 32, 0, 1234, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    stack: [64, 32, 32, 0, 1, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
       errno: 6,
     },
   },
   {
     code: OP.DELEGATECALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    gasRemaining: 706,
+    gasLimit: 706,
+    result: {
+      gasUsed: 706,
+    },
+  },
+  {
+    description: 'DELEGATECALL and failed',
+    code: OP.DELEGATECALL,
+    stack: [32, 32, 0, 0, DEFAULT_CONTRACT_ADDRESS, 10000],
+    accounts: [
+      {
+        address: DEFAULT_CONTRACT_ADDRESS,
+        code: 'fe',
+      },
+    ],
     result: {
       errno: 6,
     },
@@ -642,7 +655,6 @@ module.exports = [
   {
     description: 'STATICCALL, not to a precompile',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
       // error
@@ -650,8 +662,18 @@ module.exports = [
     },
   },
   {
+    description: 'STATICCALL and success',
+    code: OP.STATICCALL,
+    stack: [32, 32, 0, 0, DEFAULT_CONTRACT_ADDRESS, 10000],
+    gasRemaining: 706,
+    gasLimit: 706,
+    result: {
+      gasUsed: 706,
+    },
+  },
+  {
+    description: 'CREATE with send value and failed',
     code: OP.CREATE,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [16, 0, 123],
     result: {
       errno: 6,
