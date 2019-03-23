@@ -108,6 +108,9 @@ module.exports = class OffchainStepper extends VM.MetaVM {
           }
         }
       }
+      if (openCallbacks === 0) {
+        resolve();
+      }
     });
   }
 
@@ -159,6 +162,18 @@ module.exports = class OffchainStepper extends VM.MetaVM {
   }
 
   async runNextStep (runState) {
+    if (runState.depth !== 0) {
+      try {
+        await super.runNextStep(runState);
+      } catch (e) {
+        // TODO: fix upstream, this results in an endless loop
+        if (e.error === 'invalid opcode') {
+          runState.programCounter++;
+        }
+      }
+      return;
+    }
+
     runState.stateManager.checkpoint(() => {});
 
     let stack = toHex(runState.stack);
@@ -297,15 +312,20 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       }
     }
     if (context.mem) {
-      const tmp = Buffer.from(context.mem.replace('0x', ''), 'hex');
+      const tmp = context.mem.join ? context.mem.join('') : context.mem.replace('0x', '');
       const len = tmp.length;
 
-      for (let i = 0; i < len; i++) {
-        runState.memory.push(tmp[i]);
-        if (i % 32 === 0) {
+      for (let i = 0; i < len;) {
+        if (i % 64 === 0) {
           runState.memoryWordCount.iaddn(1);
         }
+        let x = tmp.substring(i, i += 2);
+        runState.memory.push(parseInt(x, 16));
       }
+
+      const words = runState.memoryWordCount;
+      // words * 3 + words ^2 / 512
+      runState.highestMemCost = words.muln(3).add(words.mul(words).divn(512));
     }
 
     if (typeof context.gasRemaining !== 'undefined') {

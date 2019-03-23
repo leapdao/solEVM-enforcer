@@ -79,6 +79,7 @@ contract('Runtime', function () {
         const { accounts, accountsCode } = encodeAccounts(fixture.accounts || []);
         const data = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
+        const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
         const logHash = fixture.logHash;
         const codeContract = await deployCode(code);
         const args = {
@@ -86,6 +87,7 @@ contract('Runtime', function () {
           data,
           pc,
           gasLimit,
+          gasRemaining,
           stack,
           mem,
           accounts,
@@ -138,7 +140,7 @@ contract('Runtime', function () {
           assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');
         }
         if (fixture.result.gasUsed !== undefined) {
-          assert.equal(gasLimit - parseInt(res.gas), fixture.result.gasUsed, 'gasUsed');
+          assert.equal(gasRemaining - parseInt(res.gas), fixture.result.gasUsed, 'gasUsed');
         }
         if (fixture.result.errno !== undefined) {
           assert.equal(res.errno, fixture.result.errno, 'errno');
