@@ -3,6 +3,7 @@ const OP = require('./../../utils/constants');
 
 const DEFAULT_CONTRACT_ADDRESS = `0x${OP.DEFAULT_CONTRACT_ADDRESS}`;
 const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
+const SECOND_CONTRACT_ADDRESS = '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6';
 
 const stack16 = range(1, 16);
 
@@ -624,29 +625,34 @@ module.exports = [
   },
   {
     code: OP.CALL,
-    stack: [64, 32, 32, 0, 1, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    stack: [64, 32, 32, 0, 1, SECOND_CONTRACT_ADDRESS, 10000],
     result: {
       errno: 6,
     },
   },
   {
     code: OP.DELEGATECALL,
-    stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
-    gasRemaining: 706,
-    gasLimit: 706,
+    stack: [32, 32, 0, 0, SECOND_CONTRACT_ADDRESS, 10000],
+    accounts: [
+      {
+        address: SECOND_CONTRACT_ADDRESS,
+        code: OP.GASPRICE,
+      },
+    ],
+    gasLimit: 708,
     result: {
-      gasUsed: 706,
+      gasUsed: 708,
       stack: ['1'],
     },
   },
   {
     description: 'DELEGATECALL and failed',
     code: OP.DELEGATECALL,
-    stack: [32, 32, 0, 0, DEFAULT_CONTRACT_ADDRESS, 10000],
+    stack: [32, 32, 0, 0, SECOND_CONTRACT_ADDRESS, 10000],
     accounts: [
       {
-        address: DEFAULT_CONTRACT_ADDRESS,
-        code: 'fe',
+        address: SECOND_CONTRACT_ADDRESS,
+        code: OP.INVALID,
       },
     ],
     result: {
@@ -656,7 +662,7 @@ module.exports = [
   {
     description: 'STATICCALL, not to a precompile',
     code: OP.STATICCALL,
-    stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    stack: [32, 32, 0, 0, SECOND_CONTRACT_ADDRESS, 10000],
     result: {
       // error
       stack: ['0'],
@@ -665,7 +671,7 @@ module.exports = [
   {
     description: 'STATICCALL with limited gas',
     code: OP.STATICCALL,
-    stack: [32, 32, 0, 0, DEFAULT_CONTRACT_ADDRESS, 10000],
+    stack: [32, 32, 0, 0, SECOND_CONTRACT_ADDRESS, 10000],
     gasRemaining: 706,
     result: {
       gasUsed: 706,
