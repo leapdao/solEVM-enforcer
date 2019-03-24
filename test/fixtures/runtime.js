@@ -636,6 +636,7 @@ module.exports = [
     gasLimit: 706,
     result: {
       gasUsed: 706,
+      stack: ['1'],
     },
   },
   {
@@ -662,11 +663,10 @@ module.exports = [
     },
   },
   {
-    description: 'STATICCALL and success',
+    description: 'STATICCALL with limited gas',
     code: OP.STATICCALL,
     stack: [32, 32, 0, 0, DEFAULT_CONTRACT_ADDRESS, 10000],
     gasRemaining: 706,
-    gasLimit: 706,
     result: {
       gasUsed: 706,
     },
