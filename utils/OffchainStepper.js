@@ -67,6 +67,16 @@ function NumToBuf32 (val) {
   return Buffer.from(val, 'hex');
 }
 
+function NumToHex (val) {
+  val = val.toString(16).replace('0x', '');
+
+  if (val.length % 2 !== 0) {
+    val = '0' + val;
+  }
+
+  return val;
+}
+
 module.exports = class OffchainStepper extends VM.MetaVM {
   async initAccounts (accounts) {
     const self = this;
@@ -166,10 +176,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       try {
         await super.runNextStep(runState);
       } catch (e) {
-        // TODO: fix upstream, this results in an endless loop
-        if (e.error === 'invalid opcode') {
-          runState.programCounter++;
-        }
+        runState.vmError = true;
       }
       return;
     }
@@ -261,13 +268,18 @@ module.exports = class OffchainStepper extends VM.MetaVM {
 
   async run ({ code, data, stack, mem, accounts, logHash, gasLimit, blockGasLimit, gasRemaining, pc }) {
     data = data ? data.replace('0x', '') : '';
-    blockGasLimit = Buffer.from(
-      (blockGasLimit || OP.BLOCK_GAS_LIMIT).toString(16).replace('0x', ''),
-      'hex'
-    );
+    blockGasLimit = Buffer.from(NumToHex(blockGasLimit || OP.BLOCK_GAS_LIMIT), 'hex');
 
     if (accounts) {
       await this.initAccounts(accounts);
+      // commit to the tree, needs a checkpoint first 🤪
+      await new Promise((resolve) => {
+        this.stateManager.checkpoint(() => {
+          this.stateManager.commit(() => {
+            resolve();
+          });
+        });
+      });
     }
 
     const context = {
@@ -292,10 +304,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     const runState = await this.initRunState({
       code: Buffer.from(code.join(''), 'hex'),
       data: Buffer.from(data, 'hex'),
-      gasLimit: Buffer.from(
-        (gasLimit || OP.BLOCK_GAS_LIMIT).toString(16).replace('0x', ''),
-        'hex'
-      ),
+      gasLimit: Buffer.from(NumToHex(gasLimit || OP.BLOCK_GAS_LIMIT), 'hex'),
       gasPrice: 0,
       caller: DEFAULT_CALLER,
       origin: DEFAULT_CALLER,
