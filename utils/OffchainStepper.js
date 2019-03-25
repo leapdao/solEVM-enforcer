@@ -34,16 +34,33 @@ const MEMORY_OPCODES =
 // Supported by ethereumjs-vm
 const ERRNO_MAP =
   {
-
     'stack overflow': 0x01,
     'stack underflow': 0x02,
     'invalid opcode': 0x04,
     'invalid JUMP': 0x05,
+    'instruction not supported': 0x06,
     'revert': 0x07,
     'static state change': 0x0b,
     'out of gas': 0x0d,
     'internal error': 0xff,
   };
+
+const ERROR = {
+  OUT_OF_GAS: 'out of gas',
+  STACK_UNDERFLOW: 'stack underflow',
+  STACK_OVERFLOW: 'stack overflow',
+  INVALID_JUMP: 'invalid JUMP',
+  INSTRUCTION_NOT_SUPPORTED: 'instruction not supported',
+  INVALID_OPCODE: 'invalid opcode',
+  REVERT: 'revert',
+  STATIC_STATE_CHANGE: 'static state change',
+  INTERNAL_ERROR: 'internal error',
+};
+
+function VmError (error) {
+  this.error = error;
+  this.errorType = 'VmError';
+};
 
 const ERROR_KEYS = Object.keys(ERRNO_MAP);
 
@@ -357,6 +374,41 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     }
 
     return context.steps;
+  }
+
+  async handleCALL (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleDELEGATECALL (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleSTATICCALL (runState) {
+    let target = runState.stack[runState.stack.length - 2] || new BN(0xff);
+
+    if (target.gten(0) && target.lten(8)) {
+      await super.handleSTATICCALL(runState);
+      return;
+    }
+
+    runState.lastReturned = Buffer.alloc(0);
+    runState.stack = runState.stack.slice(0, runState.stack.length - 6);
+    runState.stack.push(new BN(0));
+
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleCREATE (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleCREATE2 (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleSELFDESTRUCT (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
 
   async handleLOG (runState) {

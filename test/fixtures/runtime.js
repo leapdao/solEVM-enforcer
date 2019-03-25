@@ -551,120 +551,84 @@ module.exports = [
   {
     code: OP.SELFDESTRUCT,
     stack: [DEFAULT_CALLER_ADDRESS],
-    accounts: [
-      {
-        address: DEFAULT_CONTRACT_ADDRESS,
-        balance: 254,
-        storage: [{ address: 0, value: 5 }],
-      },
-      {
-        address: DEFAULT_CALLER_ADDRESS,
-        balance: 254,
-        storage: [{ address: 0, value: 5 }],
-      },
-    ],
     result: {
-      gasUsed: 5000,
+      errno: 6,
     },
   },
   {
-    code: OP.SELFDESTRUCT,
-    stack: ['0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6'],
-    accounts: [
-      {
-        address: DEFAULT_CONTRACT_ADDRESS,
-        balance: 254,
-        storage: [{ address: 0, value: 5 }],
-      },
-    ],
-    result: {
-      gasUsed: 30000,
-    },
-  },
-  {
-    description: 'CALL ECRECOVER without input/output',
-    code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 1, 10000],
+    description: 'STATICCALL ECRECOVER without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 1, 10000],
     result: {
       gasUsed: 3700,
     },
   },
   {
-    description: 'CALL ECRECOVER with input/output',
-    code: OP.CALL,
+    description: 'STATICCALL ECRECOVER with input/output',
+    code: OP.STATICCALL,
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [64, 32, 32, 0, 0, 1, 10000],
+    stack: [64, 32, 32, 0, 1, 10000],
     result: {
       gasUsed: 3709,
     },
   },
   {
-    description: 'CALL SHA256 without input/output',
-    code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 2, 10000],
+    description: 'STATICCALL SHA256 without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 2, 10000],
     result: {
       gasUsed: 760,
     },
   },
   {
-    description: 'CALL SHA256 with input/output',
-    code: OP.CALL,
+    description: 'STATICCALL SHA256 with input/output',
+    code: OP.STATICCALL,
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [64, 32, 32, 0, 0, 2, 10000],
+    stack: [64, 32, 32, 0, 2, 10000],
     result: {
       gasUsed: 781,
     },
   },
   {
-    description: 'CALL RIPEMD160 without input/output',
-    code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 3, 10000],
+    description: 'STATICCALL RIPEMD160 without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 3, 10000],
     result: {
       gasUsed: 1300,
     },
   },
   {
-    description: 'CALL RIPEMD160 with input/output',
-    code: OP.CALL,
+    description: 'STATICCALL RIPEMD160 with input/output',
+    code: OP.STATICCALL,
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [64, 32, 32, 0, 0, 3, 10000],
+    stack: [64, 32, 32, 0, 3, 10000],
     result: {
       gasUsed: 1429,
     },
   },
   {
-    description: 'CALL IDENTITY without input/output',
-    code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 4, 10000],
+    description: 'STATICCALL IDENTITY without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 4, 10000],
     result: {
       gasUsed: 715,
     },
   },
   {
-    description: 'CALL IDENTITY with input/output',
-    code: OP.CALL,
+    description: 'STATICCALL IDENTITY with input/output',
+    code: OP.STATICCALL,
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [64, 32, 32, 0, 0, 4, 10000],
+    stack: [64, 32, 32, 0, 4, 10000],
     result: {
       gasUsed: 727,
     },
   },
   {
-    description: 'CALL with value transfer & new account',
     code: OP.CALL,
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [64, 32, 32, 0, 1234, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 32409,
-    },
-  },
-  {
-    description: 'CALL without value transfer',
-    code: OP.CALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [64, 32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
-    result: {
-      gasUsed: 709,
+      errno: 6,
     },
   },
   {
@@ -672,25 +636,17 @@ module.exports = [
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 706,
+      errno: 6,
     },
   },
   {
-    description: 'STATICCALL without input',
+    description: 'STATICCALL, not to a precompile',
     code: OP.STATICCALL,
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
     result: {
-      gasUsed: 706,
-    },
-  },
-  {
-    description: 'STATICCALL with out of range input',
-    code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [32, 32, 64, 48, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
-    result: {
-      gasUsed: 712,
+      // error
+      stack: ['0'],
     },
   },
   {
@@ -698,16 +654,7 @@ module.exports = [
     mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [16, 0, 123],
     result: {
-      gasUsed: 32003,
-    },
-  },
-  {
-    description: 'CREATE growing memory',
-    code: OP.CREATE,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
-    stack: [16, 44, 123],
-    result: {
-      gasUsed: 32006,
+      errno: 6,
     },
   },
   {
