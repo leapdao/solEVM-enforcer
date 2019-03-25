@@ -173,11 +173,8 @@ module.exports = class OffchainStepper extends VM.MetaVM {
 
   async runNextStep (runState) {
     if (runState.depth !== 0) {
-      try {
-        await super.runNextStep(runState);
-      } catch (e) {
-        runState.vmError = true;
-      }
+      // throw is expected on errors. That's ok
+      await super.runNextStep(runState);
       return;
     }
 
