@@ -134,6 +134,11 @@ module.exports = class OffchainStepper extends VM.MetaVM {
             );
           }
         }
+
+        if (obj.code) {
+          openCallbacks++;
+          self.stateManager.putContractCode(addr, Buffer.from(obj.code, 'hex'), resolveCallbacks);
+        }
       }
       if (openCallbacks === 0) {
         resolve();
@@ -304,7 +309,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       pc: pc | 0,
       gasRemaining: gasRemaining,
       steps: [],
-      gasLeft: null,
+      gasLeft: gasRemaining,
       logHash: logHash || ZERO_HASH,
     };
 
