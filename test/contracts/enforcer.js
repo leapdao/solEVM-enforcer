@@ -37,7 +37,7 @@ contract('Enforcer', () => {
 
     // start dispute
     tx = await enforcer.dispute(
-      enforcer.address, callData, otherEndHash,
+      enforcer.address, callData, otherEndHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     tx = await tx.wait();
@@ -94,7 +94,7 @@ contract('Enforcer', () => {
 
     assert.isTrue(execution.startBlock.gt(0), 'start block not set');
     assert.equal(execution.endHash, endHash, 'endHash not match');
-    assert.equal(execution.executionLength, executionLength, 'execution length not match');
+    assert.equal(execution.executionDepth, executionLength, 'execution length not match');
     assert.equal(execution.solver, solver.address, 'solver address not match');
   });
 
@@ -109,7 +109,7 @@ contract('Enforcer', () => {
   // dispute
   it('not allow dispute with nonexistent execution', async () => {
     let tx = enforcer.dispute(
-      enforcer.address, otherCallData, endHash,
+      enforcer.address, otherCallData, endHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
 
@@ -124,7 +124,7 @@ contract('Enforcer', () => {
     await tx.wait();
 
     tx = enforcer.dispute(
-      enforcer.address, '0x01', otherEndHash,
+      enforcer.address, '0x01', otherEndHash, executionLength,
       { value: 0, gasLimit: 0xfffffffffffff }
     );
     await assertRevert(tx);
@@ -143,7 +143,7 @@ contract('Enforcer', () => {
     }
 
     tx = enforcer.dispute(
-      enforcer.address, '0x02', otherEndHash,
+      enforcer.address, '0x02', otherEndHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     await assertRevert(tx);
@@ -159,7 +159,7 @@ contract('Enforcer', () => {
 
     const challengerBond = await enforcer.bonds(challenger.address);
     tx = await enforcer.connect(challenger).dispute(
-      enforcer.address, '0x03', otherEndHash,
+      enforcer.address, '0x03', otherEndHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     tx = await tx.wait();
@@ -233,7 +233,7 @@ contract('Enforcer', () => {
     const executionId = tx.events[0].args.executionId;
 
     tx = await enforcer.connect(challenger).dispute(
-      enforcer.address, '0x06', otherEndHash,
+      enforcer.address, '0x06', otherEndHash, executionLength,
       { value: bondAmount, gasLimit: 0xfffffffffffff }
     );
     tx = await tx.wait();

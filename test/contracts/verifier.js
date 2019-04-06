@@ -76,7 +76,7 @@ async function disputeGame (
 
     // TODO: handle the bigger case too
     if (solverMerkle.depth < challengerMerkle.depth) {
-      challengerComputationPath = challengerMerkle.tree[solverMerkle.depth][0];
+      challengerComputationPath = challengerMerkle.tree[solverMerkle.depth - 1][0];
     }
 
     const bondAmount = await enforcer.bondAmount();
@@ -85,7 +85,7 @@ async function disputeGame (
       codeContract,
       callData,
       solverComputationPath.hash,
-      solverSteps.length,
+      solverMerkle.depth,
       { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
     );
 
@@ -94,6 +94,7 @@ async function disputeGame (
       codeContract,
       callData,
       challengerComputationPath.hash,
+      solverMerkle.depth, // TODO handle diff case
       { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
     );
 

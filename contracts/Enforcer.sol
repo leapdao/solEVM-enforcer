@@ -14,7 +14,7 @@ contract Enforcer {
     struct Execution {
         uint256 startBlock;
         bytes32 endHash;
-        uint256 executionLength;
+        uint256 executionDepth;
         address solver;
     }
 
@@ -40,7 +40,7 @@ contract Enforcer {
     }
 
     // register a new execution
-    function register(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionLength)
+    function register(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionDepth)
         public payable
     {
         require(msg.value == bondAmount);
@@ -48,14 +48,14 @@ contract Enforcer {
         bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
 
         require(executions[executionId].startBlock == 0);
-        executions[executionId] = Execution(block.number, endHash, executionLength, msg.sender);
+        executions[executionId] = Execution(block.number, endHash, executionDepth, msg.sender);
         bonds[msg.sender] += bondAmount;
 
         emit Registered(executionId, msg.sender, codeContractAddress, _callData);
     }
 
     // starts a new dispute
-    function dispute(address codeContractAddress, bytes memory _callData, bytes32 endHash)
+    function dispute(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionDepth)
         public payable
     {
         bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
@@ -74,8 +74,9 @@ contract Enforcer {
             executionId,
             Merkelizer.initialStateHash(_callData),
             execution.endHash,
-            execution.executionLength,
+            execution.executionDepth,
             endHash,
+            executionDepth,
             // challenger
             msg.sender,
             codeContractAddress

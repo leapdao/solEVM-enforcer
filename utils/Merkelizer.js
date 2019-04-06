@@ -102,8 +102,8 @@ module.exports = class Merkelizer {
   }
 
   get depth () {
-    // we do not count the leaves
-    return this.tree.length - 1;
+    // we also count leaves
+    return this.tree.length;
   }
 
   getNode (hash) {

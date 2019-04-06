@@ -36,7 +36,9 @@ contract Verifier is Ownable, HydratedRuntime {
         address challengerAddr;
 
         bytes32 solverPath;
+        uint256 solverDepth;
         bytes32 challengerPath;
+        uint256 challengerDepth;
 
         ComputationPath solver;
         ComputationPath challenger;
@@ -47,6 +49,7 @@ contract Verifier is Ownable, HydratedRuntime {
     }
 
     event DisputeNewRound(bytes32 indexed disputeId, uint256 timeout, bytes32 solverPath, bytes32 challengerPath);
+    event ProofSubmitted(uint256 solverDepth, uint256 challengerDepth);
 
     uint256 public timeoutDuration;
 
@@ -85,8 +88,9 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 executionId,
         bytes32 initialStateHash,
         bytes32 solverHashRoot,
-        uint256 solverExecutionLength,
+        uint256 solverExecutionDepth,
         bytes32 challengerHashRoot,
+        uint256 challengerExecutionDepth,
         address challenger,
         address codeContractAddress
     ) public onlyEnforcer() returns (bytes32 disputeId) {
@@ -95,8 +99,9 @@ contract Verifier is Ownable, HydratedRuntime {
                 executionId,
                 initialStateHash,
                 solverHashRoot,
-                solverExecutionLength,
-                challengerHashRoot
+                solverExecutionDepth,
+                challengerHashRoot,
+                challengerExecutionDepth
             )
         );
 
@@ -110,7 +115,9 @@ contract Verifier is Ownable, HydratedRuntime {
             codeContractAddress,
             challenger,
             solverHashRoot,
+            solverExecutionDepth,
             challengerHashRoot,
+            challengerExecutionDepth,
             ComputationPath(solverHashRoot, solverHashRoot),
             ComputationPath(challengerHashRoot, challengerHashRoot),
             INITIAL_STATE,
@@ -138,12 +145,12 @@ contract Verifier is Ownable, HydratedRuntime {
             "wrong path submitted"
         );
 
-        if ((h == dispute.solver.left) || (h == dispute.solver.right)) {
+        if ((h == dispute.solver.left) || (h == dispute.solver.right) && dispute.solverDepth >= dispute.challengerDepth) {
             dispute.state |= SOLVER_RESPONDED;
             dispute.solver = computationPath;
         }
 
-        if ((h == dispute.challenger.left) || (h == dispute.challenger.right)) {
+        if ((h == dispute.challenger.left) || (h == dispute.challenger.right) && dispute.challengerDepth >= dispute.solverDepth) {
             dispute.state |= CHALLENGER_RESPONDED;
             dispute.challenger = computationPath;
         }
@@ -151,10 +158,7 @@ contract Verifier is Ownable, HydratedRuntime {
         // TODO: do we really want to refresh the timeout?
         // dispute.timeout = getTimeout();
 
-        if ((dispute.state & SOLVER_RESPONDED) != 0 && (dispute.state & CHALLENGER_RESPONDED) != 0) {
-            updateRound(dispute);
-            emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
-        }
+        updateRound(dispute);
     }
 
     /*
@@ -168,7 +172,7 @@ contract Verifier is Ownable, HydratedRuntime {
      *    is considered invalid
      *  - the left-most (first) execution step must be a `Merkelizer.initialStateHash`
      *
-     * Note: if that doesn't happen, this will finally timeout and a final decision is made
+     * Note: if that doesnt happen, this will finally timeout and a final decision is made
      *       in `claimTimeout`.
      */
     // solhint-disable-next-line code-complexity
@@ -179,6 +183,7 @@ contract Verifier is Ownable, HydratedRuntime {
         // solhint-disable-next-line function-max-lines
     ) public onlyPlaying(disputeId) {
         Dispute storage dispute = disputes[disputeId];
+        require(dispute.solverDepth == 0 && dispute.challengerDepth == 0, "Not at leaf yet");
 
         bytes32 inputHash = executionState.stateHash(
             executionState.stackHash(proofs.stackHash),
@@ -300,8 +305,55 @@ contract Verifier is Ownable, HydratedRuntime {
         return block.number + timeoutDuration;
     }
 
+    /**
+      * @dev updateRound runs every time after receiving a respond
+      *     If solver depth is higher than challenger depth
+      *         update solver tree
+      *     If solver depth is less than challenger depth
+      *         update challenger tree
+      *     Else update both tree
+      */
     function updateRound(Dispute storage dispute) internal {
+        // if solver depth is higher, only update solver tree
+        emit ProofSubmitted(dispute.solverDepth, dispute.challengerDepth);
+        if (dispute.solverDepth > dispute.challengerDepth) {
+            if (dispute.state & SOLVER_RESPONDED != 0) {
+                // follow to the left by default
+                dispute.solverPath = dispute.solver.left;
+                dispute.solverDepth -= 1;
+                dispute.state ^= SOLVER_RESPONDED;
+                emit DisputeNewRound(dispute.executionId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+            } else {
+                // TODO this means CHALLENGER_RESPONDED unnecessary, should be ignored
+                dispute.state ^= CHALLENGER_RESPONDED;
+            }
+            return;
+        }
+
+        // if solver depth is lower, only update challenger tree
+        if (dispute.solverDepth < dispute.challengerDepth) {
+            if (dispute.state & CHALLENGER_RESPONDED != 0) {
+                // follow to the left by default
+                dispute.challengerPath = dispute.challenger.left;
+                dispute.challengerDepth -= 1;
+                dispute.state ^= CHALLENGER_RESPONDED;
+                emit DisputeNewRound(dispute.executionId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+            } else {
+                // TODO this means SOLVER_RESPONDED unnecessary, should be ignored
+                dispute.state ^= SOLVER_RESPONDED;
+            }
+            return;
+        }
+
+        if ((dispute.state & SOLVER_RESPONDED) == 0 || (dispute.state & CHALLENGER_RESPONDED) == 0) {
+            return;
+        }
+
         dispute.state ^= SOLVER_RESPONDED | CHALLENGER_RESPONDED;
+
+        // solver depth should now equal to challenger depth
+        dispute.solverDepth -= 1;
+        dispute.challengerDepth -= 1;
 
         if ((dispute.solver.left == dispute.challenger.left) &&
             (dispute.solver.right != 0) &&
@@ -324,6 +376,7 @@ contract Verifier is Ownable, HydratedRuntime {
                 }
             }
         }
+        emit DisputeNewRound(dispute.executionId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
     }
 
     function handleCREATE(EVM memory state) internal {
