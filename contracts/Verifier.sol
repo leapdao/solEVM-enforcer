@@ -313,6 +313,7 @@ contract Verifier is Ownable, HydratedRuntime {
       *         update challenger tree
       *     Else update both tree
       */
+    // solhint-disable-next-line code-complexity, function-max-lines
     function updateRound(bytes32 disputeId, Dispute storage dispute) internal {
         // if solver depth is higher, only update solver tree
         emit ProofSubmitted(dispute.solverDepth, dispute.challengerDepth);
