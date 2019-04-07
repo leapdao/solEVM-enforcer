@@ -158,7 +158,7 @@ contract Verifier is Ownable, HydratedRuntime {
         // TODO: do we really want to refresh the timeout?
         // dispute.timeout = getTimeout();
 
-        updateRound(dispute);
+        updateRound(disputeId, dispute);
     }
 
     /*
@@ -313,7 +313,7 @@ contract Verifier is Ownable, HydratedRuntime {
       *         update challenger tree
       *     Else update both tree
       */
-    function updateRound(Dispute storage dispute) internal {
+    function updateRound(bytes32 disputeId, Dispute storage dispute) internal {
         // if solver depth is higher, only update solver tree
         emit ProofSubmitted(dispute.solverDepth, dispute.challengerDepth);
         if (dispute.solverDepth > dispute.challengerDepth) {
@@ -322,7 +322,7 @@ contract Verifier is Ownable, HydratedRuntime {
                 dispute.solverPath = dispute.solver.left;
                 dispute.solverDepth -= 1;
                 dispute.state ^= SOLVER_RESPONDED;
-                emit DisputeNewRound(dispute.executionId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+                emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
             } else {
                 // TODO this means CHALLENGER_RESPONDED unnecessary, should be ignored
                 dispute.state ^= CHALLENGER_RESPONDED;
@@ -337,7 +337,7 @@ contract Verifier is Ownable, HydratedRuntime {
                 dispute.challengerPath = dispute.challenger.left;
                 dispute.challengerDepth -= 1;
                 dispute.state ^= CHALLENGER_RESPONDED;
-                emit DisputeNewRound(dispute.executionId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+                emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
             } else {
                 // TODO this means SOLVER_RESPONDED unnecessary, should be ignored
                 dispute.state ^= SOLVER_RESPONDED;
@@ -376,7 +376,7 @@ contract Verifier is Ownable, HydratedRuntime {
                 }
             }
         }
-        emit DisputeNewRound(dispute.executionId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+        emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
     }
 
     function handleCREATE(EVM memory state) internal {
