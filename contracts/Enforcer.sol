@@ -43,11 +43,11 @@ contract Enforcer {
     function register(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionDepth)
         public payable
     {
-        require(msg.value == bondAmount);
+        require(msg.value == bondAmount, 'Bond is required');
 
         bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
 
-        require(executions[executionId].startBlock == 0);
+        require(executions[executionId].startBlock == 0, 'Execution already registered');
         executions[executionId] = Execution(block.number, endHash, executionDepth, msg.sender);
         bonds[msg.sender] += bondAmount;
 

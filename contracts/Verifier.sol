@@ -49,7 +49,6 @@ contract Verifier is Ownable, HydratedRuntime {
     }
 
     event DisputeNewRound(bytes32 indexed disputeId, uint256 timeout, bytes32 solverPath, bytes32 challengerPath);
-    event ProofSubmitted(uint256 solverDepth, uint256 challengerDepth);
 
     uint256 public timeoutDuration;
 
@@ -159,6 +158,18 @@ contract Verifier is Ownable, HydratedRuntime {
         // dispute.timeout = getTimeout();
 
         updateRound(disputeId, dispute);
+    }
+
+    /*
+     * This function is used by the party with the larger tree.
+     * It accepts an array of ComputationPath and check them with the one with larger tree.
+     * After this, it is required that both parties' trees are of the same depth
+     */
+    function quickRespond(
+        bytes32 disputeId,
+        ComputationPath[] memory path
+    ) public onlyPlaying(disputeId) {
+        // TODO
     }
 
     /*
@@ -316,7 +327,6 @@ contract Verifier is Ownable, HydratedRuntime {
     // solhint-disable-next-line code-complexity, function-max-lines
     function updateRound(bytes32 disputeId, Dispute storage dispute) internal {
         // if solver depth is higher, only update solver tree
-        emit ProofSubmitted(dispute.solverDepth, dispute.challengerDepth);
         if (dispute.solverDepth > dispute.challengerDepth) {
             if (dispute.state & SOLVER_RESPONDED != 0) {
                 // follow to the left by default
