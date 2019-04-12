@@ -16,9 +16,8 @@ contract VerifierMock {
         bytes32 executionId,
         bytes32 initialStateHash,
         bytes32 solverHashRoot,
-        uint256 solverDepth,
         bytes32 challengerHashRoot,
-        uint256 challengerDepth,
+        uint256 treeDepth,
         address challenger,
         address codeContractAddress
     ) public returns (bytes32 disputeId) {

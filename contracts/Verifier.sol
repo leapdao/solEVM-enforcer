@@ -36,9 +36,8 @@ contract Verifier is Ownable, HydratedRuntime {
         address challengerAddr;
 
         bytes32 solverPath;
-        uint256 solverDepth;
         bytes32 challengerPath;
-        uint256 challengerDepth;
+        uint256 treeDepth;
 
         ComputationPath solver;
         ComputationPath challenger;
@@ -87,9 +86,8 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 executionId,
         bytes32 initialStateHash,
         bytes32 solverHashRoot,
-        uint256 solverExecutionDepth,
         bytes32 challengerHashRoot,
-        uint256 challengerExecutionDepth,
+        uint256 executionDepth,
         address challenger,
         address codeContractAddress
     ) public onlyEnforcer() returns (bytes32 disputeId) {
@@ -98,9 +96,8 @@ contract Verifier is Ownable, HydratedRuntime {
                 executionId,
                 initialStateHash,
                 solverHashRoot,
-                solverExecutionDepth,
                 challengerHashRoot,
-                challengerExecutionDepth
+                executionDepth
             )
         );
 
@@ -114,9 +111,8 @@ contract Verifier is Ownable, HydratedRuntime {
             codeContractAddress,
             challenger,
             solverHashRoot,
-            solverExecutionDepth,
             challengerHashRoot,
-            challengerExecutionDepth,
+            executionDepth,
             ComputationPath(solverHashRoot, solverHashRoot),
             ComputationPath(challengerHashRoot, challengerHashRoot),
             INITIAL_STATE,
@@ -134,8 +130,9 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 disputeId,
         ComputationPath memory computationPath
     ) public onlyPlaying(disputeId) {
-
         Dispute storage dispute = disputes[disputeId];
+
+        require(dispute.treeDepth > 0, "already reach leaf");
 
         bytes32 h = keccak256(abi.encodePacked(computationPath.left, computationPath.right));
 
@@ -144,32 +141,17 @@ contract Verifier is Ownable, HydratedRuntime {
             "wrong path submitted"
         );
 
-        if ((h == dispute.solver.left) || (h == dispute.solver.right) && dispute.solverDepth >= dispute.challengerDepth) {
+        if ((h == dispute.solver.left) || (h == dispute.solver.right)) {
             dispute.state |= SOLVER_RESPONDED;
             dispute.solver = computationPath;
         }
 
-        if ((h == dispute.challenger.left) || (h == dispute.challenger.right) && dispute.challengerDepth >= dispute.solverDepth) {
+        if ((h == dispute.challenger.left) || (h == dispute.challenger.right)) {
             dispute.state |= CHALLENGER_RESPONDED;
             dispute.challenger = computationPath;
         }
 
-        // TODO: do we really want to refresh the timeout?
-        // dispute.timeout = getTimeout();
-
         updateRound(disputeId, dispute);
-    }
-
-    /*
-     * This function is used by the party with the larger tree.
-     * It accepts an array of ComputationPath and check them with the one with larger tree.
-     * After this, it is required that both parties' trees are of the same depth
-     */
-    function quickRespond(
-        bytes32 disputeId,
-        ComputationPath[] memory path
-    ) public onlyPlaying(disputeId) {
-        // TODO
     }
 
     /*
@@ -194,7 +176,7 @@ contract Verifier is Ownable, HydratedRuntime {
         // solhint-disable-next-line function-max-lines
     ) public onlyPlaying(disputeId) {
         Dispute storage dispute = disputes[disputeId];
-        require(dispute.solverDepth == 0 && dispute.challengerDepth == 0, "Not at leaf yet");
+        require(dispute.treeDepth == 0, "Not at leaf yet");
 
         bytes32 inputHash = executionState.stateHash(
             executionState.stackHash(proofs.stackHash),
@@ -318,53 +300,19 @@ contract Verifier is Ownable, HydratedRuntime {
 
     /**
       * @dev updateRound runs every time after receiving a respond
-      *     If solver depth is higher than challenger depth
-      *         update solver tree
-      *     If solver depth is less than challenger depth
-      *         update challenger tree
-      *     Else update both tree
+      *         assume that both solver and challenger have the same tree depth
       */
     // solhint-disable-next-line code-complexity, function-max-lines
     function updateRound(bytes32 disputeId, Dispute storage dispute) internal {
-        // if solver depth is higher, only update solver tree
-        if (dispute.solverDepth > dispute.challengerDepth) {
-            if (dispute.state & SOLVER_RESPONDED != 0) {
-                // follow to the left by default
-                dispute.solverPath = dispute.solver.left;
-                dispute.solverDepth -= 1;
-                dispute.state ^= SOLVER_RESPONDED;
-                emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
-            } else {
-                // TODO this means CHALLENGER_RESPONDED unnecessary, should be ignored
-                dispute.state ^= CHALLENGER_RESPONDED;
-            }
-            return;
-        }
-
-        // if solver depth is lower, only update challenger tree
-        if (dispute.solverDepth < dispute.challengerDepth) {
-            if (dispute.state & CHALLENGER_RESPONDED != 0) {
-                // follow to the left by default
-                dispute.challengerPath = dispute.challenger.left;
-                dispute.challengerDepth -= 1;
-                dispute.state ^= CHALLENGER_RESPONDED;
-                emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
-            } else {
-                // TODO this means SOLVER_RESPONDED unnecessary, should be ignored
-                dispute.state ^= SOLVER_RESPONDED;
-            }
-            return;
-        }
-
         if ((dispute.state & SOLVER_RESPONDED) == 0 || (dispute.state & CHALLENGER_RESPONDED) == 0) {
             return;
         }
 
+        // refresh state and timeout
+        dispute.timeout = getTimeout();
         dispute.state ^= SOLVER_RESPONDED | CHALLENGER_RESPONDED;
 
-        // solver depth should now equal to challenger depth
-        dispute.solverDepth -= 1;
-        dispute.challengerDepth -= 1;
+        dispute.treeDepth -= 1;
 
         if ((dispute.solver.left == dispute.challenger.left) &&
             (dispute.solver.right != 0) &&

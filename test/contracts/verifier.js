@@ -95,7 +95,6 @@ async function disputeGame (
       codeContract,
       callData,
       challengerComputationPath.hash,
-      solverMerkle.depth, // TODO handle diff case
       { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
     );
 
@@ -268,7 +267,6 @@ contract('Verifier', function () {
         codeContract.address,
         callData,
         ZERO_HASH,
-        1,
         { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
       );
 
