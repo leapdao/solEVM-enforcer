@@ -108,7 +108,6 @@ module.exports = class ExecutionPoker {
         contractAddr,
         data,
         challengerHash,
-        res.merkle.depth,
         { value: bondAmount, gasLimit: this.gasLimit }
       );
 
