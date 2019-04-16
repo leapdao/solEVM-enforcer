@@ -75,7 +75,7 @@ module.exports = class ExecutionPoker {
       contractAddr,
       data,
       res.merkle.root.hash,
-      res.steps.length,
+      res.merkle.depth,
       { value: bondAmount }
     );
 
@@ -127,7 +127,7 @@ module.exports = class ExecutionPoker {
 
     let obj = {
       merkle: res.merkle,
-      steps: res.steps,
+      depth: res.merkle.depth,
       computationPath: res.merkle.root,
     };
 
