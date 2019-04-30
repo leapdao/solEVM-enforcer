@@ -34,16 +34,33 @@ const MEMORY_OPCODES =
 // Supported by ethereumjs-vm
 const ERRNO_MAP =
   {
-
     'stack overflow': 0x01,
     'stack underflow': 0x02,
     'invalid opcode': 0x04,
     'invalid JUMP': 0x05,
+    'instruction not supported': 0x06,
     'revert': 0x07,
     'static state change': 0x0b,
     'out of gas': 0x0d,
     'internal error': 0xff,
   };
+
+const ERROR = {
+  OUT_OF_GAS: 'out of gas',
+  STACK_UNDERFLOW: 'stack underflow',
+  STACK_OVERFLOW: 'stack overflow',
+  INVALID_JUMP: 'invalid JUMP',
+  INSTRUCTION_NOT_SUPPORTED: 'instruction not supported',
+  INVALID_OPCODE: 'invalid opcode',
+  REVERT: 'revert',
+  STATIC_STATE_CHANGE: 'static state change',
+  INTERNAL_ERROR: 'internal error',
+};
+
+function VmError (error) {
+  this.error = error;
+  this.errorType = 'VmError';
+};
 
 const ERROR_KEYS = Object.keys(ERRNO_MAP);
 
@@ -65,6 +82,16 @@ function NumToBuf32 (val) {
   }
 
   return Buffer.from(val, 'hex');
+}
+
+function NumToHex (val) {
+  val = val.toString(16).replace('0x', '');
+
+  if (val.length % 2 !== 0) {
+    val = '0' + val;
+  }
+
+  return val;
 }
 
 module.exports = class OffchainStepper extends VM.MetaVM {
@@ -111,6 +138,14 @@ module.exports = class OffchainStepper extends VM.MetaVM {
             );
           }
         }
+
+        if (obj.code) {
+          openCallbacks++;
+          self.stateManager.putContractCode(addr, Buffer.from(obj.code, 'hex'), resolveCallbacks);
+        }
+      }
+      if (openCallbacks === 0) {
+        resolve();
       }
     });
   }
@@ -164,6 +199,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
 
   async runNextStep (runState) {
     if (runState.depth !== 0) {
+      // throw is expected on errors. That's ok
       await super.runNextStep(runState);
       return;
     }
@@ -255,13 +291,18 @@ module.exports = class OffchainStepper extends VM.MetaVM {
 
   async run ({ code, data, stack, mem, accounts, logHash, gasLimit, blockGasLimit, gasRemaining, pc }) {
     data = data ? data.replace('0x', '') : '';
-    blockGasLimit = Buffer.from(
-      (blockGasLimit || OP.BLOCK_GAS_LIMIT).toString(16).replace('0x', ''),
-      'hex'
-    );
+    blockGasLimit = Buffer.from(NumToHex(blockGasLimit || OP.BLOCK_GAS_LIMIT), 'hex');
 
     if (accounts) {
       await this.initAccounts(accounts);
+      // commit to the tree, needs a checkpoint first 🤪
+      await new Promise((resolve) => {
+        this.stateManager.checkpoint(() => {
+          this.stateManager.commit(() => {
+            resolve();
+          });
+        });
+      });
     }
 
     const context = {
@@ -272,7 +313,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       pc: pc | 0,
       gasRemaining: gasRemaining,
       steps: [],
-      gasLeft: null,
+      gasLeft: gasRemaining,
       logHash: logHash || ZERO_HASH,
     };
 
@@ -286,10 +327,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     const runState = await this.initRunState({
       code: Buffer.from(code.join(''), 'hex'),
       data: Buffer.from(data, 'hex'),
-      gasLimit: Buffer.from(
-        (gasLimit || OP.BLOCK_GAS_LIMIT).toString(16).replace('0x', ''),
-        'hex'
-      ),
+      gasLimit: Buffer.from(NumToHex(gasLimit || OP.BLOCK_GAS_LIMIT), 'hex'),
       gasPrice: 0,
       caller: DEFAULT_CALLER,
       origin: DEFAULT_CALLER,
@@ -306,14 +344,15 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       }
     }
     if (context.mem) {
-      const tmp = Buffer.from(context.mem.replace('0x', ''), 'hex');
+      const tmp = context.mem.join ? context.mem.join('') : context.mem.replace('0x', '');
       const len = tmp.length;
 
-      for (let i = 0; i < len; i++) {
-        runState.memory.push(tmp[i]);
-        if (i % 32 === 0) {
+      for (let i = 0; i < len;) {
+        if (i % 64 === 0) {
           runState.memoryWordCount.iaddn(1);
         }
+        let x = tmp.substring(i, i += 2);
+        runState.memory.push(parseInt(x, 16));
       }
 
       const words = runState.memoryWordCount;
@@ -344,6 +383,41 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     }
 
     return context.steps;
+  }
+
+  async handleCALL (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleDELEGATECALL (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleSTATICCALL (runState) {
+    let target = runState.stack[runState.stack.length - 2] || new BN(0xff);
+
+    if (target.gten(0) && target.lten(8)) {
+      await super.handleSTATICCALL(runState);
+      return;
+    }
+
+    runState.lastReturned = Buffer.alloc(0);
+    runState.stack = runState.stack.slice(0, runState.stack.length - 6);
+    runState.stack.push(new BN(0));
+
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleCREATE (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleCREATE2 (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleSELFDESTRUCT (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
 
   async handleLOG (runState) {

@@ -1,7 +1,8 @@
-
 const Merkelizer = require('./../../utils/Merkelizer');
 const disputeFixtures = require('./../fixtures/dispute');
 const { deployContract, txOverrides, deployCode } = require('./../helpers/utils');
+const OP = require('./../../utils/constants');
+const assertRevert = require('./../helpers/assertRevert');
 
 const Verifier = artifacts.require('Verifier.sol');
 const Enforcer = artifacts.require('Enforcer.sol');
@@ -76,7 +77,7 @@ async function disputeGame (
 
     // TODO: handle the bigger case too
     if (solverMerkle.depth < challengerMerkle.depth) {
-      challengerComputationPath = challengerMerkle.tree[solverMerkle.depth][0];
+      challengerComputationPath = challengerMerkle.tree[solverMerkle.depth - 1][0];
     }
 
     const bondAmount = await enforcer.bondAmount();
@@ -85,7 +86,7 @@ async function disputeGame (
       codeContract,
       callData,
       solverComputationPath.hash,
-      solverSteps.length,
+      solverMerkle.depth,
       { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
     );
 
@@ -242,4 +243,57 @@ contract('Verifier', function () {
       );
     }
   );
+
+  describe('submitProof', async () => {
+    it('not allow preemptive submission of proof', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.PUSH1, '00',
+        OP.RETURN,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345678';
+
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+
+      tx = await tx.wait();
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+
+      tx = await tx.wait();
+      let disputeId = tx.events[0].args.disputeId;
+
+      let proofs = {
+        stackHash: ZERO_HASH,
+        memHash: ZERO_HASH,
+        dataHash: ZERO_HASH,
+      };
+
+      // should not accept submitProof
+      await assertRevert(verifier.submitProof(
+        disputeId,
+        proofs,
+        {
+          data: '0x12345678',
+          stack: [],
+          mem: '0x',
+          returnData: '0x',
+          logHash: ZERO_HASH,
+          pc: 0,
+          gasRemaining: 0xfffffffffffff,
+        },
+        txOverrides
+      ));
+    });
+  });
 });

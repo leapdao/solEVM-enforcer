@@ -14,7 +14,7 @@ contract Enforcer {
     struct Execution {
         uint256 startBlock;
         bytes32 endHash;
-        uint256 executionLength;
+        uint256 executionDepth;
         address solver;
     }
 
@@ -40,21 +40,26 @@ contract Enforcer {
     }
 
     // register a new execution
-    function register(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionLength)
+    function register(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionDepth)
         public payable
     {
-        require(msg.value == bondAmount);
+        require(msg.value == bondAmount, "Bond is required");
 
         bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
 
-        require(executions[executionId].startBlock == 0);
-        executions[executionId] = Execution(block.number, endHash, executionLength, msg.sender);
+        require(executions[executionId].startBlock == 0, "Execution already registered");
+        executions[executionId] = Execution(block.number, endHash, executionDepth, msg.sender);
         bonds[msg.sender] += bondAmount;
 
         emit Registered(executionId, msg.sender, codeContractAddress, _callData);
     }
 
-    // starts a new dispute
+    /**
+      * @dev dispute is called by challenger to start a new dispute
+      *     assumed that challenger's execution tree is of the same depth as solver's
+      *     in case challenger's tree is shallower, he should use node with zero hash to make it deeper
+      *     in case challenger's tree is deeper, he should submit only the left subtree with the same depth with solver's
+      */
     function dispute(address codeContractAddress, bytes memory _callData, bytes32 endHash)
         public payable
     {
@@ -74,8 +79,8 @@ contract Enforcer {
             executionId,
             Merkelizer.initialStateHash(_callData),
             execution.endHash,
-            execution.executionLength,
             endHash,
+            execution.executionDepth,
             // challenger
             msg.sender,
             codeContractAddress

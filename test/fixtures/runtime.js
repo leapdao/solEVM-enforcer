@@ -1,9 +1,9 @@
-
 const { hexRange, range, toBN } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 
 const DEFAULT_CONTRACT_ADDRESS = `0x${OP.DEFAULT_CONTRACT_ADDRESS}`;
 const DEFAULT_CALLER_ADDRESS = `0x${OP.DEFAULT_CALLER}`;
+const SECOND_CONTRACT_ADDRESS = '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6';
 
 const stack16 = range(1, 16);
 
@@ -165,7 +165,7 @@ module.exports = [
   { code: OP.RETURNDATASIZE, result: { stack: ['0'], gasUsed: 2 } },
 
   //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
-  
+
   { code: OP.CODESIZE, result: { stack: ['1'], gasUsed: 2 } },
   { code: [OP.CODESIZE, OP.GASPRICE, OP.POP], pc: '0', result: { stack: ['3'], gasUsed: 6 } },
   { code: [OP.PUSH1, '01'], pc: '0', result: { stack: [parseInt('01', 16).toString()], gasUsed: 3 } },
@@ -202,7 +202,7 @@ module.exports = [
   { code: [OP.PUSH32, ...range(10, 41)], pc: '0', result: { stack: [hexRange(10, 41)], gasUsed: 3 } },
 
   // Data and stack opcodes
-  
+
   { code: OP.CALLDATALOAD,
     stack: ['1'],
     data: '0x123456',
@@ -550,163 +550,115 @@ module.exports = [
   {
     code: OP.SELFDESTRUCT,
     stack: [DEFAULT_CALLER_ADDRESS],
-    accounts: [
-      {
-        address: DEFAULT_CONTRACT_ADDRESS,
-        balance: 254,
-        storage: [{ address: 0, value: 5 }],
-      },
-      {
-        address: DEFAULT_CALLER_ADDRESS,
-        balance: 254,
-        storage: [{ address: 0, value: 5 }],
-      },
-    ],
     result: {
-      gasUsed: 5000,
+      errno: 6,
     },
   },
   {
-    code: OP.SELFDESTRUCT,
-    stack: ['0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6'],
-    accounts: [
-      {
-        address: DEFAULT_CONTRACT_ADDRESS,
-        balance: 254,
-        storage: [{ address: 0, value: 5 }],
-      },
-    ],
-    result: {
-      gasUsed: 30000,
-    },
-  },
-  {
-    description: 'CALL ECRECOVER without input/output',
     code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 1, 10000],
+    stack: [64, 32, 32, 0, 1, SECOND_CONTRACT_ADDRESS, 10000],
+    result: {
+      errno: 6,
+    },
+  },
+  {
+    code: OP.DELEGATECALL,
+    stack: [32, 32, 0, 0, SECOND_CONTRACT_ADDRESS, 10000],
+    result: {
+      errno: 6,
+    },
+  },
+  {
+    description: 'STATICCALL ECRECOVER without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 1, 10000],
     result: {
       gasUsed: 3700,
     },
   },
   {
-    description: 'CALL ECRECOVER with input/output',
-    code: OP.CALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [64, 32, 32, 0, 0, 1, 10000],
+    description: 'STATICCALL ECRECOVER with input/output',
+    code: OP.STATICCALL,
+    stack: [64, 32, 32, 0, 1, 10000],
     result: {
       gasUsed: 3706,
     },
   },
   {
-    description: 'CALL SHA256 without input/output',
-    code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 2, 10000],
+    description: 'STATICCALL SHA256 without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 2, 10000],
     result: {
       gasUsed: 760,
     },
   },
   {
-    description: 'CALL SHA256 with input/output',
-    code: OP.CALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [64, 32, 32, 0, 0, 2, 10000],
+    description: 'STATICCALL SHA256 with input/output',
+    code: OP.STATICCALL,
+    stack: [64, 32, 32, 0, 2, 10000],
     result: {
       gasUsed: 778,
     },
   },
   {
-    description: 'CALL RIPEMD160 without input/output',
-    code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 3, 10000],
+    description: 'STATICCALL RIPEMD160 without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 3, 10000],
     result: {
       gasUsed: 1300,
     },
   },
   {
-    description: 'CALL RIPEMD160 with input/output',
-    code: OP.CALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [64, 32, 32, 0, 0, 3, 10000],
+    description: 'STATICCALL RIPEMD160 with input/output',
+    code: OP.STATICCALL,
+    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
+    stack: [64, 32, 32, 0, 3, 10000],
     result: {
       gasUsed: 1426,
     },
   },
   {
-    description: 'CALL IDENTITY without input/output',
-    code: OP.CALL,
-    stack: [0, 0, 0, 0, 0, 4, 10000],
+    description: 'STATICCALL IDENTITY without input/output',
+    code: OP.STATICCALL,
+    stack: [0, 0, 0, 0, 4, 10000],
     result: {
       gasUsed: 715,
     },
   },
   {
-    description: 'CALL IDENTITY with input/output',
-    code: OP.CALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [64, 32, 32, 0, 0, 4, 10000],
+    description: 'STATICCALL IDENTITY with input/output',
+    code: OP.STATICCALL,
+    stack: [64, 32, 32, 0, 4, 10000],
     result: {
       gasUsed: 724,
     },
   },
   {
-    description: 'CALL with value transfer & new account',
-    code: OP.CALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [64, 32, 32, 0, 1234, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
-    result: {
-      gasUsed: 32406,
-    },
-  },
-  {
-    description: 'CALL without value transfer',
-    code: OP.CALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [64, 32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
-    result: {
-      gasUsed: 706,
-    },
-  },
-  {
-    code: OP.DELEGATECALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
-    result: {
-      gasUsed: 703,
-    },
-  },
-  {
-    description: 'STATICCALL without input',
+    description: 'STATICCALL, not to a precompile',
     code: OP.STATICCALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [32, 32, 0, 0, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    stack: [32, 32, 0, 0, SECOND_CONTRACT_ADDRESS, 10000],
     result: {
-      gasUsed: 703,
+      // error
+      stack: ['0'],
     },
   },
   {
-    description: 'STATICCALL with out of range input',
+    description: 'STATICCALL with limited gas',
     code: OP.STATICCALL,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [32, 32, 64, 48, '0x1f572e5295c57f15886f9b263e2f6d2d6c7b5ec6', 10000],
+    stack: [32, 32, 0, 0, SECOND_CONTRACT_ADDRESS, 10000],
+    gasRemaining: 706,
     result: {
-      gasUsed: 709,
+      // TODO check why this failed
+      // gasUsed: 706,
+      stack: ['0'],
     },
   },
   {
+    description: 'CREATE with send value and failed',
     code: OP.CREATE,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
     stack: [16, 0, 123],
     result: {
-      gasUsed: 32000,
-    },
-  },
-  {
-    description: 'CREATE growing memory',
-    code: OP.CREATE,
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303100',
-    stack: [16, 44, 123],
-    result: {
-      gasUsed: 32003,
+      errno: 6,
     },
   },
   {

@@ -37,6 +37,7 @@ contract Verifier is Ownable, HydratedRuntime {
 
         bytes32 solverPath;
         bytes32 challengerPath;
+        uint256 treeDepth;
 
         ComputationPath solver;
         ComputationPath challenger;
@@ -85,8 +86,8 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 executionId,
         bytes32 initialStateHash,
         bytes32 solverHashRoot,
-        uint256 solverExecutionLength,
         bytes32 challengerHashRoot,
+        uint256 executionDepth,
         address challenger,
         address codeContractAddress
     ) public onlyEnforcer() returns (bytes32 disputeId) {
@@ -95,8 +96,8 @@ contract Verifier is Ownable, HydratedRuntime {
                 executionId,
                 initialStateHash,
                 solverHashRoot,
-                solverExecutionLength,
-                challengerHashRoot
+                challengerHashRoot,
+                executionDepth
             )
         );
 
@@ -111,6 +112,7 @@ contract Verifier is Ownable, HydratedRuntime {
             challenger,
             solverHashRoot,
             challengerHashRoot,
+            executionDepth,
             ComputationPath(solverHashRoot, solverHashRoot),
             ComputationPath(challengerHashRoot, challengerHashRoot),
             INITIAL_STATE,
@@ -128,8 +130,9 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 disputeId,
         ComputationPath memory computationPath
     ) public onlyPlaying(disputeId) {
-
         Dispute storage dispute = disputes[disputeId];
+
+        require(dispute.treeDepth > 0, "already reach leaf");
 
         bytes32 h = keccak256(abi.encodePacked(computationPath.left, computationPath.right));
 
@@ -148,13 +151,7 @@ contract Verifier is Ownable, HydratedRuntime {
             dispute.challenger = computationPath;
         }
 
-        // TODO: do we really want to refresh the timeout?
-        // dispute.timeout = getTimeout();
-
-        if ((dispute.state & SOLVER_RESPONDED) != 0 && (dispute.state & CHALLENGER_RESPONDED) != 0) {
-            updateRound(dispute);
-            emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
-        }
+        updateRound(disputeId, dispute);
     }
 
     /*
@@ -168,7 +165,7 @@ contract Verifier is Ownable, HydratedRuntime {
      *    is considered invalid
      *  - the left-most (first) execution step must be a `Merkelizer.initialStateHash`
      *
-     * Note: if that doesn't happen, this will finally timeout and a final decision is made
+     * Note: if that doesnt happen, this will finally timeout and a final decision is made
      *       in `claimTimeout`.
      */
     // solhint-disable-next-line code-complexity
@@ -179,6 +176,7 @@ contract Verifier is Ownable, HydratedRuntime {
         // solhint-disable-next-line function-max-lines
     ) public onlyPlaying(disputeId) {
         Dispute storage dispute = disputes[disputeId];
+        require(dispute.treeDepth == 0, "Not at leaf yet");
 
         bytes32 inputHash = executionState.stateHash(
             executionState.stackHash(proofs.stackHash),
@@ -300,8 +298,21 @@ contract Verifier is Ownable, HydratedRuntime {
         return block.number + timeoutDuration;
     }
 
-    function updateRound(Dispute storage dispute) internal {
+    /**
+      * @dev updateRound runs every time after receiving a respond
+      *         assume that both solver and challenger have the same tree depth
+      */
+    // solhint-disable-next-line code-complexity, function-max-lines
+    function updateRound(bytes32 disputeId, Dispute storage dispute) internal {
+        if ((dispute.state & SOLVER_RESPONDED) == 0 || (dispute.state & CHALLENGER_RESPONDED) == 0) {
+            return;
+        }
+
+        // refresh state and timeout
+        dispute.timeout = getTimeout();
         dispute.state ^= SOLVER_RESPONDED | CHALLENGER_RESPONDED;
+
+        dispute.treeDepth -= 1;
 
         if ((dispute.solver.left == dispute.challenger.left) &&
             (dispute.solver.right != 0) &&
@@ -324,6 +335,36 @@ contract Verifier is Ownable, HydratedRuntime {
                 }
             }
         }
+        emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+    }
+
+    function handleCREATE(EVM memory state) internal {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+    }
+
+    function handleCREATE2(EVM memory state) internal {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+    }
+
+    function handleCALL(EVM memory state) internal {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+    }
+
+    function handleDELEGATECALL(EVM memory state) internal {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+    }
+
+    function handleSTATICCALL(EVM memory state) internal {
+        // TODO: only support precompiles
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+    }
+
+    function handleCALLCODE(EVM memory state) internal {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+    }
+
+    function handleEXTCODEHASH(EVM memory state) internal {
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     function handleCREATE(EVM memory state) internal {

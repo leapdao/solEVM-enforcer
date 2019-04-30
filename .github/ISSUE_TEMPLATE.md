@@ -12,15 +12,21 @@ This policy allows to write out rewards to complete required tasks. Completed ta
 3. Add the bounty to the bounties board: https://github.com/orgs/leapdao/projects/6
 4. If no objections for 2 days, the bounty is considered approved
 
-Bounty sizes vs reward:
+# Bounty sizes
 XS 200
 S  350
 M  550
 L  900
 XL 1400
 
-Pair programming:
+# Pair programming
 If 2 people claim the bounty together, the payout increases by 1.5x.
+
+# Bounty Challenge
+If bounty has no progress for 4 days, then anyone can challenge the bounty. Once the bounty is challenged, the worker has 3 more days to deliver some progress on the bounty (gardener can make exception and extend period to 5 days 1x, unless gardener is also working). If worker fails to make progress within period, the bounty is up for grabs by anyone.
+
+# Payout
+Only bounties from the current sprint(if any) are payed out. Unless you are newbie (never earned a bounty before), then you get 1 exception.
 -->
 # Bounty
 

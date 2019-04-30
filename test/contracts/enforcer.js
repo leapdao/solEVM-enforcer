@@ -94,7 +94,7 @@ contract('Enforcer', () => {
 
     assert.isTrue(execution.startBlock.gt(0), 'start block not set');
     assert.equal(execution.endHash, endHash, 'endHash not match');
-    assert.equal(execution.executionLength, executionLength, 'execution length not match');
+    assert.equal(execution.executionDepth, executionLength, 'execution length not match');
     assert.equal(execution.solver, solver.address, 'solver address not match');
   });
 

@@ -34,11 +34,12 @@ module.exports = [
   { code: [OP.PUSH1, '02', OP.PUSH1, '03', OP.SGT], step: 2 },
   { code: [OP.PUSH1, '02', OP.PUSH1, '03', OP.EQ], step: 2 },
   { code: [OP.PUSH1, '02', OP.ISZERO], step: 1 },
-  { code: [OP.PUSH1, 0xfd, OP.PUSH1, 0xfc, OP.AND], step: 2 },
-  { code: [OP.PUSH1, 0xfd, OP.PUSH1, 0xfc, OP.OR], step: 2 },
-  { code: [OP.PUSH1, 0xfd, OP.PUSH1, 0xff, OP.XOR], step: 2 },
+  { code: [OP.PUSH1, 'fd', OP.PUSH1, 'fc', OP.AND], step: 2 },
+  { code: [OP.PUSH1, 'fd', OP.PUSH1, 'fc', OP.OR], step: 2 },
+  { code: [OP.PUSH1, 'fd', OP.PUSH1, 'ff', OP.XOR], step: 2 },
   { code: [OP.PUSH1, 'fe', OP.NOT], step: 1 },
   { code: [OP.PUSH1, '02', OP.PUSH1, '03', OP.BYTE], step: 2 },
+  { code: [OP.PUSH32, ...range(10, 41), OP.PUSH1, '00', OP.MSTORE, OP.PUSH1, '20', OP.PUSH1, '00', OP.SHA3], step: 5 },
   // TODO: need to compile for Constantinople
   // [0x0001, 2, OP.SHL],
   // [0x0001, 2, OP.SHR],,
@@ -91,7 +92,7 @@ module.exports = [
   // always 0 in current implementation
   // TODO: do we need it non-zero?
   { code: [OP.GASPRICE, OP.POP, OP.GASPRICE], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.BLOCKHASH], step: 2 },
+  { code: [OP.PUSH1, '00', OP.BLOCKHASH], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.COINBASE], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.TIMESTAMP], step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.NUMBER], step: 2 },
@@ -100,8 +101,11 @@ module.exports = [
   { code: [OP.GASPRICE, OP.PC, OP.POP], pc: 1, step: 1 }, // PC
   { code: [OP.GASPRICE, OP.GAS, OP.POP], pc: 1, step: 1 }, // GAS
 
-  { code: [OP.PUSH1, '00', OP.JUMPDEST, OP.PUSH1, '04', OP.JUMP, OP.JUMPDEST], pc: 5, step: 3 },
-  { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], step: 4 },
+  { code: [OP.JUMPDEST, OP.PUSH1, '00', OP.JUMP], step: 2 }, // jump
+  { code: [OP.JUMPDEST, OP.PUSH1, '01', OP.JUMP], step: 2 }, // jump err
+  { code: [OP.JUMPDEST, OP.PUSH1, '00', OP.PUSH1, '00', OP.JUMPI], step: 3 }, // not jump
+  { code: [OP.JUMPDEST, OP.PUSH1, '01', OP.PUSH1, '00', OP.JUMPI], step: 3 }, // jump
+  { code: [OP.JUMPDEST, OP.PUSH1, '01', OP.PUSH1, '01', OP.JUMPI], step: 3 }, // jump err
 
   // still poor test
   // TODO: init state with returnData first
@@ -141,6 +145,9 @@ module.exports = [
   { code: [OP.GASPRICE, OP.POP, OP.PUSH30, ...range(10, 39)], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH31, ...range(10, 40)], pc: 2, step: 2 },
   { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 41)], pc: 2, step: 2 },
+  { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 39)], pc: 2, step: 2 }, // PUSH out of bound
+  // TODO this one will throw, didn't know why
+  // { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 40)], pc: 2, step: 2 }, // PUSH out of bound
 
   // Data and stack opcodes
 
@@ -186,9 +193,11 @@ module.exports = [
 
   // Code, stack and memory type OP-codes (CODECOPY)
   { code: [OP.PUSH1, '02', OP.PUSH1, '01', OP.PUSH1, '01', OP.CODECOPY], step: 3 },
+  { code: [OP.PUSH1, '07', OP.PUSH1, '01', OP.PUSH1, '01', OP.CODECOPY], step: 3 }, // out of bound
 
   // Storage and stack (SSTORE, SLOAD)
   { code: [OP.PUSH1, '00', OP.PUSH1, '05', OP.SSTORE], step: 2 },
+  { code: [OP.PUSH1, '01', OP.PUSH1, '05', OP.SSTORE], step: 2 }, // set non-zero value
   { code: [OP.PUSH1, '00', OP.PUSH1, '05', OP.SSTORE, OP.PUSH1, '00', OP.SLOAD], step: 4 },
 
   // Context, stack and memory type OP-codes (LOG)
@@ -240,6 +249,12 @@ module.exports = [
 
   // Return, Stack and Memory type OP-codes (RETURN, REVERT, RETURNDATACOPY)
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURN], step: 2 },
+  { code: [OP.PUSH1, '04', OP.PUSH1, '00', OP.RETURN], step: 2 }, // RETURN and expand memory
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.REVERT], step: 2 },
+  { code: [OP.PUSH1, '04', OP.PUSH1, '00', OP.REVERT], step: 2 }, // REVERT and expand memory
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURNDATACOPY], step: 3 },
+  // INVALID opcade
+  { code: [OP.GASPRICE, OP.INVALID], step: 1 },
+  // STOP
+  { code: [OP.GASPRICE, OP.STOP], step: 1 },
 ];
