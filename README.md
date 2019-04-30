@@ -34,8 +34,8 @@ Please make sure to read the contribution guidelines.
 Currently there are only tests using truffle. You can run the tests like this:
 
 ```
-npm install
-npm test
+yarn
+yarn test
 ```
 
 ## Runtime - EVMRuntime.sol
