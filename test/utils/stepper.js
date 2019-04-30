@@ -4,7 +4,6 @@ const OffchainStepper = require('./../../utils/OffchainStepper');
 const fixtures = require('./../fixtures/runtime');
 
 const assert = require('assert');
-const ethers = require('ethers');
 
 const fromHextoStr = arr => arr.map(e => toBN(e).toString());
 const fromMixedToHex = arr => arr.map(e => toBN(e).toHexString('hex'));
@@ -19,7 +18,6 @@ describe('JS Stepper', function () {
         const code = typeof fixture.code === 'object' ? fixture.code : [fixture.code];
         const stack = fromMixedToHex(fixture.stack || []);
         const mem = fixture.memory || '';
-        const accounts = fixture.accounts;
         const data = fixture.data || '';
         const gasLimit = fixture.gasLimit;
         const blockGasLimit = fixture.gasLimit;
@@ -29,7 +27,6 @@ describe('JS Stepper', function () {
           data,
           stack,
           mem,
-          accounts,
           logHash,
           gasLimit,
           blockGasLimit,
@@ -67,36 +64,6 @@ describe('JS Stepper', function () {
         }
         if (fixture.result.logHash) {
           assert.equal(res.logHash, fixture.result.logHash.replace('0x', ''), 'logHash');
-        }
-        if (fixture.result.accounts) {
-          const accsMap = res.accounts.reduce((m, a) => { m[a.address] = a; return m; }, {});
-
-          fixture.result.accounts.forEach(account => {
-            const expectedAccount = accsMap[account.address.replace('0x', '')] || {};
-
-            if (account.balance) {
-              assert.equal(expectedAccount.balance, account.balance, 'Account Balance');
-            }
-
-            if (account.storage) {
-              const stgeMap = account.storage.reduce(
-                (m, a) => {
-                  // ignore zero values
-                  // eslint-disable-next-line eqeqeq
-                  if (a.value == 0) {
-                    return m;
-                  }
-
-                  m[ethers.utils.solidityKeccak256(['uint'], [a.address]).replace('0x', '')] =
-                    toBN(a.value).toHexString().replace('0x', '');
-                  return m;
-                },
-                {}
-              );
-
-              assert.deepEqual(expectedAccount.storage, stgeMap, 'Account Storage');
-            }
-          });
         }
       });
     });

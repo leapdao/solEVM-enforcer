@@ -29,7 +29,7 @@ function submitProofHelper (dispute, code, computationPath) {
   return dispute.submitProof(
     proofs,
     {
-      // TODO: compact {returnData}, support for accounts
+      // TODO: compact returnData
       data: execState.isCallDataRequired ? prevOutput.data : '',
       stack: execState.compactStack,
       mem: execState.isMemoryRequired ? prevOutput.mem : '',

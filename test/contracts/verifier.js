@@ -33,7 +33,7 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
     disputeId,
     proofs,
     {
-      // TODO: compact {returnData}, support for accounts
+      // TODO: compact returnData
       data: '0x' + (execState.isCallDataRequired ? prevOutput.data : ''),
       stack: execState.compactStack,
       mem: '0x' + (execState.isMemoryRequired ? prevOutput.mem : ''),

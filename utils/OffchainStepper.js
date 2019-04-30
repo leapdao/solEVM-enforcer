@@ -290,21 +290,21 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     });
   }
 
-  async run ({ code, data, stack, mem, accounts, logHash, gasLimit, blockGasLimit, gasRemaining, pc }) {
+  async run ({ code, data, stack, mem, logHash, gasLimit, blockGasLimit, gasRemaining, pc }) {
     data = data ? data.replace('0x', '') : '';
     blockGasLimit = Buffer.from(NumToHex(blockGasLimit || OP.BLOCK_GAS_LIMIT), 'hex');
 
-    if (accounts) {
-      await this.initAccounts(accounts);
-      // commit to the tree, needs a checkpoint first 🤪
-      await new Promise((resolve) => {
-        this.stateManager.checkpoint(() => {
-          this.stateManager.commit(() => {
-            resolve();
-          });
+    // TODO: make it configurable by the user
+    // init default account
+    await this.initAccounts([{ code: code.join(''), address: DEFAULT_CONTRACT_ADDRESS }]);
+    // commit to the tree, needs a checkpoint first 🤪
+    await new Promise((resolve) => {
+      this.stateManager.checkpoint(() => {
+        this.stateManager.commit(() => {
+          resolve();
         });
       });
-    }
+    });
 
     const context = {
       code: code,
@@ -418,6 +418,22 @@ module.exports = class OffchainStepper extends VM.MetaVM {
   }
 
   async handleSELFDESTRUCT (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleSLOAD (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleSSTORE (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleBALANCE (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleEXTCODEHASH (runState) {
     throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
 

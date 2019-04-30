@@ -1,10 +1,10 @@
-const { toNum, toStr, encodeAccounts, decodeAccounts, getCode, deployContract, deployCode } =
+const { toNum, toStr, getCode, deployContract, deployCode } =
   require('./../helpers/utils');
 const fixtures = require('./../fixtures/runtime');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
 const OP = require('./../../utils/constants');
 
-const { PUSH1, BLOCK_GAS_LIMIT, DEFAULT_CALLER } = OP;
+const { PUSH1, BLOCK_GAS_LIMIT } = OP;
 
 const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
 
@@ -74,7 +74,6 @@ contract('Runtime', function () {
       it(fixture.description || opcodeUnderTest, async () => {
         const stack = fixture.stack || [];
         const mem = fixture.memory || '0x';
-        const { accounts, accountsCode } = encodeAccounts(fixture.accounts || []);
         const data = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
@@ -88,8 +87,6 @@ contract('Runtime', function () {
           gasRemaining,
           stack,
           mem,
-          accounts,
-          accountsCode,
           logHash,
         };
         const res = await rt.execute(args);
@@ -106,30 +103,6 @@ contract('Runtime', function () {
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.mem, fixture.result.memory, 'memory');
-        }
-        if (fixture.result.accounts) {
-          const accounts = Array.from(fixture.result.accounts);
-
-          accounts.push({
-            address: `0x${DEFAULT_CALLER}`,
-            balance: 0,
-            nonce: 0,
-            destroyed: false,
-            code: '',
-            storage: [],
-          });
-          const accs = decodeAccounts(res.accounts, res.accountsCode);
-          const accsMap = accs.reduce((m, a) => { m[a.address] = a; return m; }, {});
-          accounts.forEach(account => {
-            const expectedAccount = accsMap[account.address];
-            assert.isTrue(!!expectedAccount);
-            if (account.balance) {
-              assert.equal(expectedAccount.balance, account.balance, 'account balance');
-            }
-            if (account.storage) {
-              assert.deepEqual(expectedAccount.storage, account.storage, 'account storage');
-            }
-          });
         }
         if (fixture.result.logHash) {
           assert.equal(res.logHash, fixture.result.logHash, 'logHash');

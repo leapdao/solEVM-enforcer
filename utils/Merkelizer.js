@@ -64,8 +64,7 @@ module.exports = class Merkelizer {
   }
 
   static stateHash (execution, stackHash, memHash, dataHash) {
-    // TODO: implement support for accounts
-    // TODO: compact-{returnData, accounts}
+    // TODO: compact returnData
 
     if (!stackHash) {
       stackHash = this.stackHash(execution.stack);

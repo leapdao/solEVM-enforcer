@@ -5,7 +5,6 @@ pragma experimental ABIEncoderV2;
 import { EVMCode } from "./EVMCode.slb";
 import { EVMStack } from "./EVMStack.slb";
 import { EVMMemory } from "./EVMMemory.slb";
-import { EVMAccounts } from "./EVMAccounts.slb";
 import { HydratedRuntime } from "./HydratedRuntime.sol";
 
 
@@ -67,18 +66,10 @@ contract EthereumRuntime is HydratedRuntime {
         evm.data = img.data;
         evm.gas = img.gasRemaining;
 
-        evm.accounts = EVMAccounts.fromArray(img.accounts, img.accountsCode);
-        EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
-        caller.nonce = uint8(1);
+        evm.caller = DEFAULT_CALLER;
+        evm.target = DEFAULT_CONTRACT_ADDRESS;
 
-        EVMAccounts.Account memory target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
-        target.code = EVMCode.fromAddress(img.code);
-
-        evm.caller = evm.accounts.get(DEFAULT_CALLER);
-        // TODO touching accounts.
-        evm.target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
-
-        evm.code = evm.target.code;
+        evm.code = EVMCode.fromAddress(img.code);
         evm.stack = EVMStack.fromArray(img.stack);
         evm.mem = EVMMemory.fromArray(img.mem);
 
@@ -93,11 +84,9 @@ contract EthereumRuntime is HydratedRuntime {
         resultState.lastRet = evm.lastRet;
         resultState.returnData = evm.returnData;
         resultState.errno = evm.errno;
-        (resultState.accounts, resultState.accountsCode) = evm.accounts.toArray();
         resultState.logHash = hydratedState.logHash;
         resultState.mem = EVMMemory.toArray(evm.mem);
         resultState.stack = EVMStack.toArray(evm.stack);
-        resultState.depth = evm.depth;
         resultState.pc = evm.pc;
         resultState.hashValue = hashValue;
 
@@ -120,8 +109,7 @@ contract EthereumRuntime is HydratedRuntime {
             evm.data,
             evm.lastRet,
             evm.returnData,
-            evm.errno,
-            evm.accounts.size
+            evm.errno
         ));
 
         HydratedState memory hydratedState = getHydratedState(evm);
@@ -131,7 +119,6 @@ contract EthereumRuntime is HydratedRuntime {
             hydratedState.logHash,
             evm.mem.size,
             evm.stack.size,
-            evm.depth,
             evm.pc,
             contextHash
         ));
