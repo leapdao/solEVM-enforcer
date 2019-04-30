@@ -50,8 +50,6 @@ contract('Runtime', function () {
             gasRemaining: beforeState.gas,
             stack: beforeState.stack,
             mem: beforeState.mem,
-            accounts: beforeState.accounts,
-            accountsCode: beforeState.accountsCode,
             logHash: beforeState.logHash,
           }
         );

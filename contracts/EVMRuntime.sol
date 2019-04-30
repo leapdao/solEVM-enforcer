@@ -3,8 +3,6 @@ pragma experimental ABIEncoderV2;
 
 
 import { EVMConstants } from "./EVMConstants.sol";
-import { EVMAccounts } from "./EVMAccounts.slb";
-import { EVMStorage } from "./EVMStorage.slb";
 import { EVMMemory } from "./EVMMemory.slb";
 import { EVMStack } from "./EVMStack.slb";
 import { EVMLogs } from "./EVMLogs.slb";
@@ -14,19 +12,9 @@ import { EVMCode } from "./EVMCode.slb";
 
 contract EVMRuntime is EVMConstants {
 
-    enum CallType {
-        Call,
-        StaticCall,
-        DelegateCall,
-        CallCode
-    }
-
     address constant internal DEFAULT_CONTRACT_ADDRESS = 0x0f572e5295c57F15886F9b263E2f6d2d6c7b5ec6;
     address constant internal DEFAULT_CALLER = 0xcD1722f2947Def4CF144679da39c4C32bDc35681;
 
-    using EVMAccounts for EVMAccounts.Accounts;
-    using EVMAccounts for EVMAccounts.Account;
-    using EVMStorage for EVMStorage.Storage;
     using EVMMemory for EVMMemory.Memory;
     using EVMStack for EVMStack.Stack;
     using EVMLogs for EVMLogs.Logs;
@@ -42,14 +30,14 @@ contract EVMRuntime is EVMConstants {
         uint difficulty;
     }
 
+    // what we do not track  (not complete list)
+    // call depth: as we do not support stateful things like call to other contracts
+    // staticExec: same as above, we only support precompiles, higher implementations still can intercept calls
     struct EVM {
         uint customDataPtr;
         uint gas;
         uint value;
-        bool staticExec;
         uint8 errno;
-        // TODO: max 1024;
-        uint16 depth;
         uint n;
         uint pc;
 
@@ -58,13 +46,12 @@ contract EVMRuntime is EVMConstants {
         bytes returnData;
 
         EVMCode.Code code;
-        EVMAccounts.Accounts accounts;
         Context context;
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
 
-        EVMAccounts.Account caller;
-        EVMAccounts.Account target;
+        address caller;
+        address target;
     }
 
     // solhint-disable-next-line code-complexity, function-max-lines, security/no-assign-params
@@ -634,15 +621,6 @@ contract EVMRuntime is EVMConstants {
                 evm.gas -= gasFee;
             }
 
-            // Check for violation of static execution.
-            if (
-                evm.staticExec &&
-                (opcode == OP_SSTORE || opcode == OP_CREATE || (OP_LOG0 <= opcode && opcode <= OP_LOG4))
-            ) {
-                evm.errno = ERROR_ILLEGAL_WRITE_OPERATION;
-                break;
-            }
-
             // Check for stack errors
             if (evm.stack.size < stackIn) {
                 evm.errno = ERROR_STACK_UNDERFLOW;
@@ -1107,11 +1085,12 @@ contract EVMRuntime is EVMConstants {
 
     // 0x3X
     function handleADDRESS(EVM memory state) internal {
-        state.stack.push(uint(state.target.addr));
+        state.stack.push(uint(state.target));
     }
 
+    // not supported, we are stateless
     function handleBALANCE(EVM memory state) internal {
-        state.stack.push(state.accounts.get(address(state.stack.pop())).balance);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     function handleORIGIN(EVM memory state) internal {
@@ -1119,7 +1098,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     function handleCALLER(EVM memory state) internal {
-        state.stack.push(uint(state.caller.addr));
+        state.stack.push(uint(state.caller));
     }
 
     function handleCALLVALUE(EVM memory state) internal {
@@ -1203,32 +1182,14 @@ contract EVMRuntime is EVMConstants {
         state.stack.push(state.context.gasPrice);
     }
 
+    // this can be implemented for special needs, the EVMRuntime itself should be stateless
     function handleEXTCODESIZE(EVM memory state) internal {
-        state.stack.push(state.accounts.get(address(state.stack.pop())).code.length);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
+    // same as above
     function handleEXTCODECOPY(EVM memory state) internal {
-        bytes memory code = state.accounts.get(address(state.stack.pop())).code.toBytes();
-        uint mAddr = state.stack.pop();
-        uint dAddr = state.stack.pop();
-        uint len = state.stack.pop();
-
-        if (dAddr + len > code.length) {
-            state.errno = ERROR_INDEX_OOB;
-            return;
-        }
-
-        uint gasFee = GAS_VERYLOW + computeGasForMemoryCopy(state, mAddr, len);
-
-        if (gasFee > state.gas) {
-            state.gas = 0;
-            state.errno = ERROR_OUT_OF_GAS;
-            return;
-        }
-
-        state.gas -= gasFee;
-
-        state.mem.storeBytes(code, dAddr, mAddr, len);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     function handleRETURNDATASIZE(EVM memory state) internal {
@@ -1259,22 +1220,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     function handleEXTCODEHASH(EVM memory state) internal {
-        EVMAccounts.Account memory acc = state.accounts.get(address(state.stack.pop()));
-
-        if (acc.destroyed ||
-            (acc.nonce == 0 && acc.balance == 0 && acc.stge.size == 0 && acc.code.length == 0)) {
-            state.stack.push(0);
-            return;
-        }
-
-        bytes memory code = acc.code.toBytes();
-        uint res;
-
-        assembly {
-            res := keccak256(add(code, 0x20), mload(code))
-        }
-
-        state.stack.push(res);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     // 0x4X
@@ -1347,27 +1293,11 @@ contract EVMRuntime is EVMConstants {
     }
 
     function handleSLOAD(EVM memory state) internal {
-        state.stack.push(state.target.stge.load(state.stack.pop()));
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     function handleSSTORE(EVM memory state) internal {
-        uint addr = state.stack.pop();
-        uint val = state.stack.pop();
-
-        uint gasFee = GAS_SSET;
-        if (val == 0) {
-            gasFee = GAS_SRESET;
-        }
-
-        if (gasFee > state.gas) {
-            state.gas = 0;
-            state.errno = ERROR_OUT_OF_GAS;
-            return;
-        }
-
-        state.gas -= gasFee;
-
-        state.target.stge.store(addr, val);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     function handleJUMP(EVM memory state) internal {
@@ -1449,7 +1379,7 @@ contract EVMRuntime is EVMConstants {
         state.gas -= gasFee;
 
         EVMLogs.LogEntry memory log;
-        log.account = state.target.addr;
+        log.account = state.target;
         log.data = state.mem.toArray(mAddr, mSize);
 
         for (uint i = 0; i < state.n; i++) {
@@ -1495,13 +1425,11 @@ contract EVMRuntime is EVMConstants {
 
     // solhint-disable-next-line code-complexity, function-max-lines
     function handleSTATICCALL(EVM memory state) internal {
+        // TODO: as we are only support precompiles, remove the retEvm to save memory and instructions
         EVM memory retEvm;
 
         retEvm.gas = state.stack.pop();
-        retEvm.staticExec = true;
-        retEvm.accounts = state.accounts;
-        retEvm.caller = retEvm.accounts.get(state.target.addr);
-        retEvm.target = retEvm.accounts.get(address(state.stack.pop()));
+        uint target = uint(address(state.stack.pop()));
 
         uint inOffset = state.stack.pop();
         uint inSize = state.stack.pop();
@@ -1528,7 +1456,6 @@ contract EVMRuntime is EVMConstants {
         retEvm.context = state.context;
 
         // we only going to support precompiles
-        uint target = uint(retEvm.target.addr);
         if (1 <= target && target <= 8) {
             if (target == 1) {
                 handlePreC_ECRECOVER(retEvm);

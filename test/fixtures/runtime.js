@@ -88,14 +88,10 @@ module.exports = [
 
   { code: OP.BALANCE,
     stack: ['0x4ae7b3e204fed41c82d57ecd2242470196d70d02'],
-    accounts: [
-      {
-        address: '0x4ae7b3e204fed41c82d57ecd2242470196d70d02',
-        balance: 254,
-        storage: [{ address: 0, value: 5 }, { address: 1, value: 6 }],
-      },
-    ],
-    result: { stack: ['254'], gasUsed: 400 },
+    result: {
+      // not supported
+      errno: 6,
+    },
   },
   { code: OP.ADDRESS, result: { stack: [toBN(DEFAULT_CONTRACT_ADDRESS).toString()], gasUsed: 2 } },
   { code: OP.ORIGIN, result: { stack: [toBN(DEFAULT_CALLER_ADDRESS).toString()], gasUsed: 2 } },
@@ -266,46 +262,16 @@ module.exports = [
     code: OP.SSTORE,
     stack: [5, 0],
     result: {
-      stack: [],
-      accounts: [
-        {
-          address: DEFAULT_CONTRACT_ADDRESS,
-          storage: [{ address: 0, value: 5 }],
-        },
-      ],
-      pc: 1,
-      gasUsed: 20000,
-    },
-  },
-  {
-    code: [OP.SSTORE, OP.SSTORE],
-    stack: [0, 0, 5, 0],
-    pc: 0,
-    result: {
-      stack: [],
-      accounts: [
-        {
-          address: DEFAULT_CONTRACT_ADDRESS,
-          storage: [],
-        },
-      ],
-      pc: 2,
-      gasUsed: 25000,
+      // not supported
+      errno: 6,
     },
   },
   {
     code: OP.SLOAD,
     stack: ['0'],
-    accounts: [
-      {
-        address: DEFAULT_CONTRACT_ADDRESS,
-        storage: [{ address: 0, value: 5 }],
-      },
-    ],
     result: {
-      stack: ['5'],
-      pc: 1,
-      gasUsed: 200,
+      // not supported
+      errno: 6,
     },
   },
 
@@ -661,23 +627,6 @@ module.exports = [
     },
   },
   {
-    description: 'SSTORE [set to 0, set to 5, set to 0]',
-    code: [OP.SSTORE, OP.SSTORE, OP.SSTORE],
-    stack: [0, 0, 5, 0, 0, 0],
-    pc: 0,
-    result: {
-      stack: [],
-      accounts: [
-        {
-          address: DEFAULT_CONTRACT_ADDRESS,
-          storage: [],
-        },
-      ],
-      pc: 3,
-      gasUsed: 30000,
-    },
-  },
-  {
     description: 'CALLDATACOPY expanding memory',
     code: OP.CALLDATACOPY,
     stack: [4, 3, 144],
@@ -705,24 +654,8 @@ module.exports = [
     stack: ['0x0002030405060708091011121314151617181920212223242526272829303100'],
     pc: 0,
     result: {
-      stack: ['0'],
-      gasUsed: 400,
-    },
-  },
-  {
-    description: 'EXTCODEHASH for self',
-    code: [OP.ADDRESS, OP.EXTCODEHASH],
-    stack: [],
-    pc: 0,
-    accounts: [
-      {
-        address: DEFAULT_CONTRACT_ADDRESS,
-        code: [OP.ADDRESS, OP.EXTCODEHASH].join(''),
-      },
-    ],
-    result: {
-      stack: ['39443990582930071708907638907613589496695943523742414084656626340717098617021'],
-      gasUsed: 402,
+      // not supported
+      errno: 6,
     },
   },
 ];

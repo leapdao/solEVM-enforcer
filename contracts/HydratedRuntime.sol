@@ -76,7 +76,7 @@ contract HydratedRuntime is EVMRuntime {
         state.gas -= gasFee;
 
         EVMLogs.LogEntry memory log;
-        log.account = state.target.addr;
+        log.account = state.target;
         log.data = state.mem.toArray(mAddr, mSize);
 
         for (uint i = 0; i < state.n; i++) {

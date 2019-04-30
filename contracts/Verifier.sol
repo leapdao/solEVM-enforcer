@@ -223,17 +223,9 @@ contract Verifier is Ownable, HydratedRuntime {
 
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
-
-        EVMAccounts.Account memory caller = evm.accounts.get(DEFAULT_CALLER);
-        caller.nonce = uint8(1);
-
-        EVMAccounts.Account memory target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
-        target.code = EVMCode.fromAddress(dispute.codeContractAddress);
-
-        evm.caller = evm.accounts.get(DEFAULT_CALLER);
-        evm.target = evm.accounts.get(DEFAULT_CONTRACT_ADDRESS);
-
-        evm.code = evm.target.code;
+        evm.code = EVMCode.fromAddress(dispute.codeContractAddress);
+        evm.caller = DEFAULT_CALLER;
+        evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
         evm.mem = EVMMemory.fromArray(executionState.mem);
 
