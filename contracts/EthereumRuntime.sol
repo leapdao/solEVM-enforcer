@@ -20,8 +20,6 @@ contract EthereumRuntime is HydratedRuntime {
         uint stepCount;
         uint[] stack;
         bytes mem;
-        uint[] accounts;
-        bytes accountsCode;
         bytes returnData;
         bytes32 logHash;
     }
@@ -32,8 +30,6 @@ contract EthereumRuntime is HydratedRuntime {
         bytes lastRet;
         bytes returnData;
         uint8 errno;
-        uint[] accounts;
-        bytes accountsCode;
         bytes mem;
         uint[] stack;
         uint16 depth;
