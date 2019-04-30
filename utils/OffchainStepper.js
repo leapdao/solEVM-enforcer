@@ -95,6 +95,10 @@ function NumToHex (val) {
 }
 
 module.exports = class OffchainStepper extends VM.MetaVM {
+  constructor () {
+    super({ hardfork: 'petersburg' });
+  }
+
   async initAccounts (accounts) {
     const self = this;
 
@@ -111,7 +115,8 @@ module.exports = class OffchainStepper extends VM.MetaVM {
 
       while (len--) {
         let obj = accounts[len];
-        let addr = Buffer.from((obj.address || '').replace('0x', ''), 'hex');
+        let addr = Buffer.isBuffer(obj.address)
+          ? obj.address : Buffer.from((obj.address || '').replace('0x', ''), 'hex');
         let account = new VM.deps.Account();
 
         account.balance = obj.balance | 0;

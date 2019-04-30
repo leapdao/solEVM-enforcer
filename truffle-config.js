@@ -8,8 +8,7 @@ module.exports = {
           enabled: true,
           runs: 2,
         },
-        // TODO: the code is supposed to work on constantinople EVM but fails if this is switched on
-        evmVersion: 'byzantium',
+        evmVersion: 'constantinople',
       },
     },
   },

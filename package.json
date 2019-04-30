@@ -17,14 +17,14 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npm run test:contracts && npm run test:utils",
+    "test": "yarn test:contracts && yarn test:utils",
     "test:contracts": "scripts/test.sh test/contracts/*",
     "test:utils": "./node_modules/.bin/mocha test/utils/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:sol": "solhint contracts/*.{sol,slb}",
-    "lint:all": "npm run lint && npm run lint:sol",
-    "lint:all:fix": "npm run lint:fix && npm run lint:sol",
+    "lint:all": "yarn lint && yarn lint:sol",
+    "lint:all:fix": "yarn lint:fix && yarn lint:sol",
     "console": "./node_modules/.bin/truffle console",
     "compile:contracts": "./node_modules/.bin/truffle compile",
     "version": "scripts/version.js",
@@ -37,7 +37,7 @@
     "eslint-plugin-node": "^5.2.1",
     "eslint-plugin-promise": "^3.6.0",
     "eslint-plugin-standard": "^3.0.1",
-    "ganache-cli": "=6.2.5",
+    "ganache-cli": "=6.4.0",
     "solhint": "^1.2.1",
     "truffle": "=5.0.0"
   },

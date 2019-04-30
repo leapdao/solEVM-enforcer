@@ -45,10 +45,9 @@ module.exports = [
     result: { stack: ['1'], gasUsed: 3 },
   },
   { code: OP.BYTE, stack: ['3', '2'], result: { stack: ['0'], gasUsed: 3 } },
-  // TODO: need to compile for Constantinople
-  // { code: OP.SHL, stack: [0x0001, 2], result: { stack: [parseInt('0x01', 16)] } },
-  // { code: OP.SHR, stack: [0x1000, 2], result: { stack: [parseInt('0x001', 16)] } },
-  // { code: OP.SAR, stack: [0x1000, 2], result: { stack: ['1'] } },
+  { code: OP.SHL, stack: [0x0001, 2], result: { stack: ['4'], gasUsed: 3 } },
+  { code: OP.SHR, stack: [0x1000, 2], result: { stack: ['1024'], gasUsed: 3 } },
+  { code: OP.SAR, stack: [0x1000, 2], result: { stack: ['1024'], gasUsed: 3 } },
   { code: OP.POP, stack: ['2', '3'], result: { stack: ['2'], gasUsed: 2 } },
   // 8x Duplication
   { code: OP.DUP1, stack: ['2'], result: { stack: ['2', '2'], gasUsed: 3 } },
@@ -612,7 +611,6 @@ module.exports = [
   {
     description: 'STATICCALL RIPEMD160 with input/output',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [64, 32, 32, 0, 3, 10000],
     result: {
       gasUsed: 1429,
@@ -700,6 +698,31 @@ module.exports = [
     code: OP.STOP,
     result: {
       pc: 1,
+    },
+  },
+  {
+    code: [OP.EXTCODEHASH],
+    stack: ['0x0002030405060708091011121314151617181920212223242526272829303100'],
+    pc: 0,
+    result: {
+      stack: ['0'],
+      gasUsed: 400,
+    },
+  },
+  {
+    description: 'EXTCODEHASH for self',
+    code: [OP.ADDRESS, OP.EXTCODEHASH],
+    stack: [],
+    pc: 0,
+    accounts: [
+      {
+        address: DEFAULT_CONTRACT_ADDRESS,
+        code: [OP.ADDRESS, OP.EXTCODEHASH].join(''),
+      },
+    ],
+    result: {
+      stack: ['39443990582930071708907638907613589496695943523742414084656626340717098617021'],
+      gasUsed: 402,
     },
   },
 ];

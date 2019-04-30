@@ -1,27 +1,27 @@
 language: node_js
 node_js:
-  - "10.14.2"
-cache: npm
+  - "lts/*"
+cache: yarn
 jobs:
   include:
     - stage: tests
       name: "lint:all"
-      script: npm run lint:all
+      script: yarn lint:all
 
     - stage: tests
       name: "test:contracts"
-      script: npm run test:contracts
+      script: yarn test:contracts
 
     - stage: tests
       name: "test:utils"
-      script: npm run test:utils
+      script: yarn test:utils
 
     - stage: tests
       name: "Solidity Coverage"
       script:
-        - npm install codecov
-        - npm install https://github.com/leapdao/solidity-coverage.git#master
-        - npm run coverage
+        - yarn add codecov
+        - yarn add https://github.com/leapdao/solidity-coverage.git#master
+        - yarn coverage
         - ./node_modules/.bin/codecov -f coverage/lcov.info
 
     - stage: tests
@@ -33,5 +33,5 @@ jobs:
     - stage: tests
       name: "test ExecutionPoker cli tool"
       script:
-        - npm run compile:contracts
+        - yarn compile:contracts
         - ./tools/executionPoker/bin.js build/contracts/SpendingConditionMock.json test 0xD8992E08C1Fb17775deF02e15B620A006c4726db [] []

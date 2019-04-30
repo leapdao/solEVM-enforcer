@@ -68,6 +68,7 @@ module.exports = {
   EXTCODECOPY: '3c',
   RETURNDATASIZE: '3d',
   RETURNDATACOPY: '3e',
+  EXTCODEHASH: '3f',
 
   // Block information
   BLOCKHASH: '40',
