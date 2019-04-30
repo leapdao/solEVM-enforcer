@@ -581,7 +581,7 @@ module.exports = [
     code: OP.STATICCALL,
     stack: [64, 32, 32, 0, 1, 10000],
     result: {
-      gasUsed: 3706,
+      gasUsed: 3709,
     },
   },
   {
@@ -597,7 +597,7 @@ module.exports = [
     code: OP.STATICCALL,
     stack: [64, 32, 32, 0, 2, 10000],
     result: {
-      gasUsed: 778,
+      gasUsed: 781,
     },
   },
   {
@@ -611,10 +611,9 @@ module.exports = [
   {
     description: 'STATICCALL RIPEMD160 with input/output',
     code: OP.STATICCALL,
-    mem: '0x01020304050607080910111213141516171819202122232425262728293031',
     stack: [64, 32, 32, 0, 3, 10000],
     result: {
-      gasUsed: 1426,
+      gasUsed: 1429,
     },
   },
   {
@@ -630,7 +629,7 @@ module.exports = [
     code: OP.STATICCALL,
     stack: [64, 32, 32, 0, 4, 10000],
     result: {
-      gasUsed: 724,
+      gasUsed: 727,
     },
   },
   {
@@ -711,14 +710,19 @@ module.exports = [
     },
   },
   {
-    description: 'CREATE EXTCODEHASH',
-    code: [OP.CREATE, OP.EXTCODEHASH],
-    stack: [1, 0, 0],
-    memory: '0x0002030405060708091011121314151617181920212223242526272829303100',
+    description: 'EXTCODEHASH for self',
+    code: [OP.ADDRESS, OP.EXTCODEHASH],
+    stack: [],
     pc: 0,
+    accounts: [
+      {
+        address: DEFAULT_CONTRACT_ADDRESS,
+        code: [OP.ADDRESS, OP.EXTCODEHASH].join(''),
+      },
+    ],
     result: {
-      stack: ['89477152217924674838424037953991966239322087453347756267410168184682657981552'],
-      gasUsed: 32400,
+      stack: ['39443990582930071708907638907613589496695943523742414084656626340717098617021'],
+      gasUsed: 402,
     },
   },
 ];
