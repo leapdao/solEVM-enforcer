@@ -28,7 +28,6 @@ module.exports = (callback) => {
       OP.MSTORE,
       OP.PUSH1, '00',
       OP.PUSH1, '01',
-      OP.LOG0,
       OP.PUSH1, '00',
       OP.PUSH1, '01',
       OP.SHA3,

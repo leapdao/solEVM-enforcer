@@ -281,9 +281,8 @@ module.exports = [
     stack: [4, 2],
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
-      stack: [],
-      logHash: '0x73d2c8d7164fd32313bc49407c85be488239dda257c390b3fb8c4b78ae7e5d90',
-      gasUsed: 407,
+      // not supported
+      errno: 6,
     },
   },
   {
@@ -291,9 +290,8 @@ module.exports = [
     stack: [0x567, 4, 2],
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
-      stack: [],
-      logHash: '0x8a3fc8f56f0d1d1b858ce6753e8e950ab6cec2652736744c0603c3ff05c4716b',
-      gasUsed: 782,
+      // not supported
+      errno: 6,
     },
   },
   {
@@ -301,9 +299,8 @@ module.exports = [
     stack: [0x123, 0x567, 4, 2],
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
-      stack: [],
-      logHash: '0xc2152d58ac22809607a34167a0289fd8f40f695364b49cc870f198fc6bdf9b09',
-      gasUsed: 1157,
+      // not supported
+      errno: 6,
     },
   },
   {
@@ -311,9 +308,8 @@ module.exports = [
     stack: [0x987, 0x123, 0x567, 4, 2],
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
-      stack: [],
-      logHash: '0xb7e7d2bc2c72f5ee94013d38b2cc7d125bae556227c46b4f7e12a657585e1b37',
-      gasUsed: 1532,
+      // not supported
+      errno: 6,
     },
   },
   {
@@ -321,66 +317,8 @@ module.exports = [
     stack: [0x294, 0x987, 0x123, 0x567, 4, 2],
     memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
     result: {
-      stack: [],
-      logHash: '0xcb56c22daa081416d6024fa5415236dfe4e5be1a903ee3fad83cd66a3bbb1dca',
-      gasUsed: 1907,
-    },
-  },
-
-  // Check logHash
-  {
-    code: OP.LOG0,
-    stack: [4, 2],
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
-    logHash: '0x73d2c8d7164fd32313bc49407c85be488239dda257c390b3fb8c4b78ae7e5d90',
-    result: {
-      stack: [],
-      logHash: '0x3890e1cc9f39d08777e250e082c7642985cdfcc08ce34593dd6ee80870871d8a',
-      gasUsed: 407,
-    },
-  },
-  {
-    code: OP.LOG1,
-    stack: [0x567, 4, 2],
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
-    logHash: '0x8a3fc8f56f0d1d1b858ce6753e8e950ab6cec2652736744c0603c3ff05c4716b',
-    result: {
-      stack: [],
-      logHash: '0x153e61e8bae37db12468fbfdbb040a394d0d131169c2c453db9d5ea93b4aba11',
-      gasUsed: 782,
-    },
-  },
-  {
-    code: OP.LOG2,
-    stack: [0x123, 0x567, 4, 2],
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
-    logHash: '0xc2152d58ac22809607a34167a0289fd8f40f695364b49cc870f198fc6bdf9b09',
-    result: {
-      stack: [],
-      logHash: '0x14422ad14c72f4738362ca0e5c9c01c0311fd96247efa06b0cccc2939fe32278',
-      gasUsed: 1157,
-    },
-  },
-  {
-    code: OP.LOG3,
-    stack: [0x987, 0x123, 0x567, 4, 2],
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
-    logHash: '0xb7e7d2bc2c72f5ee94013d38b2cc7d125bae556227c46b4f7e12a657585e1b37',
-    result: {
-      stack: [],
-      logHash: '0x426e18c50d3adc9b7281858e6386bd5b27e60bb4310ee4ce69f00816f916dcb7',
-      gasUsed: 1532,
-    },
-  },
-  {
-    code: OP.LOG4,
-    stack: [0x294, 0x987, 0x123, 0x567, 4, 2],
-    memory: '0x0102030405060708091011121314151617181920212223242526272829303132',
-    logHash: '0xcb56c22daa081416d6024fa5415236dfe4e5be1a903ee3fad83cd66a3bbb1dca',
-    result: {
-      stack: [],
-      logHash: '0x83d7464c358e068fb006f770433a511f79431ebc618ff4f528be7f250adb46b4',
-      gasUsed: 1907,
+      // not supported
+      errno: 6,
     },
   },
 

@@ -239,5 +239,7 @@ contract EVMConstants {
     uint constant internal WORD_SIZE = 32;
     uint constant internal MAX_CODE_SIZE = 24576;
 
-    uint constant internal BLOCK_GAS_LIMIT = 0xfffffffffffff;
+    uint constant internal DEFAULT_BLOCK_GAS_LIMIT = 0xfffffffffffff;
+    address constant internal DEFAULT_CONTRACT_ADDRESS = 0x0f572e5295c57F15886F9b263E2f6d2d6c7b5ec6;
+    address constant internal DEFAULT_CALLER = 0xcD1722f2947Def4CF144679da39c4C32bDc35681;
 }

@@ -209,12 +209,11 @@ contract Verifier is Ownable, HydratedRuntime {
 
         hydratedState.stackHash = proofs.stackHash;
         hydratedState.memHash = proofs.memHash;
-        hydratedState.logHash = executionState.logHash;
 
         evm.context = Context(
             DEFAULT_CALLER,
             0,
-            BLOCK_GAS_LIMIT,
+            DEFAULT_BLOCK_GAS_LIMIT,
             0,
             0,
             0,
@@ -236,7 +235,6 @@ contract Verifier is Ownable, HydratedRuntime {
         }
 
         executionState.pc = evm.pc;
-        executionState.logHash = hydratedState.logHash;
         executionState.returnData = evm.returnData;
         executionState.gasRemaining = evm.gas;
 

@@ -1,7 +1,6 @@
 
 const VM = require('ethereumjs-vm');
 const BN = VM.deps.ethUtil.BN;
-const ethers = require('ethers');
 const OP = require('./constants');
 
 const toHex = arr => arr.map(e => '0x' + e.toString(16));
@@ -66,8 +65,6 @@ const ERROR_KEYS = Object.keys(ERRNO_MAP);
 
 const DEFAULT_CONTRACT_ADDRESS = Buffer.from('0f572e5295c57F15886F9b263E2f6d2d6c7b5ec6', 'hex');
 const DEFAULT_CALLER = Buffer.from('cD1722f2947Def4CF144679da39c4C32bDc35681', 'hex');
-
-const ZERO_HASH = '0000000000000000000000000000000000000000000000000000000000000000';
 
 const OP_SWAP1 = parseInt(OP.SWAP1, 16);
 const OP_SWAP16 = parseInt(OP.SWAP16, 16);
@@ -286,11 +283,10 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       pc: pc,
       errno: errno,
       gasRemaining: gasRemaining,
-      logHash: runState.context.logHash,
     });
   }
 
-  async run ({ code, data, stack, mem, logHash, gasLimit, blockGasLimit, gasRemaining, pc }) {
+  async run ({ code, data, stack, mem, gasLimit, blockGasLimit, gasRemaining, pc }) {
     data = data ? data.replace('0x', '') : '';
     blockGasLimit = Buffer.from(NumToHex(blockGasLimit || OP.BLOCK_GAS_LIMIT), 'hex');
 
@@ -315,7 +311,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       gasRemaining: gasRemaining,
       steps: [],
       gasLeft: gasRemaining,
-      logHash: logHash || ZERO_HASH,
     };
 
     const defaultBlock = {
@@ -438,27 +433,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
   }
 
   async handleLOG (runState) {
-    await super.handleLOG(runState);
-
-    let prevLogHash = runState.context.logHash.replace('0x', '');
-    let log = runState.logs[runState.logs.length - 1];
-
-    if (!log) {
-      throw new Error('step with LOGx opcode but no log emitted');
-    }
-
-    let topics = log[1];
-    while (topics.length !== 4) {
-      topics.push(0);
-    }
-    runState.context.logHash = ethers.utils.solidityKeccak256(
-      ['bytes32', 'address', 'uint[4]', 'bytes'],
-      [
-        '0x' + prevLogHash,
-        '0x' + log[0].toString('hex'),
-        topics,
-        '0x' + log[2].toString('hex'),
-      ]
-    ).replace('0x', '');
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
 };

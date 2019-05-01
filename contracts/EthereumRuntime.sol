@@ -21,7 +21,6 @@ contract EthereumRuntime is HydratedRuntime {
         uint[] stack;
         bytes mem;
         bytes returnData;
-        bytes32 logHash;
     }
 
     struct EVMResult {
@@ -35,7 +34,6 @@ contract EthereumRuntime is HydratedRuntime {
         uint16 depth;
         // uint n;
         uint pc;
-        bytes32 logHash;
         bytes32 hashValue;
     }
 
@@ -45,8 +43,7 @@ contract EthereumRuntime is HydratedRuntime {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
 
-        HydratedState memory hydratedState = initHydratedState(evm);
-        hydratedState.logHash = img.logHash;
+        initHydratedState(evm);
 
         evm.context = Context(
             DEFAULT_CALLER,
@@ -80,7 +77,6 @@ contract EthereumRuntime is HydratedRuntime {
         resultState.lastRet = evm.lastRet;
         resultState.returnData = evm.returnData;
         resultState.errno = evm.errno;
-        resultState.logHash = hydratedState.logHash;
         resultState.mem = EVMMemory.toArray(evm.mem);
         resultState.stack = EVMStack.toArray(evm.stack);
         resultState.pc = evm.pc;
@@ -112,7 +108,8 @@ contract EthereumRuntime is HydratedRuntime {
 
         bytes32 hashValue = keccak256(abi.encodePacked(
             dataHash,
-            hydratedState.logHash,
+            hydratedState.stackHash,
+            hydratedState.memHash,
             evm.mem.size,
             evm.stack.size,
             evm.pc,

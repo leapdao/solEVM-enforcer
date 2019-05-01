@@ -77,7 +77,6 @@ contract('Runtime', function () {
         const data = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
-        const logHash = fixture.logHash;
         const codeContract = await deployCode(code);
         const args = {
           code: codeContract.address,
@@ -87,7 +86,6 @@ contract('Runtime', function () {
           gasRemaining,
           stack,
           mem,
-          logHash,
         };
         const res = await rt.execute(args);
 
@@ -103,9 +101,6 @@ contract('Runtime', function () {
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.mem, fixture.result.memory, 'memory');
-        }
-        if (fixture.result.logHash) {
-          assert.equal(res.logHash, fixture.result.logHash, 'logHash');
         }
         if (fixture.result.pc !== undefined) {
           assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');

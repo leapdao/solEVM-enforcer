@@ -10,7 +10,6 @@ library Merkelizer {
         uint[] stack;
         bytes mem;
         bytes returnData;
-        bytes32 logHash;
         uint pc;
         uint gasRemaining;
         // accounts...
@@ -65,7 +64,6 @@ library Merkelizer {
                 _stackHash,
                 _memHash,
                 _dataHash,
-                self.logHash,
                 self.returnData,
                 self.pc,
                 self.gasRemaining
