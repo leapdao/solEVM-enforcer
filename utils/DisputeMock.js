@@ -96,7 +96,6 @@ module.exports = class DisputeMock {
       stack: executionState.stack,
       mem: executionState.mem,
       pc: executionState.pc,
-      logHash: executionState.logHash,
       gasRemaining: executionState.gasRemaining,
     };
 
@@ -112,7 +111,6 @@ module.exports = class DisputeMock {
         returnData: '',
         pc: 0,
         errno: 0xff,
-        logHash: '',
         gasRemaining: 0,
       };
 

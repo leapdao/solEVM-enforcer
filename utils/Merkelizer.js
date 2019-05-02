@@ -13,7 +13,6 @@ module.exports = class Merkelizer {
         stack: [],
         mem: '',
         returnData: '',
-        logHash: ZERO_HASH.replace('0x', ''),
         pc: 0,
         errno: 0,
         gasRemaining: DEFAULT_GAS,
@@ -79,12 +78,11 @@ module.exports = class Merkelizer {
     }
 
     return ethers.utils.solidityKeccak256(
-      ['bytes', 'bytes', 'bytes', 'bytes', 'bytes', 'uint', 'uint'],
+      ['bytes', 'bytes', 'bytes', 'bytes', 'uint', 'uint'],
       [
         stackHash,
         memHash,
         dataHash,
-        '0x' + execution.logHash,
         '0x' + execution.returnData,
         execution.pc,
         execution.gasRemaining,

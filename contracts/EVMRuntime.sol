@@ -5,19 +5,13 @@ pragma experimental ABIEncoderV2;
 import { EVMConstants } from "./EVMConstants.sol";
 import { EVMMemory } from "./EVMMemory.slb";
 import { EVMStack } from "./EVMStack.slb";
-import { EVMLogs } from "./EVMLogs.slb";
 import { EVMUtils } from "./EVMUtils.slb";
 import { EVMCode } from "./EVMCode.slb";
 
 
 contract EVMRuntime is EVMConstants {
-
-    address constant internal DEFAULT_CONTRACT_ADDRESS = 0x0f572e5295c57F15886F9b263E2f6d2d6c7b5ec6;
-    address constant internal DEFAULT_CALLER = 0xcD1722f2947Def4CF144679da39c4C32bDc35681;
-
     using EVMMemory for EVMMemory.Memory;
     using EVMStack for EVMStack.Stack;
-    using EVMLogs for EVMLogs.Logs;
     using EVMCode for EVMCode.Code;
 
     struct Context {
@@ -1363,28 +1357,9 @@ contract EVMRuntime is EVMConstants {
     }
 
     // 0xaX
+    // Logs are also stateful and thus not supported
     function handleLOG(EVM memory state) internal {
-        uint mAddr = state.stack.pop();
-        uint mSize = state.stack.pop();
-        uint gasFee = GAS_LOG +
-            (GAS_LOGTOPIC * state.n) +
-            (mSize * GAS_LOGDATA) +
-            computeGasForMemory(state, mAddr + mSize);
-
-        if (gasFee > state.gas) {
-            state.gas = 0;
-            state.errno = ERROR_OUT_OF_GAS;
-            return;
-        }
-        state.gas -= gasFee;
-
-        EVMLogs.LogEntry memory log;
-        log.account = state.target;
-        log.data = state.mem.toArray(mAddr, mSize);
-
-        for (uint i = 0; i < state.n; i++) {
-            log.topics[i] = state.stack.pop();
-        }
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     // 0xfX

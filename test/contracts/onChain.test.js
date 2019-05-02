@@ -50,7 +50,6 @@ contract('Runtime', function () {
             gasRemaining: beforeState.gas,
             stack: beforeState.stack,
             mem: beforeState.mem,
-            logHash: beforeState.logHash,
           }
         );
 

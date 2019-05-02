@@ -21,13 +21,11 @@ describe('JS Stepper', function () {
         const data = fixture.data || '';
         const gasLimit = fixture.gasLimit;
         const blockGasLimit = fixture.gasLimit;
-        const logHash = fixture.logHash;
         const args = {
           code,
           data,
           stack,
           mem,
-          logHash,
           gasLimit,
           blockGasLimit,
           pc,
@@ -61,9 +59,6 @@ describe('JS Stepper', function () {
         }
         if (fixture.result.errno !== undefined) {
           assert.equal(res.errno, fixture.result.errno, 'errno');
-        }
-        if (fixture.result.logHash) {
-          assert.equal(res.logHash, fixture.result.logHash.replace('0x', ''), 'logHash');
         }
       });
     });

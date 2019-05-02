@@ -205,7 +205,6 @@ module.exports = class ExecutionPoker {
       stack: execState.compactStack,
       mem: '0x' + (execState.isMemoryRequired ? prevOutput.mem : ''),
       returnData: '0x' + prevOutput.returnData,
-      logHash: '0x' + prevOutput.logHash,
       pc: prevOutput.pc,
       gasRemaining: prevOutput.gasRemaining,
     };

@@ -34,7 +34,6 @@ function submitProofHelper (dispute, code, computationPath) {
       stack: execState.compactStack,
       mem: execState.isMemoryRequired ? prevOutput.mem : '',
       returnData: prevOutput.returnData,
-      logHash: prevOutput.logHash,
       pc: prevOutput.pc,
       gasRemaining: prevOutput.gasRemaining,
     }
