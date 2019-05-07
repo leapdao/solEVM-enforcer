@@ -22,7 +22,7 @@ jobs:
       name: "Solidity Coverage"
       script:
         - yarn add codecov
-        - yarn add github:leapdao/solidity-coverage.git#7b3ae478f2777dc72c813fe16e937e09670e3587
+        - yarn add github:leapdao/solidity-coverage#7b3ae478f2777dc72c813fe16e937e09670e3587
         - yarn coverage
         - ./node_modules/.bin/codecov -f coverage/lcov.info
 
