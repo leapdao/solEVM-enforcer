@@ -21,6 +21,7 @@ describe('JS Stepper', function () {
         const data = fixture.data || '';
         const gasLimit = fixture.gasLimit;
         const blockGasLimit = fixture.gasLimit;
+        const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
         const args = {
           code,
           data,
@@ -28,6 +29,7 @@ describe('JS Stepper', function () {
           mem,
           gasLimit,
           blockGasLimit,
+          gasRemaining,
           pc,
         };
         const steps = await stepper.run(args);
