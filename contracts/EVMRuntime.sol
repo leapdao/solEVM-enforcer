@@ -756,8 +756,45 @@ contract EVMRuntime is EVMConstants {
 
     // solhint-disable-next-line func-name-mixedcase
     function handlePreC_MODEXP(EVM memory state) internal {
-        // TODO
-        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        // EIP-198
+        bytes memory inData = state.data;
+        bytes memory outData;
+        uint256 gasFee = 0;
+
+        assembly {
+            let inSize := mload(inData)
+            // outSize is length of modulus
+            let outSize := mload(add(inData, 0x60))
+
+            // get free mem ptr
+            outData := mload(0x40)
+            // update free mem = ptr + outSize + 0x20 (bytes length)
+            mstore(0x40, add(add(outData, outSize), 0x20))
+            // store outData.length
+            mstore(outData, outSize)
+
+            let inOff := add(inData, 0x20)
+            let outOff := add(outData, 0x20)
+            let curGas := gas()
+
+            if iszero(staticcall(curGas, 0x05, inOff, inSize, outOff, outSize)) {
+                // In this case we run out of gas, and have to revert (safety measure)
+                revert(0, 0)
+            }
+            gasFee  := sub(curGas, gas())
+        }
+
+        // XXX: static warning, if that is not correct anymore then the bytecode changed.
+        // adjust accordingly ;)
+        gasFee = (gasFee - 744);
+
+        if (gasFee > state.gas) {
+            state.gas = 0;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
+        }
+        state.gas -= gasFee;
+        state.returnData = outData;
     }
 
     // solhint-disable-next-line func-name-mixedcase
