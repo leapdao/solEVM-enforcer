@@ -782,7 +782,7 @@ contract EVMRuntime is EVMConstants {
                 // In this case we run out of gas, and have to revert (safety measure)
                 revert(0, 0)
             }
-            gasFee  := sub(curGas, gas())
+            gasFee := sub(curGas, gas())
         }
 
         // XXX: static warning, if that is not correct anymore then the bytecode changed.
