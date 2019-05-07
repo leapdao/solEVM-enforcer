@@ -776,8 +776,9 @@ contract EVMRuntime is EVMConstants {
             let inOff := add(inData, 0x20)
             let outOff := add(outData, 0x20)
             let curGas := gas()
+            let success := staticcall(curGas, 0x05, inOff, inSize, outOff, outSize)
 
-            if iszero(staticcall(curGas, 0x05, inOff, inSize, outOff, outSize)) {
+            if iszero(success) {
                 // In this case we run out of gas, and have to revert (safety measure)
                 revert(0, 0)
             }
@@ -786,7 +787,7 @@ contract EVMRuntime is EVMConstants {
 
         // XXX: static warning, if that is not correct anymore then the bytecode changed.
         // adjust accordingly ;)
-        gasFee = (gasFee - 744);
+        gasFee = (gasFee - 747);
 
         if (gasFee > state.gas) {
             state.gas = 0;
