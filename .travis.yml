@@ -4,6 +4,12 @@ node_js:
 cache:
   - yarn
   - npm
+branches:
+  only:
+    - master
+    - stable
+    - staging
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 jobs:
   include:
     - stage: tests
