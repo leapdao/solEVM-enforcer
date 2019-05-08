@@ -754,7 +754,7 @@ contract EVMRuntime is EVMConstants {
         state.returnData = state.data;
     }
 
-    // solhint-disable-next-line func-name-mixedcase
+    // solhint-disable-next-line func-name-mixedcase, function-max-lines
     function handlePreC_MODEXP(EVM memory state) internal {
         // EIP-198
         bytes memory inData = state.data;
