@@ -69,7 +69,8 @@ contract Enforcer {
 
         require(execution.startBlock != 0, "Execution does not existed");
         // executionDepth round plus 1 for submitProof
-        require(execution.startBlock + challengePeriod > block.number + (execution.executionDepth + 1) * verifier.timeoutDuration(), "Execution is out of challenge period");
+        require(execution.startBlock + challengePeriod > block.number + (execution.executionDepth + 1) * verifier.timeoutDuration(),
+                "Execution is out of challenge period");
         require(msg.value == bondAmount, "Bond amount is required");
         // Do we want to prohibit early?
         // require(execution.endHash != endHash);

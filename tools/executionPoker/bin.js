@@ -95,8 +95,8 @@ async function main () {
   solverWallet = solverWallet.connect(new ethers.providers.Web3Provider(provider));
   challengerWallet = challengerWallet.connect(new ethers.providers.Web3Provider(provider));
 
-  let timeout = 100;
-  let challengePeriod = 1000;
+  let timeout = 10;
+  let challengePeriod = 10000;
   let bondAmount = 1;
 
   console.log(

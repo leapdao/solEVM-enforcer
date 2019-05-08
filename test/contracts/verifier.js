@@ -216,9 +216,10 @@ contract('Verifier', function () {
 
   before(async () => {
     const challengePeriod = 1000;
+    const timeoutDuration = 10;
     const bondAmount = 1;
 
-    verifier = await deployContract(Verifier, challengePeriod);
+    verifier = await deployContract(Verifier, timeoutDuration);
     enforcer = await deployContract(Enforcer, verifier.address, challengePeriod, bondAmount);
 
     let tx = await verifier.setEnforcer(enforcer.address);
