@@ -768,8 +768,24 @@ contract EVMRuntime is EVMConstants {
 
             // get free mem ptr
             outData := mload(0x40)
-            // update free mem = ptr + outSize + 0x20 (bytes length)
-            mstore(0x40, add(add(outData, outSize), 0x20))
+            // padding up to word size
+            let memEnd := add(
+                outData,
+                and(
+                    add(
+                        add(
+                            add(outData, outSize),
+                            0x20
+                        ),
+                        0x1F
+                    ),
+                    not(0x1F)
+                )
+            )
+            // update free mem ptr
+            mstore(0x40, memEnd)
+            // for correct gas calculation, we have to touch the new highest mem slot
+            mstore8(memEnd, 0)
             // store outData.length
             mstore(outData, outSize)
 
@@ -787,7 +803,7 @@ contract EVMRuntime is EVMConstants {
 
         // XXX: static warning, if that is not correct anymore then the bytecode changed.
         // adjust accordingly ;)
-        gasFee = (gasFee - 747);
+        gasFee = (gasFee - 743);
 
         if (gasFee > state.gas) {
             state.gas = 0;
