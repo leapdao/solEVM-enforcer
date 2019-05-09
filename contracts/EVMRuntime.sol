@@ -910,10 +910,61 @@ contract EVMRuntime is EVMConstants {
         state.returnData = outData;
     }
 
-    // solhint-disable-next-line func-name-mixedcase
+    // solhint-disable-next-line func-name-mixedcase, function-max-lines
     function handlePreC_ECPAIRING(EVM memory state) internal {
-        // TODO
-        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        // EIP-197
+        bytes memory inData = state.data;
+        bytes memory outData;
+        uint256 success;
+        uint256 gasFee = 0;
+
+        assembly {
+            let inSize := mload(inData)
+            // outSize is 32 bytes
+            let outSize := 0x20
+
+            // get free mem ptr
+            outData := mload(0x40)
+            // padding up to word size
+            let memEnd := add(
+                outData,
+                and(
+                    add(
+                        add(
+                            add(outData, outSize),
+                            0x20
+                        ),
+                        0x1F
+                    ),
+                    not(0x1F)
+                )
+            )
+            // update free mem ptr
+            mstore(0x40, memEnd)
+            // for correct gas calculation, we have to touch the new highest mem slot
+            mstore8(memEnd, 0)
+            // store outData.length
+            mstore(outData, outSize)
+
+            let inOff := add(inData, 0x20)
+            let outOff := add(outData, 0x20)
+            let curGas := gas()
+
+            success := staticcall(curGas, 0x08, inOff, inSize, outOff, outSize)
+            gasFee := sub(curGas, gas())
+        }
+
+        // XXX: static warning, if that is not correct anymore then the bytecode changed.
+        // adjust accordingly ;)
+        gasFee = (gasFee - 725);
+
+        if (gasFee > state.gas || success == 0) {
+            state.gas = 0;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
+        }
+        state.gas -= gasFee;
+        state.returnData = outData;
     }
     // 0x0X
 
