@@ -1,7 +1,9 @@
 language: node_js
 node_js:
   - "lts/*"
-cache: yarn
+cache:
+  - yarn
+  - npm
 branches:
   only:
     - master
@@ -26,7 +28,7 @@ jobs:
       name: "Solidity Coverage"
       script:
         - yarn add codecov
-        - yarn add https://github.com/leapdao/solidity-coverage.git#master
+        - yarn add https://github.com/leapdao/solidity-coverage.git#bb22d28edb700040ddb614bb2a4605f641383ced
         - yarn coverage
         - ./node_modules/.bin/codecov -f coverage/lcov.info
 

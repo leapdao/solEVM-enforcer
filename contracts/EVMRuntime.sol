@@ -754,10 +754,64 @@ contract EVMRuntime is EVMConstants {
         state.returnData = state.data;
     }
 
-    // solhint-disable-next-line func-name-mixedcase
+    // solhint-disable-next-line func-name-mixedcase, function-max-lines
     function handlePreC_MODEXP(EVM memory state) internal {
-        // TODO
-        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        // EIP-198
+        bytes memory inData = state.data;
+        bytes memory outData;
+        uint256 gasFee = 0;
+
+        assembly {
+            let inSize := mload(inData)
+            // outSize is length of modulus
+            let outSize := mload(add(inData, 0x60))
+
+            // get free mem ptr
+            outData := mload(0x40)
+            // padding up to word size
+            let memEnd := add(
+                outData,
+                and(
+                    add(
+                        add(
+                            add(outData, outSize),
+                            0x20
+                        ),
+                        0x1F
+                    ),
+                    not(0x1F)
+                )
+            )
+            // update free mem ptr
+            mstore(0x40, memEnd)
+            // for correct gas calculation, we have to touch the new highest mem slot
+            mstore8(memEnd, 0)
+            // store outData.length
+            mstore(outData, outSize)
+
+            let inOff := add(inData, 0x20)
+            let outOff := add(outData, 0x20)
+            let curGas := gas()
+            let success := staticcall(curGas, 0x05, inOff, inSize, outOff, outSize)
+
+            if iszero(success) {
+                // In this case we run out of gas, and have to revert (safety measure)
+                revert(0, 0)
+            }
+            gasFee := sub(curGas, gas())
+        }
+
+        // XXX: static warning, if that is not correct anymore then the bytecode changed.
+        // adjust accordingly ;)
+        gasFee = (gasFee - 743);
+
+        if (gasFee > state.gas) {
+            state.gas = 0;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
+        }
+        state.gas -= gasFee;
+        state.returnData = outData;
     }
 
     // solhint-disable-next-line func-name-mixedcase
