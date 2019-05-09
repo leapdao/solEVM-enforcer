@@ -214,6 +214,8 @@ contract EVMConstants {
     uint16 constant internal GAS_RIPEMD160_WORD = 120;
     uint16 constant internal GAS_IDENTITY_BASE = 15;
     uint16 constant internal GAS_IDENTITY_WORD = 3;
+    uint16 constant internal GAS_EC_ADD = 500;
+    uint16 constant internal GAS_EC_MUL = 40000;
 
     // ERRORS
 
