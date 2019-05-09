@@ -816,14 +816,98 @@ contract EVMRuntime is EVMConstants {
 
     // solhint-disable-next-line func-name-mixedcase
     function handlePreC_ECADD(EVM memory state) internal {
-        // TODO
-        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        // EIP-196
+        bytes memory inData = state.data;
+        bytes memory outData;
+        uint256 success;
+        uint256 gas = state.gas;
+
+        assembly {
+            let inSize := mload(inData)
+            // outSize is 64 bytes
+            let outSize := 0x40
+
+            // get free mem ptr
+            outData := mload(0x40)
+            // padding up to word size
+            let memEnd := add(
+                outData,
+                and(
+                    add(
+                        add(
+                            add(outData, outSize),
+                            0x20
+                        ),
+                        0x1F
+                    ),
+                    not(0x1F)
+                )
+            )
+            // update free mem ptr
+            mstore(0x40, memEnd)
+            // store outData.length
+            mstore(outData, outSize)
+
+            let inOff := add(inData, 0x20)
+            let outOff := add(outData, 0x20)
+            success := staticcall(gas, 0x06, inOff, inSize, outOff, outSize)
+        }
+
+        if (GAS_EC_ADD > gas || success == 0) {
+            state.gas = 0;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
+        }
+        state.gas -= GAS_EC_ADD;
+        state.returnData = outData;
     }
 
     // solhint-disable-next-line func-name-mixedcase
     function handlePreC_ECMUL(EVM memory state) internal {
-        // TODO
-        state.errno = ERROR_PRECOMPILE_NOT_IMPLEMENTED;
+        // EIP-196
+        bytes memory inData = state.data;
+        bytes memory outData;
+        uint256 success;
+        uint256 gas = state.gas;
+
+        assembly {
+            let inSize := mload(inData)
+            // outSize is 64 bytes
+            let outSize := 0x40
+
+            // get free mem ptr
+            outData := mload(0x40)
+            // padding up to word size
+            let memEnd := add(
+                outData,
+                and(
+                    add(
+                        add(
+                            add(outData, outSize),
+                            0x20
+                        ),
+                        0x1F
+                    ),
+                    not(0x1F)
+                )
+            )
+            // update free mem ptr
+            mstore(0x40, memEnd)
+            // store outData.length
+            mstore(outData, outSize)
+
+            let inOff := add(inData, 0x20)
+            let outOff := add(outData, 0x20)
+            success := staticcall(gas, 0x07, inOff, inSize, outOff, outSize)
+        }
+
+        if (GAS_EC_MUL > gas || success == 0) {
+            state.gas = 0;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
+        }
+        state.gas -= GAS_EC_MUL;
+        state.returnData = outData;
     }
 
     // solhint-disable-next-line func-name-mixedcase
