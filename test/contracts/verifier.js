@@ -1,6 +1,6 @@
 const Merkelizer = require('./../../utils/Merkelizer');
 const disputeFixtures = require('./../fixtures/dispute');
-const { deployContract, txOverrides, deployCode } = require('./../helpers/utils');
+const { toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 const assertRevert = require('./../helpers/assertRevert');
 
@@ -293,6 +293,36 @@ contract('Verifier', function () {
         },
         txOverrides
       ));
+    });
+  });
+
+  describe('claimTimeout', async () => {
+    it('non-existent dispute, cannot claim', async () => {
+      await assertRevert(verifier.claimTimeout(toBytes32('NotExist')), 'dispute not exist');
+    });
+
+    it('dispute resolved, cannot claim', async () => {
+
+    });
+
+    it('not yet timeout, cannot claim', async () => {
+
+    });
+
+    it('nobody submits anything, solver wins', async () => {
+
+    });
+
+    it('2 round - solver submitted, solver wins', async () => {
+
+    });
+
+    it('2 round - challenger submitted, challenger wins', async () => {
+
+    });
+
+    it('2 round - both submitted, waiting proof, challenger wins', async () => {
+
     });
   });
 });
