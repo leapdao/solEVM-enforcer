@@ -281,7 +281,7 @@ contract Verifier is Ownable, HydratedRuntime {
         require(dispute.timeout > 0, "dispute not exist");
         require(dispute.timeout < block.number, "not timed out yet");
         require(
-            !((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0),
+            (dispute.state & SOLVER_VERIFIED) == 0 && (dispute.state & CHALLENGER_VERIFIED) == 0,
             "already notified enforcer"
         );
 
@@ -293,6 +293,12 @@ contract Verifier is Ownable, HydratedRuntime {
             solverWins = false;
         } else {
             solverWins = (dispute.treeDepth > 0);
+        }
+
+        if (solverWins) {
+            dispute.state |= SOLVER_VERIFIED;
+        } else {
+            dispute.state |= CHALLENGER_VERIFIED;
         }
 
         enforcer.result(dispute.executionId, solverWins, dispute.challengerAddr);

@@ -1,6 +1,9 @@
 const OP = require('./../../utils/constants');
+// TODO make a util contract
+const verifierMock = artifacts.require('./mocks/VerifierMock.sol');
 const ethers = require('ethers');
 const { PUSH1 } = OP;
+let utilsContract;
 
 const Utils = {};
 
@@ -120,5 +123,15 @@ for (var i = 0; i < 10; i++) {
   const wallet = new ethers.Wallet(privateKey, Utils.provider);
   Utils.wallets.push(wallet);
 }
+
+Utils.onchainWait = async function onchainWait (t) {
+  if (utilsContract === undefined) {
+    utilsContract = await Utils.deployContract(verifierMock, 10);
+  }
+  for (let i = 0; i < t; i++) {
+    let tx = await utilsContract.dummy();
+    tx = await tx.wait();
+  }
+};
 
 module.exports = Utils;

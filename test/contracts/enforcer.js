@@ -1,4 +1,4 @@
-const { toBytes32, wallets, deployContract, txOverrides } = require('./../helpers/utils');
+const { onchainWait, toBytes32, wallets, deployContract, txOverrides } = require('./../helpers/utils');
 const assertRevert = require('./../helpers/assertRevert');
 
 const Enforcer = artifacts.require('./Enforcer.sol');
@@ -19,13 +19,6 @@ contract('Enforcer', () => {
   let verifierMock;
   let solver = wallets[0];
   let challenger = wallets[1];
-
-  async function onchainWait (t) {
-    for (let i = 0; i < t; i++) {
-      let tx = await verifierMock.dummy();
-      tx = await tx.wait();
-    }
-  }
 
   before('Prepare contracts', async () => {
     verifier = await deployContract(Verifier, timeoutDuration);
