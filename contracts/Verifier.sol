@@ -67,7 +67,9 @@ contract Verifier is Ownable, HydratedRuntime {
       * @dev game not timeout yet
       */
     modifier onlyPlaying(bytes32 disputeId) {
-        require(disputes[disputeId].timeout >= block.number, "game timed out");
+        Dispute storage dispute = disputes[disputeId];
+        require(dispute.timeout >= block.number, "game timed out");
+        require((dispute.state & SOLVER_VERIFIED == 0) && (dispute.state & CHALLENGER_VERIFIED == 0), 'dispute resolved');
         _;
     }
 
@@ -256,9 +258,10 @@ contract Verifier is Ownable, HydratedRuntime {
             dispute.state |= CHALLENGER_VERIFIED;
         }
 
-        if ((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0) {
-            // both are verified, solver wins
+        if (dispute.state & SOLVER_VERIFIED != 0) {
             enforcer.result(dispute.executionId, true, dispute.challengerAddr);
+        } else {
+            enforcer.result(dispute.executionId, false, dispute.challengerAddr);
         }
     }
 

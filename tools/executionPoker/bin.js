@@ -16,31 +16,6 @@ class MyExecutionPoker extends ExecutionPoker {
     // we are done
     process.exit(0);
   }
-
-  async submitProof (disputeId, computationPath) {
-    await super.submitProof(disputeId, computationPath);
-
-    // TODO why claimTimeout here
-    // submissionCounter++;
-
-    // if (submissionCounter === 2) {
-    //   const timeoutDuration = (await this.verifier.timeoutDuration()).toNumber();
-
-    //   this.log('Verifier timeoutDuration', timeoutDuration);
-    //   this.log(`mining ${timeoutDuration} blocks to be able to call claimTimeout`);
-
-    //   for (let i = 0; i < timeoutDuration; i++) {
-    //     await this.wallet.provider.send('evm_mine', []);
-    //   }
-
-    //   this.log('calling Verifier.claimTimeout');
-
-    //   let tx = await this.verifier.claimTimeout(disputeId, { gasLimit: this.gasLimit });
-    //   tx = await tx.wait();
-
-    //   this.log('claimTimeout gasUsed - ', tx.gasUsed.toNumber());
-    // }
-  }
 }
 
 async function deployContract (truffleContract, wallet, ...args) {

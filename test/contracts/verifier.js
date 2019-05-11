@@ -110,14 +110,20 @@ async function disputeGame (
           solverComputationPath.left.hash + ' r=' + solverComputationPath.right.hash);
         await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
 
-        debugLog('Challenger: SUBMITTING FOR l=' +
+        const SOLVER_VERIFIED = (1 << 2);
+        const CHALLENGER_VERIFIED = (1 << 3);
+
+        // refresh
+        dispute = await verifier.disputes(event.disputeId);
+        if ((dispute.state & SOLVER_VERIFIED === 0) && (dispute.state & CHALLENGER_VERIFIED === 0)) {
+          debugLog('Challenger: SUBMITTING FOR l=' +
           challengerComputationPath.left.hash + ' r=' + challengerComputationPath.right.hash);
-        await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
+          await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
+        }
 
         // refresh again
         dispute = await verifier.disputes(event.disputeId);
 
-        const SOLVER_VERIFIED = (1 << 2);
         let winner = 'challenger';
         if ((dispute.state & SOLVER_VERIFIED) !== 0) {
           winner = 'solver';
