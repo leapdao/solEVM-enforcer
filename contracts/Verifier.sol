@@ -69,7 +69,7 @@ contract Verifier is Ownable, HydratedRuntime {
     modifier onlyPlaying(bytes32 disputeId) {
         Dispute storage dispute = disputes[disputeId];
         require(dispute.timeout >= block.number, "game timed out");
-        require((dispute.state & SOLVER_VERIFIED == 0) && (dispute.state & CHALLENGER_VERIFIED == 0), 'dispute resolved');
+        require((dispute.state & SOLVER_VERIFIED == 0) && (dispute.state & CHALLENGER_VERIFIED == 0), "dispute resolved");
         _;
     }
 
