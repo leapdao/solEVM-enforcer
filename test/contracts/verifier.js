@@ -298,7 +298,11 @@ contract('Verifier', function () {
 
   describe('claimTimeout', async () => {
     it('non-existent dispute, cannot claim', async () => {
-      await assertRevert(verifier.claimTimeout(toBytes32('NotExist')), 'dispute not exist');
+      // TODO geth require to specific gasLimit although the transaction only cost ~50k
+      await assertRevert(
+        verifier.claimTimeout(toBytes32('NotExist'), { gasLimit: 0xfffffffffffff }),
+        'dispute not exist'
+      );
     });
 
     it('not yet timeout, cannot claim', async () => {
@@ -330,7 +334,7 @@ contract('Verifier', function () {
       let disputeId = tx.events[0].args.disputeId;
 
       // should not accept submitProof
-      await assertRevert(verifier.claimTimeout(disputeId), 'not timed out yet');
+      await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff }), 'not timed out yet');
     });
 
     it('nobody submits anything, solver wins', async () => {
