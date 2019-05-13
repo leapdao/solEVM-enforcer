@@ -359,21 +359,18 @@ contract('Verifier', function () {
         1,
         { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
       );
-
       tx = await tx.wait();
+
       tx = await enforcer.dispute(
         codeContract.address,
         callData,
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
       );
-
       tx = await tx.wait();
       let disputeId = tx.events[0].args.disputeId;
 
       await onchainWait(10);
-
-      // let bondChallenger = await enforcer.bonds();
 
       tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
       tx = await tx.wait();
@@ -388,16 +385,168 @@ contract('Verifier', function () {
       await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff }), 'already notified enforcer');
     });
 
-    xit('2 round - solver submitted, solver wins', async () => {
+    it('1 round - solver submitted, solver wins', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.PUSH1, '01',
+        OP.RETURN,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345680';
 
+      let solverHash = Merkelizer.hash(ZERO_HASH, ZERO_HASH);
+
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        solverHash,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+      let disputeId = tx.events[0].args.disputeId;
+
+      // solver respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ZERO_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      await onchainWait(10);
+
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await tx.wait();
+
+      let dispute = await verifier.disputes(disputeId);
+      // TODO may add dispute result directly to Verifier?
+      const SOLVER_VERIFIED = 1 << 2;
+
+      assert.notEqual(dispute.state & SOLVER_VERIFIED, 0, 'solver should win');
     });
 
-    xit('2 round - challenger submitted, challenger wins', async () => {
+    it('1 round - challenger submitted, challenger wins', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.PUSH1, '02',
+        OP.RETURN,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345680';
 
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let challengerHash = Merkelizer.hash(ZERO_HASH, ZERO_HASH);
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        challengerHash,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let disputeId = tx.events[0].args.disputeId;
+
+      // challenger respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ZERO_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      await onchainWait(10);
+
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await tx.wait();
+
+      let dispute = await verifier.disputes(disputeId);
+      // TODO may add dispute result directly to Verifier?
+      const CHALLENGER_VERIFIED = 1 << 3;
+
+      assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
 
-    xit('2 round - both submitted, waiting proof, challenger wins', async () => {
+    it('1 round - both submitted, waiting proof, challenger wins', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.REVERT,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345680';
+      const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
 
+      let solverHash = Merkelizer.hash(ZERO_HASH, ONE_HASH);
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        solverHash,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        challengerHash,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let disputeId = tx.events[0].args.disputeId;
+
+      // solver respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ONE_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      // challenger respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ONE_HASH,
+          right: ZERO_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      await onchainWait(10);
+
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await tx.wait();
+
+      let dispute = await verifier.disputes(disputeId);
+      // TODO may add dispute result directly to Verifier?
+      const CHALLENGER_VERIFIED = 1 << 3;
+
+      assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
   });
 });
