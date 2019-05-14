@@ -5,6 +5,8 @@ const Enforcer = artifacts.require('./Enforcer.sol');
 const Verifier = artifacts.require('./Verifier.sol');
 const VerifierMock = artifacts.require('./mocks/VerifierMock.sol');
 
+const GAS_LIMIT = require('./../../utils/constants').GAS_LIMIT;
+
 contract('Enforcer', () => {
   const callData = '0xc0ffee';
   const otherCallData = '0xc0ffef';
@@ -13,6 +15,7 @@ contract('Enforcer', () => {
   const challengePeriod = 30;
   const timeoutDuration = 2;
   const executionDepth = 10;
+  const maxExecutionDepth = 10;
   const bondAmount = 999;
   let enforcer;
   let verifier;
@@ -22,7 +25,7 @@ contract('Enforcer', () => {
 
   before('Prepare contracts', async () => {
     verifier = await deployContract(Verifier, timeoutDuration);
-    enforcer = await deployContract(Enforcer, verifier.address, challengePeriod, bondAmount);
+    enforcer = await deployContract(Enforcer, verifier.address, challengePeriod, bondAmount, maxExecutionDepth);
 
     let tx = await verifier.setEnforcer(enforcer.address);
     await tx.wait();
@@ -34,7 +37,7 @@ contract('Enforcer', () => {
     // register execution and check state
     let tx = await enforcer.register(
       enforcer.address, callData, endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
 
     tx = await tx.wait();
@@ -42,7 +45,7 @@ contract('Enforcer', () => {
     // start dispute
     tx = await enforcer.dispute(
       enforcer.address, callData, otherEndHash,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
 
@@ -62,7 +65,7 @@ contract('Enforcer', () => {
 
   // change to VerifierMock for further testing
   it('should have correct information', async () => {
-    enforcer = await deployContract(Enforcer, verifierMock.address, challengePeriod, bondAmount);
+    enforcer = await deployContract(Enforcer, verifierMock.address, challengePeriod, bondAmount, maxExecutionDepth);
     let tx = await verifierMock.setEnforcer(enforcer.address);
     await tx.wait();
 
@@ -75,17 +78,26 @@ contract('Enforcer', () => {
   it('not allow registration without bond', async () => {
     let tx = enforcer.register(
       enforcer.address, callData, endHash, executionDepth,
-      { value: 0, gasLimit: 0xfffffffffffff }
+      { value: 0, gasLimit: GAS_LIMIT }
     );
 
     await assertRevert(tx, 'Bond is required');
+  });
+
+  it('not allow registration of oversized execution', async () => {
+    let tx = enforcer.register(
+      enforcer.address, callData, endHash, maxExecutionDepth + 1,
+      { value: bondAmount }
+    );
+
+    await assertRevert(tx, 'Execution too long');
   });
 
   it('allow registration of new execution', async () => {
     const solverBond = await enforcer.bonds(solver.address);
     let tx = await enforcer.register(
       enforcer.address, callData, endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
     const event = tx.events[0].args;
@@ -107,7 +119,7 @@ contract('Enforcer', () => {
   it('not allow registration of the same execution', async () => {
     let tx = enforcer.register(
       enforcer.address, callData, endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await assertRevert(tx, 'Execution already registered');
   });
@@ -116,7 +128,7 @@ contract('Enforcer', () => {
   it('not allow dispute with nonexistent execution', async () => {
     let tx = enforcer.dispute(
       enforcer.address, otherCallData, endHash,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
 
     await assertRevert(tx, 'Execution does not existed');
@@ -125,13 +137,13 @@ contract('Enforcer', () => {
   it('not allow dispute without bond', async () => {
     let tx = await enforcer.register(
       enforcer.address, '0x01', endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await tx.wait();
 
     tx = enforcer.dispute(
       enforcer.address, '0x01', otherEndHash,
-      { value: 0, gasLimit: 0xfffffffffffff }
+      { value: 0, gasLimit: GAS_LIMIT }
     );
     await assertRevert(tx, 'Bond amount is required');
   });
@@ -139,7 +151,7 @@ contract('Enforcer', () => {
   it('not allow dispute when there is not enough time', async () => {
     let tx = await enforcer.register(
       enforcer.address, '0x02', endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await tx.wait();
 
@@ -147,7 +159,7 @@ contract('Enforcer', () => {
 
     tx = enforcer.dispute(
       enforcer.address, '0x02', otherEndHash,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await assertRevert(tx, 'Execution is out of challenge period');
   });
@@ -155,7 +167,7 @@ contract('Enforcer', () => {
   it('allow dispute with valid execution', async () => {
     let tx = await enforcer.register(
       enforcer.address, '0x03', endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
     const executionId = tx.events[0].args.executionId;
@@ -163,7 +175,7 @@ contract('Enforcer', () => {
     const challengerBond = await enforcer.bonds(challenger.address);
     tx = await enforcer.connect(challenger).dispute(
       enforcer.address, '0x03', otherEndHash,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
 
@@ -181,7 +193,7 @@ contract('Enforcer', () => {
       toBytes32('invalid', 64),
       true,
       challenger.address,
-      { gasLimit: 0xfffffffffffff });
+      { gasLimit: GAS_LIMIT });
     await assertRevert(tx);
   });
 
@@ -190,14 +202,14 @@ contract('Enforcer', () => {
       toBytes32('invalid', 64),
       true,
       challenger.address,
-      { gasLimit: 0xfffffffffffff });
+      { gasLimit: GAS_LIMIT });
     await assertRevert(tx, 'Execution does not existed');
   });
 
   it('not allow submit result of execution after challenge period', async () => {
     let tx = await enforcer.register(
       enforcer.address, '0x04', endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
     const executionId = tx.events[0].args.executionId;
@@ -207,20 +219,20 @@ contract('Enforcer', () => {
       await tx.wait();
     }
 
-    tx = verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: 0xfffffffffffff });
+    tx = verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: GAS_LIMIT });
     await assertRevert(tx, 'Execution is out of challenge period');
   });
 
   it('allow submit result of valid execution and slash solver', async () => {
     let tx = await enforcer.register(
       enforcer.address, '0x05', endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
     const executionId = tx.events[0].args.executionId;
 
     const solverBond = await enforcer.bonds(solver.address);
-    tx = await verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: 0xfffffffffffff });
+    tx = await verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: GAS_LIMIT });
     tx = await tx.wait();
     assert.deepEqual(await enforcer.bonds(solver.address), solverBond.sub(bondAmount), 'solver not slashed');
     const execution = await enforcer.executions(executionId);
@@ -230,19 +242,19 @@ contract('Enforcer', () => {
   it('allow submit result of valid execution and slash challenger', async () => {
     let tx = await enforcer.register(
       enforcer.address, '0x06', endHash, executionDepth,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
     const executionId = tx.events[0].args.executionId;
 
     tx = await enforcer.connect(challenger).dispute(
       enforcer.address, '0x06', otherEndHash,
-      { value: bondAmount, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
 
     const challengerBond = await enforcer.bonds(challenger.address);
-    tx = await verifierMock.submitResult(executionId, true, challenger.address, { gasLimit: 0xfffffffffffff });
+    tx = await verifierMock.submitResult(executionId, true, challenger.address, { gasLimit: GAS_LIMIT });
     tx = await tx.wait();
     assert.deepEqual(
       await enforcer.bonds(challenger.address),

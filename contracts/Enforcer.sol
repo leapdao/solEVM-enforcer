@@ -8,6 +8,7 @@ import "./Merkelizer.slb";
 contract Enforcer {
 
     uint256 public challengePeriod;
+    uint256 public maxExecutionDepth;
     uint256 public bondAmount;
     Verifier public verifier;
 
@@ -33,10 +34,11 @@ contract Enforcer {
     event DisputeInitialised(bytes32 indexed disputeId, bytes32 indexed executionId);
     event Slashed(bytes32 indexed executionId, address indexed _address);
 
-    constructor(address _verifier, uint256 _challengePeriod, uint256 _bondAmount) public {
+    constructor(address _verifier, uint256 _challengePeriod, uint256 _bondAmount, uint256 _maxExecutionDepth) public {
         verifier = Verifier(_verifier);
         challengePeriod = _challengePeriod;
         bondAmount = _bondAmount;
+        maxExecutionDepth = _maxExecutionDepth;
     }
 
     // register a new execution
@@ -44,6 +46,7 @@ contract Enforcer {
         public payable
     {
         require(msg.value == bondAmount, "Bond is required");
+        require(executionDepth <= maxExecutionDepth, "Execution too long");
 
         bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
 
