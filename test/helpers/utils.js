@@ -1,6 +1,8 @@
 const OP = require('./../../utils/constants');
+// TODO make a util contract
 const ethers = require('ethers');
 const { PUSH1 } = OP;
+let utilsContract;
 
 const Utils = {};
 
@@ -68,6 +70,13 @@ Utils.getCode = (fixture) => {
 Utils.provider =
   typeof web3 !== 'undefined' ? new ethers.providers.Web3Provider(web3.currentProvider) : undefined;
 
+Utils.client = async () => {
+  if (Utils.clientName === undefined) {
+    Utils.clientName = await web3.eth.getNodeInfo();
+  }
+  return Utils.clientName;
+};
+
 Utils.txOverrides = {
   gasLimit: 0xfffffffffffff,
   gasPrice: 0x01,
@@ -120,5 +129,21 @@ for (var i = 0; i < 10; i++) {
   const wallet = new ethers.Wallet(privateKey, Utils.provider);
   Utils.wallets.push(wallet);
 }
+
+// TODO find better way to handle this
+Utils.onchainWait = async function onchainWait (t) {
+  if ((await Utils.client()).startsWith('Ganache')) {
+    await Utils.wallets[0].provider.send('evm_mine', []);
+  } else {
+    if (utilsContract === undefined) {
+      const verifierMock = artifacts.require('./mocks/VerifierMock.sol');
+      utilsContract = await Utils.deployContract(verifierMock, 10);
+    }
+    for (let i = 0; i < t; i++) {
+      let tx = await utilsContract.dummy();
+      tx = await tx.wait();
+    }
+  }
+};
 
 module.exports = Utils;

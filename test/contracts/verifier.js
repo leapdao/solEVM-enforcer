@@ -1,6 +1,6 @@
 const Merkelizer = require('./../../utils/Merkelizer');
 const disputeFixtures = require('./../fixtures/dispute');
-const { deployContract, txOverrides, deployCode } = require('./../helpers/utils');
+const { onchainWait, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 const assertRevert = require('./../helpers/assertRevert');
 
@@ -110,14 +110,20 @@ async function disputeGame (
           solverComputationPath.left.hash + ' r=' + solverComputationPath.right.hash);
         await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
 
-        debugLog('Challenger: SUBMITTING FOR l=' +
+        const SOLVER_VERIFIED = (1 << 2);
+        const CHALLENGER_VERIFIED = (1 << 3);
+
+        // refresh
+        dispute = await verifier.disputes(event.disputeId);
+        if ((dispute.state & SOLVER_VERIFIED === 0) && (dispute.state & CHALLENGER_VERIFIED === 0)) {
+          debugLog('Challenger: SUBMITTING FOR l=' +
           challengerComputationPath.left.hash + ' r=' + challengerComputationPath.right.hash);
-        await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
+          await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
+        }
 
         // refresh again
         dispute = await verifier.disputes(event.disputeId);
 
-        const SOLVER_VERIFIED = (1 << 2);
         let winner = 'challenger';
         if ((dispute.state & SOLVER_VERIFIED) !== 0) {
           winner = 'solver';
@@ -216,9 +222,10 @@ contract('Verifier', function () {
 
   before(async () => {
     const challengePeriod = 1000;
+    const timeoutDuration = 10;
     const bondAmount = 1;
 
-    verifier = await deployContract(Verifier, challengePeriod);
+    verifier = await deployContract(Verifier, timeoutDuration);
     enforcer = await deployContract(Enforcer, verifier.address, challengePeriod, bondAmount);
 
     let tx = await verifier.setEnforcer(enforcer.address);
@@ -292,6 +299,254 @@ contract('Verifier', function () {
         },
         txOverrides
       ));
+    });
+  });
+
+  describe('claimTimeout', async () => {
+    it('non-existent dispute, cannot claim', async () => {
+      // TODO geth require to specific gasLimit although the transaction only cost ~50k
+      await assertRevert(
+        verifier.claimTimeout(toBytes32('NotExist'), { gasLimit: 0xfffffffffffff }),
+        'dispute not exist'
+      );
+    });
+
+    it('not yet timeout, cannot claim', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.PUSH1, '00',
+        OP.RETURN,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345679';
+
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+
+      tx = await tx.wait();
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+
+      tx = await tx.wait();
+      let disputeId = tx.events[0].args.disputeId;
+
+      // should not accept submitProof
+      await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff }), 'not timed out yet');
+    });
+
+    it('nobody submits anything, solver wins', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.PUSH1, '00',
+        OP.RETURN,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345680';
+
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+      let disputeId = tx.events[0].args.disputeId;
+
+      await onchainWait(10);
+
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await tx.wait();
+
+      let dispute = await verifier.disputes(disputeId);
+      // TODO may add dispute result directly to Verifier?
+      const SOLVER_VERIFIED = 1 << 2;
+
+      assert.notEqual(dispute.state & SOLVER_VERIFIED, 0, 'solver should win');
+
+      // cannot call claimTimeout a second time
+      await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff }), 'already notified enforcer');
+    });
+
+    it('1 round - solver submitted, solver wins', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.PUSH1, '01',
+        OP.RETURN,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345680';
+
+      let solverHash = Merkelizer.hash(ZERO_HASH, ZERO_HASH);
+
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        solverHash,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+      let disputeId = tx.events[0].args.disputeId;
+
+      // solver respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ZERO_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      await onchainWait(10);
+
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await tx.wait();
+
+      let dispute = await verifier.disputes(disputeId);
+      // TODO may add dispute result directly to Verifier?
+      const SOLVER_VERIFIED = 1 << 2;
+
+      assert.notEqual(dispute.state & SOLVER_VERIFIED, 0, 'solver should win');
+    });
+
+    it('1 round - challenger submitted, challenger wins', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.PUSH1, '02',
+        OP.RETURN,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345680';
+
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        ZERO_HASH,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let challengerHash = Merkelizer.hash(ZERO_HASH, ZERO_HASH);
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        challengerHash,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let disputeId = tx.events[0].args.disputeId;
+
+      // challenger respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ZERO_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      await onchainWait(10);
+
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await tx.wait();
+
+      let dispute = await verifier.disputes(disputeId);
+      // TODO may add dispute result directly to Verifier?
+      const CHALLENGER_VERIFIED = 1 << 3;
+
+      assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
+    });
+
+    it('1 round - both submitted, waiting proof, challenger wins', async () => {
+      const code = [
+        OP.PUSH1, '20',
+        OP.REVERT,
+      ];
+      const codeContract = await deployCode(code);
+      const callData = '0x12345680';
+      const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
+
+      let solverHash = Merkelizer.hash(ZERO_HASH, ONE_HASH);
+      let tx = await enforcer.register(
+        codeContract.address,
+        callData,
+        solverHash,
+        1,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
+      tx = await enforcer.dispute(
+        codeContract.address,
+        callData,
+        challengerHash,
+        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      );
+      tx = await tx.wait();
+
+      let disputeId = tx.events[0].args.disputeId;
+
+      // solver respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ONE_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      // challenger respond
+      tx = await verifier.respond(
+        disputeId,
+        {
+          left: ONE_HASH,
+          right: ZERO_HASH,
+        },
+        { gasLimit: 0xfffffffffffff }
+      );
+
+      await onchainWait(10);
+
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await tx.wait();
+
+      let dispute = await verifier.disputes(disputeId);
+      // TODO may add dispute result directly to Verifier?
+      const CHALLENGER_VERIFIED = 1 << 3;
+
+      assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
   });
 });

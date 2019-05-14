@@ -67,7 +67,9 @@ contract Verifier is Ownable, HydratedRuntime {
       * @dev game not timeout yet
       */
     modifier onlyPlaying(bytes32 disputeId) {
-        require(disputes[disputeId].timeout >= block.number, "game timed out");
+        Dispute storage dispute = disputes[disputeId];
+        require(dispute.timeout >= block.number, "game timed out");
+        require((dispute.state & SOLVER_VERIFIED == 0) && (dispute.state & CHALLENGER_VERIFIED == 0), "dispute resolved");
         _;
     }
 
@@ -256,26 +258,50 @@ contract Verifier is Ownable, HydratedRuntime {
             dispute.state |= CHALLENGER_VERIFIED;
         }
 
-        if ((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0) {
-            // both are verified, solver wins
+        if (dispute.state & SOLVER_VERIFIED != 0) {
             enforcer.result(dispute.executionId, true, dispute.challengerAddr);
+        } else {
+            enforcer.result(dispute.executionId, false, dispute.challengerAddr);
         }
     }
 
+    /*
+     * When claimTimeout is called, the dispute must not be resolved
+     *  Hence, there are 3 cases:
+     *  - Nobody has responded
+     *  - Solver has responded, challenger hasn't: Solver wins
+     *  - Solver has not responded, challenger has: Challenger wins
+     * The case both have responded is not exist because if both responded, updateRound would has been called
+     *  and reset timeout and states
+     * The case "Nobody has responded" has 2 subcases:
+     *  - Before last turn: Solver wins, because we assume that challenger is the one who requested the dispute and has more responsibility
+     *  - Last turn: Challenger wins. Here, somebody should call submitProof. If it is not called, it should be solver's fault,
+     *      because it could be something only solver knows
+     */
     function claimTimeout(bytes32 disputeId) public {
         Dispute storage dispute = disputes[disputeId];
 
-        require(dispute.timeout > 0, "dispute not exit");
+        require(dispute.timeout > 0, "dispute not exist");
         require(dispute.timeout < block.number, "not timed out yet");
         require(
-            !((dispute.state & SOLVER_VERIFIED) != 0 && (dispute.state & CHALLENGER_VERIFIED) != 0),
+            (dispute.state & SOLVER_VERIFIED) == 0 && (dispute.state & CHALLENGER_VERIFIED) == 0,
             "already notified enforcer"
         );
 
-        bool solverWins = true;
+        bool solverWins;
 
-        if ((dispute.state & CHALLENGER_VERIFIED) != 0 || (dispute.state & CHALLENGER_RESPONDED) != 0) {
+        if ((dispute.state & SOLVER_RESPONDED) != 0) {
+            solverWins = true;
+        } else if ((dispute.state & CHALLENGER_RESPONDED) != 0) {
             solverWins = false;
+        } else {
+            solverWins = (dispute.treeDepth > 0);
+        }
+
+        if (solverWins) {
+            dispute.state |= SOLVER_VERIFIED;
+        } else {
+            dispute.state |= CHALLENGER_VERIFIED;
         }
 
         enforcer.result(dispute.executionId, solverWins, dispute.challengerAddr);

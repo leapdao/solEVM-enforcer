@@ -6,7 +6,11 @@ import "../Enforcer.sol";
 
 contract VerifierMock {
     Enforcer enforcer;
-    constructor() public {}
+    uint256 public timeoutDuration;
+
+    constructor(uint256 timeout) public {
+        timeoutDuration = timeout;
+    }
 
     function setEnforcer(address _enforcer) public {
         enforcer = Enforcer(_enforcer);

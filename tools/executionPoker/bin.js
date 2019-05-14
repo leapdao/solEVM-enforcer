@@ -8,37 +8,13 @@ const ganache = require('ganache-cli');
 
 const GAS_LIMIT = 0xfffffffffffff;
 
-let submissionCounter = 0;
+// let submissionCounter = 0;
 
 class MyExecutionPoker extends ExecutionPoker {
   onSlashed (execId) {
     this.log(`got slashed, executionId(${execId})`);
     // we are done
     process.exit(0);
-  }
-
-  async submitProof (disputeId, computationPath) {
-    await super.submitProof(disputeId, computationPath);
-
-    submissionCounter++;
-
-    if (submissionCounter === 2) {
-      const timeoutDuration = (await this.verifier.timeoutDuration()).toNumber();
-
-      this.log('Verifier timeoutDuration', timeoutDuration);
-      this.log(`mining ${timeoutDuration} blocks to be able to call claimTimeout`);
-
-      for (let i = 0; i < timeoutDuration; i++) {
-        await this.wallet.provider.send('evm_mine', []);
-      }
-
-      this.log('calling Verifier.claimTimeout');
-
-      let tx = await this.verifier.claimTimeout(disputeId, { gasLimit: this.gasLimit });
-      tx = await tx.wait();
-
-      this.log('claimTimeout gasUsed - ', tx.gasUsed.toNumber());
-    }
   }
 }
 
@@ -95,8 +71,8 @@ async function main () {
   solverWallet = solverWallet.connect(new ethers.providers.Web3Provider(provider));
   challengerWallet = challengerWallet.connect(new ethers.providers.Web3Provider(provider));
 
-  let timeout = 100;
-  let challengePeriod = 1000;
+  let timeout = 10;
+  let challengePeriod = 10000;
   let bondAmount = 1;
 
   console.log(
