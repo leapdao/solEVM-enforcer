@@ -87,7 +87,7 @@ contract('Enforcer', () => {
   it('not allow registration of oversized execution', async () => {
     let tx = enforcer.register(
       enforcer.address, callData, endHash, maxExecutionDepth + 1,
-      { value: bondAmount }
+      { value: bondAmount, gasLimit: GAS_LIMIT }
     );
 
     await assertRevert(tx, 'Execution too long');
