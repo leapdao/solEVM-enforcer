@@ -74,6 +74,7 @@ async function main () {
   let timeout = 10;
   let challengePeriod = 10000;
   let bondAmount = 1;
+  let maxExecutionDepth = 10;
 
   console.log(
     `Deploying Verifier & Enforcer\n\
@@ -81,7 +82,14 @@ async function main () {
   );
 
   let verifier = await deployContract(Verifier, deployerWallet, timeout);
-  let enforcer = await deployContract(Enforcer, deployerWallet, verifier.address, challengePeriod, bondAmount);
+  let enforcer = await deployContract(
+    Enforcer,
+    deployerWallet,
+    verifier.address,
+    challengePeriod,
+    bondAmount,
+    maxExecutionDepth
+  );
 
   let tx = await verifier.setEnforcer(enforcer.address);
 

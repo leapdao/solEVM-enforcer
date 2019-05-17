@@ -1,6 +1,7 @@
 module.exports = {
   DEFAULT_CALLER: 'cd1722f2947def4cf144679da39c4c32bdc35681',
   DEFAULT_CONTRACT_ADDRESS: '0f572e5295c57f15886f9b263e2f6d2d6c7b5ec6',
+  GAS_LIMIT: 0x0fffffffffffff,
   // Errors
 
   NO_ERROR: 0,

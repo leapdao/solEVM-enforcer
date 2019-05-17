@@ -3,6 +3,7 @@ const disputeFixtures = require('./../fixtures/dispute');
 const { onchainWait, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 const assertRevert = require('./../helpers/assertRevert');
+const GAS_LIMIT = OP.GAS_LIMIT;
 
 const Verifier = artifacts.require('Verifier.sol');
 const Enforcer = artifacts.require('Enforcer.sol');
@@ -86,7 +87,7 @@ async function disputeGame (
       callData,
       solverComputationPath.hash,
       solverMerkle.depth,
-      { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
     tx = await tx.wait();
@@ -94,7 +95,7 @@ async function disputeGame (
       codeContract,
       callData,
       challengerComputationPath.hash,
-      { value: bondAmount, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+      { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
     let dispute = await tx.wait();
@@ -224,9 +225,10 @@ contract('Verifier', function () {
     const challengePeriod = 1000;
     const timeoutDuration = 10;
     const bondAmount = 1;
+    const maxExecutionDepth = 10;
 
     verifier = await deployContract(Verifier, timeoutDuration);
-    enforcer = await deployContract(Enforcer, verifier.address, challengePeriod, bondAmount);
+    enforcer = await deployContract(Enforcer, verifier.address, challengePeriod, bondAmount, maxExecutionDepth);
 
     let tx = await verifier.setEnforcer(enforcer.address);
 
@@ -265,7 +267,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
@@ -273,7 +275,7 @@ contract('Verifier', function () {
         codeContract.address,
         callData,
         ZERO_HASH,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
@@ -295,7 +297,7 @@ contract('Verifier', function () {
           mem: '0x',
           returnData: '0x',
           pc: 0,
-          gasRemaining: 0xfffffffffffff,
+          gasRemaining: GAS_LIMIT,
         },
         txOverrides
       ));
@@ -306,7 +308,7 @@ contract('Verifier', function () {
     it('non-existent dispute, cannot claim', async () => {
       // TODO geth require to specific gasLimit although the transaction only cost ~50k
       await assertRevert(
-        verifier.claimTimeout(toBytes32('NotExist'), { gasLimit: 0xfffffffffffff }),
+        verifier.claimTimeout(toBytes32('NotExist'), { gasLimit: GAS_LIMIT }),
         'dispute not exist'
       );
     });
@@ -325,7 +327,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
@@ -333,14 +335,14 @@ contract('Verifier', function () {
         codeContract.address,
         callData,
         ZERO_HASH,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
       let disputeId = tx.events[0].args.disputeId;
 
       // should not accept submitProof
-      await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff }), 'not timed out yet');
+      await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT }), 'not timed out yet');
     });
 
     it('nobody submits anything, solver wins', async () => {
@@ -357,7 +359,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
@@ -365,14 +367,14 @@ contract('Verifier', function () {
         codeContract.address,
         callData,
         ZERO_HASH,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
       let disputeId = tx.events[0].args.disputeId;
 
       await onchainWait(10);
 
-      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();
 
       let dispute = await verifier.disputes(disputeId);
@@ -382,7 +384,7 @@ contract('Verifier', function () {
       assert.notEqual(dispute.state & SOLVER_VERIFIED, 0, 'solver should win');
 
       // cannot call claimTimeout a second time
-      await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff }), 'already notified enforcer');
+      await assertRevert(verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT }), 'already notified enforcer');
     });
 
     it('1 round - solver submitted, solver wins', async () => {
@@ -401,7 +403,7 @@ contract('Verifier', function () {
         callData,
         solverHash,
         1,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
@@ -409,7 +411,7 @@ contract('Verifier', function () {
         codeContract.address,
         callData,
         ZERO_HASH,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
       let disputeId = tx.events[0].args.disputeId;
@@ -421,12 +423,12 @@ contract('Verifier', function () {
           left: ZERO_HASH,
           right: ZERO_HASH,
         },
-        { gasLimit: 0xfffffffffffff }
+        { gasLimit: GAS_LIMIT }
       );
 
       await onchainWait(10);
 
-      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();
 
       let dispute = await verifier.disputes(disputeId);
@@ -450,7 +452,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
@@ -459,7 +461,7 @@ contract('Verifier', function () {
         codeContract.address,
         callData,
         challengerHash,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
@@ -472,12 +474,12 @@ contract('Verifier', function () {
           left: ZERO_HASH,
           right: ZERO_HASH,
         },
-        { gasLimit: 0xfffffffffffff }
+        { gasLimit: GAS_LIMIT }
       );
 
       await onchainWait(10);
 
-      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();
 
       let dispute = await verifier.disputes(disputeId);
@@ -502,7 +504,7 @@ contract('Verifier', function () {
         callData,
         solverHash,
         1,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
@@ -511,7 +513,7 @@ contract('Verifier', function () {
         codeContract.address,
         callData,
         challengerHash,
-        { value: 1, gasPrice: 0x01, gasLimit: 0xfffffffffffff }
+        { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
@@ -524,7 +526,7 @@ contract('Verifier', function () {
           left: ZERO_HASH,
           right: ONE_HASH,
         },
-        { gasLimit: 0xfffffffffffff }
+        { gasLimit: GAS_LIMIT }
       );
 
       // challenger respond
@@ -534,12 +536,12 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: ZERO_HASH,
         },
-        { gasLimit: 0xfffffffffffff }
+        { gasLimit: GAS_LIMIT }
       );
 
       await onchainWait(10);
 
-      tx = await verifier.claimTimeout(disputeId, { gasLimit: 0xfffffffffffff });
+      tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();
 
       let dispute = await verifier.disputes(disputeId);
