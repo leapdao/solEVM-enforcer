@@ -1,5 +1,6 @@
 
 const Merkelizer = require('./Merkelizer');
+const CONSTANTS = require('./constants');
 
 module.exports = class DisputeMock {
   constructor (solverComputationPath, challengerComputationPath, solverDepth, code, data, evm) {
@@ -60,13 +61,17 @@ module.exports = class DisputeMock {
   respond (computationPath) {
     let h = Merkelizer.hash(computationPath.left.hash, computationPath.right.hash);
 
+    if (computationPath.left === CONSTANTS.ZERO_HASH) {
+      throw new Error('computationPath.left can not be zero');
+    }
+
     if (h !== this.solverPath && h !== this.challengerPath) {
       throw new Error(
         `wrong path submitted need ${this.solverPath} or ${this.challengerPath} has ${h}`
       );
     }
 
-    if ((h === this.solver.left.hash) || (h === this.solver.right.hash)) {
+    if (h === this.solverPath) {
       if (this.solverDidRespond) {
         throw new Error('You can not respond right now');
       }
@@ -75,7 +80,7 @@ module.exports = class DisputeMock {
       this.solver = computationPath;
     }
 
-    if ((h === this.challenger.left.hash) || (h === this.challenger.right.hash)) {
+    if (h === this.challengerPath) {
       if (this.challengerDidRespond) {
         throw new Error('You can not respond right now');
       }
