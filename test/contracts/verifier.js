@@ -19,6 +19,7 @@ function debugLog (...args) {
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
+const TWO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000002';
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const prevOutput = computationPath.left.executionState;
@@ -397,7 +398,7 @@ contract('Verifier', function () {
       const codeContract = await deployCode(code);
       const callData = '0x12345680';
 
-      let solverHash = Merkelizer.hash(ZERO_HASH, ZERO_HASH);
+      let solverHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
 
       let tx = await enforcer.register(
         codeContract.address,
@@ -421,7 +422,7 @@ contract('Verifier', function () {
       tx = await verifier.respond(
         disputeId,
         {
-          left: ZERO_HASH,
+          left: ONE_HASH,
           right: ZERO_HASH,
         },
         { gasLimit: GAS_LIMIT }
@@ -498,7 +499,7 @@ contract('Verifier', function () {
       const codeContract = await deployCode(code);
       const callData = '0x12345680';
 
-      let solverHash = Merkelizer.hash(ZERO_HASH, ONE_HASH);
+      let solverHash = Merkelizer.hash(ONE_HASH, TWO_HASH);
       let tx = await enforcer.register(
         codeContract.address,
         callData,
@@ -523,8 +524,8 @@ contract('Verifier', function () {
       tx = await verifier.respond(
         disputeId,
         {
-          left: ZERO_HASH,
-          right: ONE_HASH,
+          left: ONE_HASH,
+          right: TWO_HASH,
         },
         { gasLimit: GAS_LIMIT }
       );
