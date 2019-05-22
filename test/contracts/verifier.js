@@ -552,4 +552,44 @@ contract('Verifier', function () {
       assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
   });
+
+  it('computationPath.left is zero, should revert', async () => {
+    const code = [
+      OP.PUSH1, '20',
+      OP.PUSH1, '00',
+      OP.RETURN,
+    ];
+    const codeContract = await deployCode(code);
+    const callData = '0x12345679';
+
+    let tx = await enforcer.register(
+      codeContract.address,
+      callData,
+      Merkelizer.hash(ZERO_HASH, ONE_HASH),
+      1,
+      { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
+    );
+
+    tx = await tx.wait();
+    tx = await enforcer.dispute(
+      codeContract.address,
+      callData,
+      TWO_HASH,
+      { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
+    );
+
+    tx = await tx.wait();
+    let disputeId = tx.events[0].args.disputeId;
+
+    await assertRevert(
+      verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ONE_HASH,
+        },
+        { gasLimit: GAS_LIMIT }
+      )
+    );
+  });
 });
