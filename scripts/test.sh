@@ -51,4 +51,4 @@ if [ "$SOLC_NIGHTLY" = true ]; then
   wget -q https://raw.githubusercontent.com/ethereum/solc-bin/gh-pages/bin/soljson-nightly.js -O /tmp/soljson.js && find . -name soljson.js -exec cp /tmp/soljson.js {} \;
 fi
 
-node_modules/.bin/truffle test "$@"
+yarn truffle test "$@"

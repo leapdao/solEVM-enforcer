@@ -19,14 +19,14 @@
   "scripts": {
     "test": "yarn test:contracts && yarn test:utils",
     "test:contracts": "scripts/test.sh test/contracts/*",
-    "test:utils": "./node_modules/.bin/mocha test/utils/",
+    "test:utils": "mocha test/utils/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:sol": "solhint contracts/*.{sol,slb}",
     "lint:all": "yarn lint && yarn lint:sol",
     "lint:all:fix": "yarn lint:fix && yarn lint:sol",
-    "console": "./node_modules/.bin/truffle console",
-    "compile:contracts": "./node_modules/.bin/truffle compile",
+    "console": "truffle console",
+    "compile:contracts": "truffle compile",
     "version": "scripts/version.js",
     "coverage": "scripts/coverage.sh"
   },

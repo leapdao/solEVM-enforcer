@@ -58,4 +58,4 @@ else
 fi
 
 echo 'running truffle'
-node_modules/.bin/truffle test "$@"
+yarn truffle test "$@"
