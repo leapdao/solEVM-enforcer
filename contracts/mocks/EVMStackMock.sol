@@ -43,9 +43,13 @@ contract EVMStackMock {
 
     function testCreate() public {
         EVMStack.Stack memory stack = EVMStack.newStack();
-        uint fPtr = MemOps.freeMemPtr();
+        uint fPtr;
 
-        require(stack.dataPtr == (fPtr - (stack.cap * 32)), "staack.dataPtr");
+        assembly {
+            fPtr := mload(0x40)
+        }
+
+        require(stack.dataPtr == (fPtr - (stack.cap * 32)), "stack.dataPtr");
         require(stack.size == 0, "stack.size");
         require(stack.cap == 64, "stack.cap");
     }
