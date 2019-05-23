@@ -18,6 +18,8 @@ function debugLog (...args) {
 }
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
+const TWO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000002';
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const prevOutput = computationPath.left.executionState;
@@ -396,7 +398,7 @@ contract('Verifier', function () {
       const codeContract = await deployCode(code);
       const callData = '0x12345680';
 
-      let solverHash = Merkelizer.hash(ZERO_HASH, ZERO_HASH);
+      let solverHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
 
       let tx = await enforcer.register(
         codeContract.address,
@@ -420,7 +422,7 @@ contract('Verifier', function () {
       tx = await verifier.respond(
         disputeId,
         {
-          left: ZERO_HASH,
+          left: ONE_HASH,
           right: ZERO_HASH,
         },
         { gasLimit: GAS_LIMIT }
@@ -456,7 +458,7 @@ contract('Verifier', function () {
       );
       tx = await tx.wait();
 
-      let challengerHash = Merkelizer.hash(ZERO_HASH, ZERO_HASH);
+      let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
       tx = await enforcer.dispute(
         codeContract.address,
         callData,
@@ -471,7 +473,7 @@ contract('Verifier', function () {
       tx = await verifier.respond(
         disputeId,
         {
-          left: ZERO_HASH,
+          left: ONE_HASH,
           right: ZERO_HASH,
         },
         { gasLimit: GAS_LIMIT }
@@ -496,9 +498,8 @@ contract('Verifier', function () {
       ];
       const codeContract = await deployCode(code);
       const callData = '0x12345680';
-      const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
 
-      let solverHash = Merkelizer.hash(ZERO_HASH, ONE_HASH);
+      let solverHash = Merkelizer.hash(ONE_HASH, TWO_HASH);
       let tx = await enforcer.register(
         codeContract.address,
         callData,
@@ -523,8 +524,8 @@ contract('Verifier', function () {
       tx = await verifier.respond(
         disputeId,
         {
-          left: ZERO_HASH,
-          right: ONE_HASH,
+          left: ONE_HASH,
+          right: TWO_HASH,
         },
         { gasLimit: GAS_LIMIT }
       );
@@ -550,5 +551,45 @@ contract('Verifier', function () {
 
       assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
+  });
+
+  it('computationPath.left is zero, should revert', async () => {
+    const code = [
+      OP.PUSH1, '20',
+      OP.PUSH1, '00',
+      OP.RETURN,
+    ];
+    const codeContract = await deployCode(code);
+    const callData = '0x12345679';
+
+    let tx = await enforcer.register(
+      codeContract.address,
+      callData,
+      Merkelizer.hash(ZERO_HASH, ONE_HASH),
+      1,
+      { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
+    );
+
+    tx = await tx.wait();
+    tx = await enforcer.dispute(
+      codeContract.address,
+      callData,
+      TWO_HASH,
+      { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
+    );
+
+    tx = await tx.wait();
+    let disputeId = tx.events[0].args.disputeId;
+
+    await assertRevert(
+      verifier.respond(
+        disputeId,
+        {
+          left: ZERO_HASH,
+          right: ONE_HASH,
+        },
+        { gasLimit: GAS_LIMIT }
+      )
+    );
   });
 });

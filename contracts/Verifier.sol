@@ -135,6 +135,7 @@ contract Verifier is Ownable, HydratedRuntime {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.treeDepth > 0, "already reach leaf");
+        require(computationPath.left != bytes32(0), "left can not be zero");
 
         bytes32 h = keccak256(abi.encodePacked(computationPath.left, computationPath.right));
 
@@ -143,12 +144,12 @@ contract Verifier is Ownable, HydratedRuntime {
             "wrong path submitted"
         );
 
-        if ((h == dispute.solver.left) || (h == dispute.solver.right)) {
+        if (h == dispute.solverPath) {
             dispute.state |= SOLVER_RESPONDED;
             dispute.solver = computationPath;
         }
 
-        if ((h == dispute.challenger.left) || (h == dispute.challenger.right)) {
+        if (h == dispute.challengerPath) {
             dispute.state |= CHALLENGER_RESPONDED;
             dispute.challenger = computationPath;
         }
