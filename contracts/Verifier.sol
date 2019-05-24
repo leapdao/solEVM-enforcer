@@ -86,13 +86,16 @@ contract Verifier is Ownable, HydratedRuntime {
       */
     function initGame(
         bytes32 executionId,
-        bytes32 initialStateHash,
         bytes32 solverHashRoot,
         bytes32 challengerHashRoot,
         uint256 executionDepth,
         address challenger,
-        address codeContractAddress
+        address codeContractAddress,
+        // TODO: should be the bytes32 root hash later on
+        bytes memory callData
     ) public onlyEnforcer() returns (bytes32 disputeId) {
+        bytes32 initialStateHash = Merkelizer.initialStateHash(callData);
+
         disputeId = keccak256(
             abi.encodePacked(
                 executionId,

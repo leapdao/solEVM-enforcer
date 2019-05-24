@@ -2,7 +2,6 @@ pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
 import "./Verifier.sol";
-import "./Merkelizer.slb";
 
 
 contract Enforcer {
@@ -82,13 +81,13 @@ contract Enforcer {
 
         bytes32 disputeId = verifier.initGame(
             executionId,
-            Merkelizer.initialStateHash(_callData),
             execution.endHash,
             endHash,
             execution.executionDepth,
             // challenger
             msg.sender,
-            codeContractAddress
+            codeContractAddress,
+            _callData
         );
 
         emit DisputeInitialised(disputeId, executionId);
