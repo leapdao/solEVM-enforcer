@@ -89,12 +89,14 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 solverHashRoot,
         bytes32 challengerHashRoot,
         uint256 executionDepth,
+        // optional for implementors
+        bytes32 customEnvironmentHash,
         address challenger,
         address codeContractAddress,
         // TODO: should be the bytes32 root hash later on
         bytes memory callData
     ) public onlyEnforcer() returns (bytes32 disputeId) {
-        bytes32 initialStateHash = Merkelizer.initialStateHash(callData);
+        bytes32 initialStateHash = Merkelizer.initialStateHash(callData, customEnvironmentHash);
 
         disputeId = keccak256(
             abi.encodePacked(

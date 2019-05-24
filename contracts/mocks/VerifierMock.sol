@@ -21,6 +21,7 @@ contract VerifierMock {
         bytes32 solverHashRoot,
         bytes32 challengerHashRoot,
         uint256 treeDepth,
+        bytes32 customEnvironmentHash,
         address challenger,
         address codeContractAddress,
         bytes memory callData
