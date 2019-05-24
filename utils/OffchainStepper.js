@@ -148,53 +148,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     });
   }
 
-  async dumpTouchedAccounts () {
-    const self = this;
-
-    return new Promise(
-      (resolve, reject) => {
-        let res = [];
-        let openCallbacks = 0;
-
-        function storageCallback (obj) {
-          this.storage = obj;
-
-          if (--openCallbacks === 0) {
-            resolve(res);
-          }
-        }
-
-        function callback (err, obj) {
-          if (err) {
-            throw err;
-          }
-
-          let account = {
-            address: this,
-            nonce: obj.nonce.toString('hex'),
-            balance: obj.balance.toString('hex'),
-            stateRoot: obj.stateRoot.toString('hex'),
-            codeHash: obj.codeHash.toString('hex'),
-          };
-          res.push(account);
-
-          self.stateManager.dumpStorage(this, storageCallback.bind(account));
-        }
-
-        self.stateManager._touched.forEach(
-          (addr) => {
-            openCallbacks++;
-            self.stateManager.getAccount(addr, callback.bind(addr));
-          }
-        );
-
-        if (!openCallbacks) {
-          resolve(res);
-        }
-      }
-    );
-  }
-
   async runNextStep (runState) {
     if (runState.depth !== 0) {
       // throw is expected on errors. That's ok
@@ -361,22 +314,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     }
 
     await super.run(runState, 0);
-
-    const self = this;
-    let i = context.steps.length;
-    while (i--) {
-      context.steps[i].accounts = await this.dumpTouchedAccounts();
-
-      await new Promise(
-        (resolve, reject) => {
-          self.stateManager.revert(
-            () => {
-              resolve(true);
-            }
-          );
-        }
-      );
-    }
 
     return context.steps;
   }

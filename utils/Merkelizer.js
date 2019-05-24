@@ -3,7 +3,7 @@ const ethers = require('ethers');
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
 module.exports = class Merkelizer {
-  static initialStateHash (code, callData) {
+  static initialStateHash (code, callData, customEnvironmentHash) {
     const DEFAULT_GAS = 0x0fffffffffffff;
     const res = {
       executionState: {
@@ -16,6 +16,7 @@ module.exports = class Merkelizer {
         pc: 0,
         errno: 0,
         gasRemaining: DEFAULT_GAS,
+        customEnvironmentHash: customEnvironmentHash || ZERO_HASH,
       },
     };
 
@@ -62,7 +63,7 @@ module.exports = class Merkelizer {
     );
   }
 
-  static stateHash (execution, stackHash, memHash, dataHash) {
+  static stateHash (execution, stackHash, memHash, dataHash, customEnvironmentHash) {
     // TODO: compact returnData
 
     if (!stackHash) {
@@ -77,8 +78,12 @@ module.exports = class Merkelizer {
       dataHash = this.dataHash(execution.data);
     }
 
+    if (!customEnvironmentHash) {
+      customEnvironmentHash = ZERO_HASH;
+    }
+
     return ethers.utils.solidityKeccak256(
-      ['bytes', 'bytes', 'bytes', 'bytes', 'uint', 'uint'],
+      ['bytes', 'bytes', 'bytes', 'bytes', 'uint', 'uint', 'bytes32'],
       [
         stackHash,
         memHash,
@@ -86,6 +91,7 @@ module.exports = class Merkelizer {
         '0x' + execution.returnData,
         execution.pc,
         execution.gasRemaining,
+        customEnvironmentHash,
       ]
     );
   }
@@ -139,14 +145,14 @@ module.exports = class Merkelizer {
     return null;
   }
 
-  run (executions, code, callData) {
+  run (executions, code, callData, customEnvironmentHash) {
     if (!executions || !executions.length) {
       throw new Error('You need to pass at least one execution step');
     }
 
     this.tree = [[]];
 
-    const initialState = this.constructor.initialStateHash(code, callData);
+    const initialState = this.constructor.initialStateHash(code, callData, customEnvironmentHash);
     const leaves = this.tree[0];
 
     let prevLeaf = { right: initialState };

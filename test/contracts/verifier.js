@@ -43,6 +43,7 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
       returnData: '0x' + prevOutput.returnData,
       pc: prevOutput.pc,
       gasRemaining: prevOutput.gasRemaining,
+      customEnvironmentHash: ZERO_HASH,
     },
     txOverrides
   );
@@ -89,6 +90,7 @@ async function disputeGame (
       callData,
       solverComputationPath.hash,
       solverMerkle.depth,
+      ZERO_HASH,
       { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
@@ -269,6 +271,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
+        ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
@@ -300,6 +303,7 @@ contract('Verifier', function () {
           returnData: '0x',
           pc: 0,
           gasRemaining: GAS_LIMIT,
+          customEnvironmentHash: ZERO_HASH,
         },
         txOverrides
       ));
@@ -329,6 +333,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
+        ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
@@ -361,6 +366,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
+        ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
@@ -405,6 +411,7 @@ contract('Verifier', function () {
         callData,
         solverHash,
         1,
+        ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
@@ -454,6 +461,7 @@ contract('Verifier', function () {
         callData,
         ZERO_HASH,
         1,
+        ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
@@ -505,6 +513,7 @@ contract('Verifier', function () {
         callData,
         solverHash,
         1,
+        ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
@@ -567,6 +576,7 @@ contract('Verifier', function () {
       callData,
       Merkelizer.hash(ZERO_HASH, ONE_HASH),
       1,
+      ZERO_HASH,
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 

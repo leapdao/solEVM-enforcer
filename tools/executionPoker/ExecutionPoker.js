@@ -2,6 +2,8 @@
 const Merkelizer = require('./../../utils/Merkelizer');
 const OffchainStepper = require('./../../utils/OffchainStepper');
 
+const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
 module.exports = class ExecutionPoker {
   constructor (enforcer, verifier, wallet, gasLimit, logTag) {
     this.enforcer = enforcer.connect(wallet);
@@ -76,6 +78,7 @@ module.exports = class ExecutionPoker {
       data,
       res.merkle.root.hash,
       res.merkle.depth,
+      ZERO_HASH,
       { value: bondAmount }
     );
 
@@ -190,7 +193,6 @@ module.exports = class ExecutionPoker {
   async submitProof (disputeId, computationPath) {
     const prevOutput = computationPath.left.executionState;
     const execState = computationPath.right.executionState;
-    const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
     const proofs = {
       stackHash: Merkelizer.stackHash(
@@ -207,6 +209,7 @@ module.exports = class ExecutionPoker {
       returnData: '0x' + prevOutput.returnData,
       pc: prevOutput.pc,
       gasRemaining: prevOutput.gasRemaining,
+      customEnvironmentHash: ZERO_HASH,
     };
 
     this.log('submitting proof - proofs', proofs);

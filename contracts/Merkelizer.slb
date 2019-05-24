@@ -12,7 +12,7 @@ library Merkelizer {
         bytes returnData;
         uint pc;
         uint gasRemaining;
-        // accounts...
+        bytes32 customEnvironmentHash;
     }
 
     function memHash(bytes memory _mem) internal pure returns (bytes32) {
@@ -66,15 +66,17 @@ library Merkelizer {
                 _dataHash,
                 self.returnData,
                 self.pc,
-                self.gasRemaining
+                self.gasRemaining,
+                self.customEnvironmentHash
             )
         );
     }
 
-    function initialStateHash(bytes memory callData) internal pure returns (bytes32) {
+    function initialStateHash(bytes memory callData, bytes32 customEnvironmentHash) internal pure returns (bytes32) {
         ExecutionState memory e;
         e.data = callData;
         e.gasRemaining = DEFAULT_GAS;
+        e.customEnvironmentHash = customEnvironmentHash;
 
         return stateHash(e, 0, 0, 0);
     }

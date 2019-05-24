@@ -2,7 +2,6 @@ pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
 import "./Verifier.sol";
-import "./Merkelizer.slb";
 
 
 contract Enforcer {
@@ -16,6 +15,7 @@ contract Enforcer {
         uint256 startBlock;
         bytes32 endHash;
         uint256 executionDepth;
+        bytes32 customEnvironmentHash;
         address solver;
     }
 
@@ -42,7 +42,14 @@ contract Enforcer {
     }
 
     // register a new execution
-    function register(address codeContractAddress, bytes memory _callData, bytes32 endHash, uint256 executionDepth)
+    function register(
+        address codeContractAddress,
+        bytes memory _callData,
+        bytes32 endHash,
+        uint256 executionDepth,
+        // optional
+        bytes32 customEnvironmentHash
+    )
         public payable
     {
         require(msg.value == bondAmount, "Bond is required");
@@ -51,7 +58,13 @@ contract Enforcer {
         bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
 
         require(executions[executionId].startBlock == 0, "Execution already registered");
-        executions[executionId] = Execution(block.number, endHash, executionDepth, msg.sender);
+        executions[executionId] = Execution(
+            block.number,
+            endHash,
+            executionDepth,
+            customEnvironmentHash,
+            msg.sender
+        );
         bonds[msg.sender] += bondAmount;
 
         emit Registered(executionId, msg.sender, codeContractAddress, _callData);
@@ -82,13 +95,14 @@ contract Enforcer {
 
         bytes32 disputeId = verifier.initGame(
             executionId,
-            Merkelizer.initialStateHash(_callData),
             execution.endHash,
             endHash,
             execution.executionDepth,
+            execution.customEnvironmentHash,
             // challenger
             msg.sender,
-            codeContractAddress
+            codeContractAddress,
+            _callData
         );
 
         emit DisputeInitialised(disputeId, executionId);

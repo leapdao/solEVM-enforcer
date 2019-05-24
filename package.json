@@ -13,9 +13,6 @@
     "type": "git",
     "url": "git+https://github.com/leapdao/solEVM-enforcer.git"
   },
-  "directories": {
-    "test": "test"
-  },
   "scripts": {
     "test": "yarn test:contracts && yarn test:utils",
     "test:contracts": "scripts/test.sh test/contracts/*",

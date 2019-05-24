@@ -18,12 +18,13 @@ contract VerifierMock {
 
     function initGame(
         bytes32 executionId,
-        bytes32 initialStateHash,
         bytes32 solverHashRoot,
         bytes32 challengerHashRoot,
         uint256 treeDepth,
+        bytes32 customEnvironmentHash,
         address challenger,
-        address codeContractAddress
+        address codeContractAddress,
+        bytes memory callData
     ) public returns (bytes32 disputeId) {
         // do nothing
     }
