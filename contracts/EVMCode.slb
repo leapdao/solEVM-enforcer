@@ -6,6 +6,7 @@ library EVMCode {
 
     struct Code {
         address codeAddress;
+        bytes codeBytes;
         uint length;
     }
 
@@ -19,25 +20,38 @@ library EVMCode {
         code.length = codeSize;
     }
 
+    function fromBytes(bytes memory codeBytes) internal pure returns (Code memory code) {
+        code.codeBytes = codeBytes;
+        code.length = codeBytes.length;
+    }
+
     function getOpcodeAt(Code memory self, uint pos) internal view returns (uint8 opcode) {
         address codeContractAddress = self.codeAddress;
 
-        assembly {
-            extcodecopy(codeContractAddress, 31, pos, 1)
-            opcode := mload(0)
+        if (codeContractAddress == address(0)) {
+            opcode = uint8(self.codeBytes[pos]);
+        } else {
+            assembly {
+                extcodecopy(codeContractAddress, 31, pos, 1)
+                opcode := mload(0)
+            }
         }
     }
 
     function toBytes(Code memory self) internal view returns (bytes memory bts) {
         address codeContractAddress = self.codeAddress;
 
-        uint size = self.length;
-        assembly {
-            bts := mload(0x40)
-            // padding up to word size
-            mstore(0x40, add(bts, and(add(add(size, 0x20), 0x1f), not(0x1f))))
-            mstore(bts, size)
-            extcodecopy(codeContractAddress, add(bts, 0x20), 0, size)
+        if (codeContractAddress == address(0)) {
+            bts = self.codeBytes;
+        } else {
+            uint size = self.length;
+            assembly {
+                bts := mload(0x40)
+                // padding up to word size
+                mstore(0x40, add(bts, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+                mstore(bts, size)
+                extcodecopy(codeContractAddress, add(bts, 0x20), 0, size)
+            }
         }
     }
 
