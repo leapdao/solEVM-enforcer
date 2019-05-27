@@ -51,7 +51,7 @@ contract HydratedRuntime is EVMRuntime {
         }
         hydratedState.stackHash = hash;
 
-        bytes memory mem = evm.mem.toArray();
+        bytes32[] memory mem = evm.mem.toArray();
         if (mem.length > 0) {
             hydratedState.memHash = keccak256(abi.encodePacked(mem));
         }

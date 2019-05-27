@@ -23,13 +23,11 @@ library EVMMemory {
     function newMemory() internal pure returns (Memory memory mem) {
     }
 
-    function fromArray(bytes memory memIn) internal pure returns (Memory memory mem) {
-        assert(memIn.length % WORD_SIZE == 0);
-
+    function fromArray(bytes32[] memory memIn) internal pure returns (Memory memory mem) {
         assembly {
             let src := add(memIn, 0x20)
-            // memIn.length / 32
-            let size := div(mload(memIn), 32)
+            // memIn.length
+            let size := mload(memIn)
             let ptr := mload(0x40)
 
             // update free memory pointer, we allocate size * sizeof(MemoryElement)
@@ -57,17 +55,17 @@ library EVMMemory {
         }
     }
 
-    function toArray(Memory memory self) internal pure returns (bytes memory arr) {
+    function toArray(Memory memory self) internal pure returns (bytes32[] memory arr) {
         assembly {
-            // Memory.size
+            // Memory.size * 32
             let size := mul(mload(self), 0x20)
 
-            // allocate Memory.size + WORD_SIZE
+            // allocate size + WORD_SIZE
             arr := mload(0x40)
             mstore(0x40, add(arr, add(size, 0x20)))
 
-            // set bytes.length
-            mstore(arr, size)
+            // set bytes.length = size / 32
+            mstore(arr, div(size, 0x20))
 
             let dest := add(arr, 0x20)
             // Memory.next
@@ -90,7 +88,7 @@ library EVMMemory {
         }
     }
 
-    function toArray(Memory memory self, uint start, uint len) internal pure returns (bytes memory arr) {
+    function toBytes(Memory memory self, uint start, uint len) internal pure returns (bytes memory arr) {
         assembly {
             // round up to WORD_SIZE
             let size := mul(div(add(len, 31), 32), 32)
@@ -320,7 +318,7 @@ library EVMMemory {
 
     // Get the position of 'index' in actual memory. Does create a new array.
     function memUPtr(Memory memory self, uint index, uint len) internal pure returns (uint ptr) {
-        bytes memory bts = toArray(self, index, len);
+        bytes memory bts = toBytes(self, index, len);
 
         assembly {
             ptr := add(bts, 0x20)

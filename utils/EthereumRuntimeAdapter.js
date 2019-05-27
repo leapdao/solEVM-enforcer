@@ -36,7 +36,7 @@ module.exports = class EthereumRuntimeAdapter {
         gasRemaining: gasRemaining || gasLimit || BLOCK_GAS_LIMIT,
         gasLimit: gasLimit || BLOCK_GAS_LIMIT,
         stack: stack || [],
-        mem: mem || '0x',
+        mem: mem || [],
         returnData: '0x',
       }
     );

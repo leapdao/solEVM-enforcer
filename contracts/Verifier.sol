@@ -188,10 +188,22 @@ contract Verifier is Ownable, HydratedRuntime {
         Dispute storage dispute = disputes[disputeId];
         require(dispute.treeDepth == 0, "Not at leaf yet");
 
+        // TODO: all sanity checks should go in a common function
+        if (executionState.stack.length > executionState.stackSize) {
+            return;
+        }
+        if (executionState.mem.length > executionState.memSize) {
+            return;
+        }
+
+        // TODO: verify all inputs, check access pattern(s) for memory, calldata, stack
+        bytes32 dataHash = executionState.data.length != 0 ? Merkelizer.dataHash(executionState.data) : proofs.dataHash;
+        bytes32 memHash = executionState.mem.length != 0 ? Merkelizer.memHash(executionState.mem) : proofs.memHash;
+
         bytes32 inputHash = executionState.stateHash(
             executionState.stackHash(proofs.stackHash),
-            proofs.memHash,
-            proofs.dataHash
+            memHash,
+            dataHash
         );
 
         if ((inputHash != dispute.solver.left && inputHash != dispute.challenger.left) ||
@@ -223,7 +235,7 @@ contract Verifier is Ownable, HydratedRuntime {
         HydratedState memory hydratedState = initHydratedState(evm);
 
         hydratedState.stackHash = proofs.stackHash;
-        hydratedState.memHash = proofs.memHash;
+        hydratedState.memHash = memHash;
 
         evm.context = Context(
             DEFAULT_CALLER,
@@ -253,10 +265,22 @@ contract Verifier is Ownable, HydratedRuntime {
         executionState.returnData = evm.returnData;
         executionState.gasRemaining = evm.gas;
 
+        uint stackSize = executionState.stackSize - executionState.stack.length;
+
+        if (stackSize < 0) {
+            return;
+        }
+
+        executionState.stackSize = evm.stack.size + stackSize;
+        // will be changed once we land merkle tree for memory
+        if (evm.mem.size > 0) {
+            executionState.memSize = evm.mem.size;
+        }
+
         bytes32 hash = executionState.stateHash(
             hydratedState.stackHash,
             hydratedState.memHash,
-            proofs.dataHash
+            dataHash
         );
 
         if (hash != dispute.solver.right && hash != dispute.challenger.right) {

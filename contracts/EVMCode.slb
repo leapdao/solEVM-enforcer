@@ -56,7 +56,9 @@ library EVMCode {
     }
 
     function toUint(Code memory self, uint pos, uint numBytes) internal view returns (uint data) {
-        assert(32 >= numBytes && numBytes > 0 && pos + numBytes <= self.length);
+        // if pos + numBytes > self.length, we get zeroes.
+        // this is the behaviour we want
+        assert(32 >= numBytes && numBytes > 0);
 
         address codeContractAddress = self.codeAddress;
         assembly {

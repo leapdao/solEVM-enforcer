@@ -1,4 +1,5 @@
 const Merkelizer = require('./../../utils/Merkelizer');
+const ProofHelper = require('./../../utils/ProofHelper');
 const disputeFixtures = require('./../fixtures/dispute');
 const { onchainWait, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
@@ -8,15 +9,6 @@ const GAS_LIMIT = OP.GAS_LIMIT;
 
 const Verifier = artifacts.require('Verifier.sol');
 const Enforcer = artifacts.require('Enforcer.sol');
-
-// for additional logging
-const DEBUG = false;
-
-function debugLog (...args) {
-  if (DEBUG) {
-    console.log(...args);
-  }
-}
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
@@ -38,29 +30,12 @@ function computeWitnessPath (dispute, merkleTree) {
 }
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
-  const prevOutput = computationPath.left.executionState;
-  const execState = computationPath.right.executionState;
-  const proofs = {
-    stackHash: Merkelizer.stackHash(
-      prevOutput.stack.slice(0, prevOutput.stack.length - execState.compactStack.length)
-    ),
-    memHash: execState.isMemoryRequired ? ZERO_HASH : Merkelizer.memHash(prevOutput.mem),
-    dataHash: execState.isCallDataRequired ? ZERO_HASH : Merkelizer.dataHash(prevOutput.data),
-  };
+  const args = ProofHelper.constructProof(computationPath);
 
   let tx = await verifier.submitProof(
     disputeId,
-    proofs,
-    {
-      // TODO: compact returnData
-      data: '0x' + (execState.isCallDataRequired ? prevOutput.data : ''),
-      stack: execState.compactStack,
-      mem: '0x' + (execState.isMemoryRequired ? prevOutput.mem : ''),
-      returnData: '0x' + prevOutput.returnData,
-      pc: prevOutput.pc,
-      gasRemaining: prevOutput.gasRemaining,
-      customEnvironmentHash: ZERO_HASH,
-    },
+    args.proofs,
+    args.executionInput,
     txOverrides
   );
 
@@ -83,13 +58,6 @@ async function disputeGame (
   let disputeId;
 
   try {
-    if (DEBUG) {
-      debugLog('solver depth=' + solverMerkle.depth);
-      solverMerkle.printTree();
-      debugLog('challenger depth=' + challengerMerkle.depth);
-      challengerMerkle.printTree();
-    }
-
     let solverComputationPath = solverMerkle.root;
     let challengerComputationPath = challengerMerkle.root;
 
@@ -126,16 +94,16 @@ async function disputeGame (
       dispute = await verifier.disputes(event.disputeId);
 
       if (solverComputationPath.isLeaf && challengerComputationPath.isLeaf) {
-        debugLog('REACHED leaves');
+        debug('REACHED leaves');
 
-        debugLog('Solver: SUBMITTING FOR l=' +
+        debug('Solver: SUBMITTING FOR l=' +
           solverComputationPath.left.hash + ' r=' + solverComputationPath.right.hash);
         await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
 
         // refresh
         dispute = await verifier.disputes(event.disputeId);
         if ((dispute.state & SOLVER_VERIFIED === 0) && (dispute.state & CHALLENGER_VERIFIED === 0)) {
-          debugLog('Challenger: SUBMITTING FOR l=' +
+          debug('Challenger: SUBMITTING FOR l=' +
           challengerComputationPath.left.hash + ' r=' + challengerComputationPath.right.hash);
           await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
         }
@@ -147,7 +115,7 @@ async function disputeGame (
         if ((dispute.state & SOLVER_VERIFIED) !== 0) {
           winner = 'solver';
         }
-        debugLog('winner=' + winner);
+        debug('winner=' + winner);
 
         assert.equal(winner, expectedWinner, 'winner should match fixture');
         break;
@@ -158,18 +126,18 @@ async function disputeGame (
         let nextPath = solverMerkle.getNode(solverPath);
 
         if (!nextPath) {
-          debugLog('solver: submission already made by another party');
+          debug('solver: submission already made by another party');
           solverComputationPath = solverMerkle.getPair(dispute.solver.left, dispute.solver.right);
           continue;
         }
 
         if (solverComputationPath.left.hash === solverPath) {
-          debugLog('solver goes left from ' +
+          debug('solver goes left from ' +
             solverComputationPath.hash.substring(2, 6) + ' to ' +
             solverComputationPath.left.hash.substring(2, 6)
           );
         } else if (solverComputationPath.right.hash === solverPath) {
-          debugLog('solver goes right from ' +
+          debug('solver goes right from ' +
             solverComputationPath.hash.substring(2, 6) + ' to ' +
             solverComputationPath.right.hash.substring(2, 6)
           );
@@ -182,7 +150,7 @@ async function disputeGame (
         debug('Solver respond\n',
           `\tleft = ${solverComputationPath.left.hash}`,
           `\tright = ${solverComputationPath.right.hash}`,
-          `\twitnessPath = ${witnessPath}`);
+          `\twitnessPath = l=${witnessPath.left} r=${witnessPath.right}`);
         tx = await verifier.respond(
           event.disputeId,
           {
@@ -201,19 +169,19 @@ async function disputeGame (
         let nextPath = challengerMerkle.getNode(challengerPath);
 
         if (!nextPath) {
-          debugLog('challenger submission already made by another party');
+          debug('challenger submission already made by another party');
           challengerComputationPath =
             challengerMerkle.getPair(dispute.challenger.left, dispute.challenger.right);
           continue;
         }
 
         if (challengerComputationPath.left.hash === challengerPath) {
-          debugLog('challenger goes left from ' +
+          debug('challenger goes left from ' +
             challengerComputationPath.hash.substring(2, 6) + ' to ' +
             challengerComputationPath.left.hash.substring(2, 6)
           );
         } else if (challengerComputationPath.right.hash === challengerPath) {
-          debugLog('challenger goes right from ' +
+          debug('challenger goes right from ' +
             challengerComputationPath.hash.substring(2, 6) + ' to ' +
             challengerComputationPath.right.hash.substring(2, 6)
           );
@@ -226,7 +194,7 @@ async function disputeGame (
         debug('Challenger respond\n',
           `\tleft = ${challengerComputationPath.left.hash}`,
           `\tright = ${challengerComputationPath.right.hash}`,
-          `\twitnessPath = ${witnessPath}`);
+          `\twitnessPath = l=${witnessPath.left} r=${witnessPath.right}`);
         tx = await verifier.respond(
           event.disputeId,
           {
@@ -252,7 +220,7 @@ async function disputeGame (
     if ((dispute.state & SOLVER_VERIFIED) !== 0) {
       winner = 'solver';
     }
-    debugLog('winner=' + winner);
+    debug('winner=' + winner);
 
     assert.equal(winner, expectedWinner, 'winner should match fixture');
   }
@@ -336,10 +304,12 @@ contract('Verifier', function () {
         {
           data: '0x12345678',
           stack: [],
-          mem: '0x',
+          mem: [],
           returnData: '0x',
           pc: 0,
           gasRemaining: GAS_LIMIT,
+          stackSize: 0,
+          memSize: 0,
           customEnvironmentHash: ZERO_HASH,
         },
         txOverrides

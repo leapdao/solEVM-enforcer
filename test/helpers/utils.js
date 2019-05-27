@@ -95,7 +95,7 @@ Utils.deployContract = async function (truffleContract, ...args) {
 };
 
 Utils.deployCode = async function (code) {
-  let codeLen = code.length.toString(16);
+  let codeLen = (code.join('').length / 2).toString(16);
 
   if (codeLen.length % 2 === 1) {
     codeLen = '0' + codeLen;

@@ -1,20 +1,24 @@
 const ethers = require('ethers');
-const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-module.exports = class Merkelizer {
+const AbstractMerkleTree = require('./AbstractMerkleTree');
+const { ZERO_HASH } = require('./constants');
+
+module.exports = class Merkelizer extends AbstractMerkleTree {
   static initialStateHash (code, callData, customEnvironmentHash) {
     const DEFAULT_GAS = 0x0fffffffffffff;
     const res = {
       executionState: {
         code: code,
-        data: callData.replace('0x', ''),
+        data: callData,
         compactStack: [],
         stack: [],
-        mem: '',
-        returnData: '',
+        mem: [],
+        returnData: '0x',
         pc: 0,
         errno: 0,
         gasRemaining: DEFAULT_GAS,
+        stackSize: 0,
+        memSize: 0,
         customEnvironmentHash: customEnvironmentHash || ZERO_HASH,
       },
     };
@@ -28,31 +32,12 @@ module.exports = class Merkelizer {
     return res;
   }
 
-  static zero () {
-    return {
-      left: {
-        hash: ZERO_HASH,
-      },
-      right: {
-        hash: ZERO_HASH,
-      },
-      hash: ZERO_HASH,
-    };
-  }
-
-  static hash (left, right) {
-    return ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32'],
-      [left, right]
-    );
-  }
-
   static stackHash (stack, sibling) {
     let res = sibling || ZERO_HASH;
 
     for (var i = 0; i < stack.length; i++) {
       res = ethers.utils.solidityKeccak256(
-        ['bytes32', 'uint'],
+        ['bytes32', 'bytes32'],
         [res, stack[i]]
       );
     }
@@ -62,30 +47,30 @@ module.exports = class Merkelizer {
 
   static memHash (mem) {
     return ethers.utils.solidityKeccak256(
-      ['bytes'],
-      ['0x' + mem]
+      ['bytes32[]'],
+      [mem]
     );
   }
 
   static dataHash (data) {
     return ethers.utils.solidityKeccak256(
       ['bytes'],
-      ['0x' + data]
+      [data]
     );
   }
 
   static stateHash (execution, stackHash, memHash, dataHash, customEnvironmentHash) {
     // TODO: compact returnData
 
-    if (!stackHash) {
+    if (!stackHash || stackHash === ZERO_HASH) {
       stackHash = this.stackHash(execution.stack);
     }
 
-    if (!memHash) {
+    if (!memHash || memHash === ZERO_HASH) {
       memHash = this.memHash(execution.mem);
     }
 
-    if (!dataHash) {
+    if (!dataHash || dataHash === ZERO_HASH) {
       dataHash = this.dataHash(execution.data);
     }
 
@@ -94,66 +79,19 @@ module.exports = class Merkelizer {
     }
 
     return ethers.utils.solidityKeccak256(
-      ['bytes', 'bytes', 'bytes', 'bytes', 'uint', 'uint', 'bytes32'],
+      ['bytes32', 'bytes32', 'bytes32', 'bytes32', 'bytes', 'uint', 'uint', 'uint', 'uint'],
       [
         stackHash,
         memHash,
         dataHash,
-        '0x' + execution.returnData,
+        customEnvironmentHash,
+        execution.returnData,
         execution.pc,
         execution.gasRemaining,
-        customEnvironmentHash,
+        execution.stackSize,
+        execution.memSize,
       ]
     );
-  }
-
-  constructor () {
-    this.tree = [];
-  }
-
-  get root () {
-    return this.tree[this.tree.length - 1][0];
-  }
-
-  get depth () {
-    // we also count leaves
-    return this.tree.length;
-  }
-
-  getNode (hash) {
-    let len = this.tree.length;
-
-    while (len--) {
-      let x = this.tree[len];
-
-      let iLen = x.length;
-      while (iLen--) {
-        let y = x[iLen];
-        if (y.hash === hash) {
-          return y;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  getPair (leftHash, rightHash) {
-    let len = this.tree.length;
-
-    while (len--) {
-      let x = this.tree[len];
-
-      let iLen = x.length;
-      while (iLen--) {
-        let y = x[iLen];
-        if (y.left.hash === leftHash && y.right.hash === rightHash) {
-          return y;
-        }
-      }
-    }
-
-    return null;
   }
 
   run (executions, code, callData, customEnvironmentHash) {
@@ -168,15 +106,34 @@ module.exports = class Merkelizer {
 
     let prevLeaf = { right: initialState };
     let len = executions.length;
+    let memHash;
 
     for (let i = 0; i < len; i++) {
-      let exec = executions[i];
-      let hash = this.constructor.stateHash(exec);
-      let llen = leaves.push(
+      const exec = executions[i];
+      const stackHash = this.constructor.stackHash(exec.stack);
+
+      // convenience
+      exec.stackSize = exec.stack.length;
+      exec.memSize = exec.mem.length;
+
+      // memory is changed if either written to or if it was expanded
+      let memoryChanged = exec.memWriteLow !== -1;
+      if (!memoryChanged && prevLeaf.right.executionState) {
+        memoryChanged = prevLeaf.right.executionState.memSize !== exec.memSize;
+      }
+
+      if (!memHash || memoryChanged) {
+        memHash = this.constructor.memHash(exec.mem) || ZERO_HASH;
+      }
+
+      const hash = this.constructor.stateHash(exec, stackHash, memHash);
+      const llen = leaves.push(
         {
           left: prevLeaf.right,
           right: {
             hash: hash,
+            stackHash,
+            memHash,
             executionState: executions[i],
           },
           hash: this.constructor.hash(prevLeaf.right.hash, hash),
@@ -191,68 +148,5 @@ module.exports = class Merkelizer {
     this.recal(0);
 
     return this;
-  }
-
-  recal (baseLevel) {
-    if (baseLevel === undefined) {
-      baseLevel = 0;
-    }
-    let level = baseLevel + 1;
-    // clear everything from level and above
-    this.tree = this.tree.slice(0, level);
-    while (true) {
-      let last = this.tree[level - 1];
-      let cur = [];
-
-      if (last.length === 1) {
-        // done
-        break;
-      }
-
-      let len = last.length;
-      for (let i = 0; i < len; i += 2) {
-        let left = last[i];
-        let right = last[i + 1];
-
-        if (!right) {
-          right = {
-            left: {
-              hash: ZERO_HASH,
-            },
-            right: {
-              hash: ZERO_HASH,
-            },
-            hash: ZERO_HASH,
-          };
-          last.push(right);
-        }
-
-        cur.push(
-          {
-            left: left,
-            right: right,
-            hash: this.constructor.hash(left.hash, right.hash),
-          }
-        );
-      }
-
-      this.tree.push(cur);
-      level++;
-    }
-  }
-
-  printTree () {
-    for (let i = 0; i < this.tree.length; i++) {
-      let row = this.tree[i];
-      process.stdout.write(`level ${i}: `);
-      for (let y = 0; y < row.length; y++) {
-        let e = row[y];
-        const h = e.hash.substring(2, 6);
-        const hl = e.left.hash.substring(2, 6);
-        const hr = e.right.hash.substring(2, 6);
-        process.stdout.write(` [ ${h} (l:${hl} r:${hr}) ] `);
-      }
-      process.stdout.write('\n');
-    }
   }
 };

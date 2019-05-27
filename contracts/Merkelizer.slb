@@ -7,15 +7,17 @@ library Merkelizer {
 
     struct ExecutionState {
         bytes data;
-        uint[] stack;
-        bytes mem;
+        bytes32[] stack;
+        bytes32[] mem;
+        bytes32 customEnvironmentHash;
         bytes returnData;
         uint pc;
         uint gasRemaining;
-        bytes32 customEnvironmentHash;
+        uint stackSize;
+        uint memSize;
     }
 
-    function memHash(bytes memory _mem) internal pure returns (bytes32) {
+    function memHash(bytes32[] memory _mem) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(_mem));
     }
 
@@ -25,7 +27,7 @@ library Merkelizer {
 
     function stackHash(ExecutionState memory self, bytes32 _sibling) internal pure returns (bytes32) {
         bytes32 hash = _sibling;
-        uint[] memory stack = self.stack;
+        bytes32[] memory stack = self.stack;
 
         for (uint i = 0; i < stack.length; i++) {
             assembly {
@@ -44,13 +46,6 @@ library Merkelizer {
         bytes32 _memHash,
         bytes32 _dataHash
     ) internal pure returns (bytes32) {
-        // TODO: implement support for accounts
-        // TODO: compact-{returnData, accounts}
-
-        if (_stackHash == 0) {
-            _stackHash = stackHash(self, 0);
-        }
-
         if (_memHash == 0) {
             _memHash = memHash(self.mem);
         }
@@ -64,10 +59,12 @@ library Merkelizer {
                 _stackHash,
                 _memHash,
                 _dataHash,
+                self.customEnvironmentHash,
                 self.returnData,
                 self.pc,
                 self.gasRemaining,
-                self.customEnvironmentHash
+                self.stackSize,
+                self.memSize
             )
         );
     }
