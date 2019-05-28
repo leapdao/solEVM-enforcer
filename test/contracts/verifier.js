@@ -62,12 +62,9 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
 }
 
 async function disputeGame (
-  enforcer, verifier, codeContract, code, callData, solverSteps, challengerSteps, expectedWinner, expectedError
+  enforcer, verifier, codeContract, code, callData, solverMerkle, challengerMerkle, expectedWinner, expectedError
 ) {
   try {
-    const solverMerkle = new Merkelizer().run(solverSteps, code, callData);
-    const challengerMerkle = new Merkelizer().run(challengerSteps, code, callData);
-
     if (DEBUG) {
       debugLog('solver depth=' + solverMerkle.depth);
       solverMerkle.printTree();
@@ -240,7 +237,7 @@ contract('Verifier', function () {
   });
 
   disputeFixtures(
-    async (code, callData, solverSteps, challengerSteps, expectedWinner) => {
+    async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
       const codeContract = await deployCode(code);
 
       await disputeGame(
@@ -249,8 +246,8 @@ contract('Verifier', function () {
         codeContract.address,
         code,
         callData,
-        solverSteps,
-        challengerSteps,
+        solverMerkle,
+        challengerMerkle,
         expectedWinner
       );
     }

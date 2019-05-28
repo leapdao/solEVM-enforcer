@@ -1,4 +1,3 @@
-
 const ethers = require('ethers');
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
@@ -27,6 +26,18 @@ module.exports = class Merkelizer {
     res.hash = this.stateHash(res.executionState);
 
     return res;
+  }
+
+  static zero () {
+    return {
+      left: {
+        hash: ZERO_HASH,
+      },
+      right: {
+        hash: ZERO_HASH,
+      },
+      hash: ZERO_HASH,
+    };
   }
 
   static hash (left, right) {
@@ -221,9 +232,58 @@ module.exports = class Merkelizer {
     return this;
   }
 
+  recal (baseLevel) {
+    if (baseLevel === undefined) {
+      baseLevel = 0;
+    }
+    let level = baseLevel + 1;
+    // clear everything from level and above
+    this.tree = this.tree.slice(0, level);
+    while (true) {
+      let last = this.tree[level - 1];
+      let cur = [];
+
+      if (last.length === 1) {
+        // done
+        break;
+      }
+
+      let len = last.length;
+      for (let i = 0; i < len; i += 2) {
+        let left = last[i];
+        let right = last[i + 1];
+
+        if (!right) {
+          right = {
+            left: {
+              hash: ZERO_HASH,
+            },
+            right: {
+              hash: ZERO_HASH,
+            },
+            hash: ZERO_HASH,
+          };
+          last.push(right);
+        }
+
+        cur.push(
+          {
+            left: left,
+            right: right,
+            hash: this.constructor.hash(left.hash, right.hash),
+          }
+        );
+      }
+
+      this.tree.push(cur);
+      level++;
+    }
+  }
+
   printTree () {
     for (let i = 0; i < this.tree.length; i++) {
       let row = this.tree[i];
+      process.stdout.write(`level ${i}: `);
       for (let y = 0; y < row.length; y++) {
         let e = row[y];
         const h = e.hash.substring(2, 6);

@@ -40,11 +40,9 @@ function submitProofHelper (dispute, code, computationPath) {
   );
 }
 
-async function disputeGame (code, callData, solverSteps, challengerSteps, expectedWinner, expectedError) {
+async function disputeGame (code, callData, solverMerkle, challengerMerkle, expectedWinner, expectedError) {
   try {
     const stepper = new OffchainStepper();
-    const solverMerkle = new Merkelizer().run(solverSteps, code, callData);
-    const challengerMerkle = new Merkelizer().run(challengerSteps, code, callData);
 
     if (DEBUG) {
       debugLog('solver depth=' + solverMerkle.depth);
@@ -156,8 +154,8 @@ async function disputeGame (code, callData, solverSteps, challengerSteps, expect
 
 describe('JS DisputeMock', function () {
   disputeFixtures(
-    async (code, callData, solverSteps, challengerSteps, expectedWinner) => {
-      await disputeGame(code, callData, solverSteps, challengerSteps, expectedWinner);
+    async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
+      await disputeGame(code, callData, solverMerkle, challengerMerkle, expectedWinner);
     }
   );
 });
