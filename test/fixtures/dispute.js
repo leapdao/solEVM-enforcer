@@ -226,22 +226,44 @@ module.exports = (callback) => {
       OP.PUSH1, '01',
       OP.PUSH1, '02',
       OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
+      OP.PUSH1, '03',
       OP.RETURN,
     ];
 
     const data = '0x';
     let steps;
     const stepper = new OffchainStepper();
-    let solverMerkle;
     let challengerMerkle;
+    let leaves;
 
     beforeEach(async () => {
       steps = await stepper.run({ code });
-      solverMerkle = new Merkelizer().run(steps, code, data);
       challengerMerkle = new Merkelizer().run(steps, code, data);
+      leaves = JSON.stringify(challengerMerkle.tree[0]);
     });
 
-    it('copy last leaf to previous leaf', async () => {
+    it('copy last leaf to previous leaf #1', async () => {
+      const solverMerkle = new Merkelizer();
+
+      solverMerkle.tree[0] = JSON.parse(leaves);
       solverMerkle.tree[0][2] = solverMerkle.tree[0][3];
       solverMerkle.recal(0);
       debug('Solver', solverMerkle.printTree());
@@ -249,7 +271,58 @@ module.exports = (callback) => {
       await callback(code, data, solverMerkle, challengerMerkle, 'challenger');
     });
 
+    it('copy last leaf to previous leaf #2', async () => {
+      const solverMerkle = new Merkelizer();
+
+      solverMerkle.tree[0] = JSON.parse(leaves);
+      solverMerkle.tree[0][1] = solverMerkle.tree[0][2];
+      solverMerkle.recal(0);
+      debug('Solver', solverMerkle.printTree());
+      debug('Challenger', challengerMerkle.printTree());
+      await callback(code, data, solverMerkle, challengerMerkle, 'challenger');
+    });
+
+    it('copy last leaf to previous leaf #3', async () => {
+      const solverMerkle = new Merkelizer();
+
+      solverMerkle.tree[0] = JSON.parse(leaves);
+      solverMerkle.tree[0][19] = solverMerkle.tree[0][20];
+      solverMerkle.recal(0);
+      debug('Solver', solverMerkle.printTree());
+      debug('Challenger', challengerMerkle.printTree());
+      await callback(code, data, solverMerkle, challengerMerkle, 'challenger');
+    });
+
+    it('copy last leaf to previous leaf #4', async () => {
+      const solverMerkle = new Merkelizer();
+
+      solverMerkle.tree[0] = JSON.parse(leaves);
+      solverMerkle.tree[0][18] = solverMerkle.tree[0][19];
+      solverMerkle.recal(0);
+      debug('Solver', solverMerkle.printTree());
+      debug('Challenger', challengerMerkle.printTree());
+      await callback(code, data, solverMerkle, challengerMerkle, 'challenger');
+    });
+
+    it('challenger: copy last leaf to previous leaf #1', async () => {
+      const challengerMerkle = new Merkelizer();
+      const solverMerkle = new Merkelizer();
+
+      solverMerkle.tree[0] = JSON.parse(leaves);
+      solverMerkle.recal(0);
+
+      challengerMerkle.tree[0] = JSON.parse(leaves);
+      challengerMerkle.tree[0][18] = solverMerkle.tree[0][19];
+      challengerMerkle.recal(0);
+      debug('Solver', solverMerkle.printTree());
+      debug('Challenger', challengerMerkle.printTree());
+      await callback(code, data, solverMerkle, challengerMerkle, 'solver');
+    });
+
     it('copy last leaf to previous leaf, change last leaf to zero', async () => {
+      const solverMerkle = new Merkelizer();
+
+      solverMerkle.tree[0] = JSON.parse(leaves);
       solverMerkle.tree[0][2] = solverMerkle.tree[0][3];
       solverMerkle.tree[0][3] = Merkelizer.zero();
       solverMerkle.recal(0);
