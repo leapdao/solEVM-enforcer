@@ -330,5 +330,18 @@ module.exports = (callback) => {
       debug('Challenger', challengerMerkle.printTree());
       await callback(code, data, solverMerkle, challengerMerkle, 'challenger');
     });
+
+    for (let i = 1; i < 23; i++) {
+      it(`fake tree[${i}]`, async () => {
+        const solverMerkle = new Merkelizer().run(steps, code, data);
+
+        const challengerMerkle = new Merkelizer().run(steps, code, data);
+        challengerMerkle.tree[0][i] = challengerMerkle.tree[0][i + 1];
+        challengerMerkle.recal(0);
+        debug('Solver', solverMerkle.printTree());
+        debug('Challenger', challengerMerkle.printTree());
+        await callback(code, data, solverMerkle, challengerMerkle, 'solver');
+      });
+    }
   });
 };

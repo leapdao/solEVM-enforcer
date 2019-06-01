@@ -188,46 +188,7 @@ module.exports = class Merkelizer {
       prevLeaf = leaves[llen - 1];
     }
 
-    let level = 1;
-    while (true) {
-      let last = this.tree[level - 1];
-      let cur = [];
-
-      if (last.length === 1) {
-        // done
-        break;
-      }
-
-      let len = last.length;
-      for (let i = 0; i < len; i += 2) {
-        let left = last[i];
-        let right = last[i + 1];
-
-        if (!right) {
-          right = {
-            left: {
-              hash: ZERO_HASH,
-            },
-            right: {
-              hash: ZERO_HASH,
-            },
-            hash: ZERO_HASH,
-          };
-          last.push(right);
-        }
-
-        cur.push(
-          {
-            left: left,
-            right: right,
-            hash: this.constructor.hash(left.hash, right.hash),
-          }
-        );
-      }
-
-      this.tree.push(cur);
-      level++;
-    }
+    this.recal(0);
 
     return this;
   }

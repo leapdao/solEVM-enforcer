@@ -3,6 +3,7 @@ const disputeFixtures = require('./../fixtures/dispute');
 const { onchainWait, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 const assertRevert = require('./../helpers/assertRevert');
+const debug = require('debug')('vgame-test');
 const GAS_LIMIT = OP.GAS_LIMIT;
 
 const Verifier = artifacts.require('Verifier.sol');
@@ -191,6 +192,10 @@ async function disputeGame (
 
         const witnesses = computeWitnesses(dispute, solverMerkle);
 
+        debug('Solver respond\n',
+          `\tleft = ${solverComputationPath.left.hash}`,
+          `\tright = ${solverComputationPath.right.hash}`,
+          `\twitnesses = ${witnesses}`);
         tx = await verifier.respond(
           event.disputeId,
           {
@@ -231,6 +236,10 @@ async function disputeGame (
 
         const witnesses = computeWitnesses(dispute, challengerMerkle);
 
+        debug('Challenger respond\n',
+          `\tleft = ${challengerComputationPath.left.hash}`,
+          `\tright = ${challengerComputationPath.right.hash}`,
+          `\twitnesses = ${witnesses}`);
         tx = await verifier.respond(
           event.disputeId,
           {
