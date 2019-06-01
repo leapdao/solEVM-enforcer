@@ -21,36 +21,20 @@ function debugLog (...args) {
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
 const TWO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000002';
+const ZERO_WITNESS_PATH = { left: ZERO_HASH, right: ZERO_HASH };
 const SOLVER_VERIFIED = (1 << 2);
 const CHALLENGER_VERIFIED = (1 << 3);
 
-function computeWitnesses (dispute, merkleTree) {
-  const witnesses = [];
-  const needsWitness =
-    dispute.witness !== ZERO_HASH &&
-    dispute.treeDepth.toNumber() === 1;
+function computeWitnessPath (dispute, merkleTree) {
+  const needsWitness = dispute.witness !== ZERO_HASH;
 
-  // TODO: needs better detection if we really need a witness
   if (needsWitness) {
-    const todo = [dispute.witness];
+    const path = merkleTree.getNode(dispute.witness);
 
-    while (todo.length !== 0) {
-      const nextPath = merkleTree.getNode(todo.shift());
-
-      witnesses.push(nextPath.left.hash);
-
-      if (nextPath.isLeaf) {
-        witnesses.push(nextPath.right.hash);
-        continue;
-      }
-
-      todo.push(nextPath.right.hash);
-    }
-
-    debugLog('needs witness', dispute.witness, witnesses);
+    return { left: path.left.hash, right: path.right.hash };
   }
 
-  return witnesses;
+  return ZERO_WITNESS_PATH;
 }
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
@@ -193,19 +177,19 @@ async function disputeGame (
 
         solverComputationPath = nextPath;
 
-        const witnesses = computeWitnesses(dispute, solverMerkle);
+        const witnessPath = computeWitnessPath(dispute, solverMerkle);
 
         debug('Solver respond\n',
           `\tleft = ${solverComputationPath.left.hash}`,
           `\tright = ${solverComputationPath.right.hash}`,
-          `\twitnesses = ${witnesses}`);
+          `\twitnessPath = ${witnessPath}`);
         tx = await verifier.respond(
           event.disputeId,
           {
             left: solverComputationPath.left.hash,
             right: solverComputationPath.right.hash,
           },
-          witnesses,
+          witnessPath,
           txOverrides
         );
         await tx.wait();
@@ -237,19 +221,19 @@ async function disputeGame (
 
         challengerComputationPath = nextPath;
 
-        const witnesses = computeWitnesses(dispute, challengerMerkle);
+        const witnessPath = computeWitnessPath(dispute, challengerMerkle);
 
         debug('Challenger respond\n',
           `\tleft = ${challengerComputationPath.left.hash}`,
           `\tright = ${challengerComputationPath.right.hash}`,
-          `\twitnesses = ${witnesses}`);
+          `\twitnessPath = ${witnessPath}`);
         tx = await verifier.respond(
           event.disputeId,
           {
             left: challengerComputationPath.left.hash,
             right: challengerComputationPath.right.hash,
           },
-          witnesses,
+          witnessPath,
           txOverrides
         );
         await tx.wait();
@@ -485,7 +469,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: ZERO_HASH,
         },
-        [],
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -538,7 +522,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: ZERO_HASH,
         },
-        [],
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -590,7 +574,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: TWO_HASH,
         },
-        [],
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -601,7 +585,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: ZERO_HASH,
         },
-        [],
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -653,7 +637,7 @@ contract('Verifier', function () {
         left: ONE_HASH,
         right: ZERO_HASH,
       },
-      [],
+      ZERO_WITNESS_PATH,
       { gasLimit: GAS_LIMIT }
     );
     await tx.wait();
@@ -665,7 +649,7 @@ contract('Verifier', function () {
         left: ZERO_HASH,
         right: ONE_HASH,
       },
-      [],
+      ZERO_WITNESS_PATH,
       { gasLimit: GAS_LIMIT }
     );
     await tx.wait();
