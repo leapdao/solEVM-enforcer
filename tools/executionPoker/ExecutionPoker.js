@@ -176,12 +176,23 @@ module.exports = class ExecutionPoker {
 
     obj.computationPath = nextPath;
 
+    let witnessPath;
+
+    if (dispute.witness !== ZERO_HASH) {
+      const path = obj.merkle.getNode(dispute.witness);
+
+      witnessPath = { left: path.left.hash, right: path.right.hash };
+    } else {
+      witnessPath = { left: ZERO_HASH, right: ZERO_HASH };
+    }
+
     let tx = await this.verifier.respond(
       disputeId,
       {
         left: obj.computationPath.left.hash,
         right: obj.computationPath.right.hash,
       },
+      witnessPath,
       { gasLimit: this.gasLimit }
     );
 
