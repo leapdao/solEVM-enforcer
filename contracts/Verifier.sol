@@ -143,7 +143,6 @@ contract Verifier is Ownable, HydratedRuntime {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.treeDepth > 0, "already reach leaf");
-        require(computationPath.left != bytes32(0), "left can not be zero");
 
         bytes32 h = keccak256(abi.encodePacked(computationPath.left, computationPath.right));
 
@@ -338,25 +337,40 @@ contract Verifier is Ownable, HydratedRuntime {
             return;
         }
 
+        // left can not be zero
+        if (dispute.solver.left == bytes32(0)) {
+            enforcer.result(dispute.executionId, false, dispute.challengerAddr);
+            dispute.state |= CHALLENGER_VERIFIED;
+            return;
+        }
+        if (dispute.challenger.left == bytes32(0)) {
+            enforcer.result(dispute.executionId, true, dispute.challengerAddr);
+            dispute.state |= SOLVER_VERIFIED;
+            return;
+        }
+
         if (dispute.treeDepth == 1 && dispute.challenger.left != dispute.solver.left) {
             require(dispute.witness != bytes32(0));
-            // we may only require 6 or 2 witnesses
-            // this could be improved
-            require(witnesses.length == 6 || witnesses.length == 2);
+            // TODO: we could keep track of the last depth taken right,
+            // that way we could enforce a explicit size
+            require(witnesses.length >= 2);
 
-            bytes32 topHash = keccak256(abi.encodePacked(witnesses[0], witnesses[1]));
-            require(topHash == dispute.witness);
+            uint len = witnesses.length;
+            bytes32 rightNode = witnesses[--len];
 
-            if (witnesses.length == 6) {
-                bytes32 leftNode = keccak256(abi.encodePacked(witnesses[2], witnesses[3]));
-                bytes32 rightNode = keccak256(abi.encodePacked(witnesses[4], witnesses[5]));
-                bytes32 combined = keccak256(abi.encodePacked(leftNode, rightNode));
+            require(
+                rightNode == dispute.solver.left ||
+                rightNode == dispute.challenger.left
+            );
 
-                require(combined == topHash);
+            while (len != 0) {
+                bytes32 leftNode = witnesses[--len];
+                rightNode = keccak256(abi.encodePacked(leftNode, rightNode));
             }
 
-            bytes32 prevLeafHash = witnesses[witnesses.length - 1];
-            dispute.witness = prevLeafHash;
+            require(rightNode == dispute.witness);
+            // update witness to the correct previous leaf hash
+            dispute.witness = witnesses[witnesses.length - 1];
         }
 
         // refresh state and timeout

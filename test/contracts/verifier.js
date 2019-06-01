@@ -21,6 +21,8 @@ function debugLog (...args) {
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
 const TWO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000002';
+const SOLVER_VERIFIED = (1 << 2);
+const CHALLENGER_VERIFIED = (1 << 3);
 
 function computeWitnesses (dispute, merkleTree) {
   const witnesses = [];
@@ -28,6 +30,7 @@ function computeWitnesses (dispute, merkleTree) {
     dispute.witness !== ZERO_HASH &&
     dispute.treeDepth.toNumber() === 1;
 
+  // TODO: needs better detection if we really need a witness
   if (needsWitness) {
     const todo = [dispute.witness];
 
@@ -35,13 +38,12 @@ function computeWitnesses (dispute, merkleTree) {
       const nextPath = merkleTree.getNode(todo.shift());
 
       witnesses.push(nextPath.left.hash);
-      witnesses.push(nextPath.right.hash);
 
       if (nextPath.isLeaf) {
+        witnesses.push(nextPath.right.hash);
         continue;
       }
 
-      todo.push(nextPath.left.hash);
       todo.push(nextPath.right.hash);
     }
 
@@ -94,6 +96,8 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
 async function disputeGame (
   enforcer, verifier, codeContract, code, callData, solverMerkle, challengerMerkle, expectedWinner, expectedError
 ) {
+  let disputeId;
+
   try {
     if (DEBUG) {
       debugLog('solver depth=' + solverMerkle.depth);
@@ -132,6 +136,8 @@ async function disputeGame (
     let dispute = await tx.wait();
     let event = dispute.events[0].args;
 
+    disputeId = event.disputeId;
+
     while (true) {
       dispute = await verifier.disputes(event.disputeId);
 
@@ -141,9 +147,6 @@ async function disputeGame (
         debugLog('Solver: SUBMITTING FOR l=' +
           solverComputationPath.left.hash + ' r=' + solverComputationPath.right.hash);
         await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
-
-        const SOLVER_VERIFIED = (1 << 2);
-        const CHALLENGER_VERIFIED = (1 << 3);
 
         // refresh
         dispute = await verifier.disputes(event.disputeId);
@@ -258,7 +261,16 @@ async function disputeGame (
       return;
     }
 
-    throw e;
+    // refresh again
+    const dispute = await verifier.disputes(disputeId);
+
+    let winner = 'challenger';
+    if ((dispute.state & SOLVER_VERIFIED) !== 0) {
+      winner = 'solver';
+    }
+    debugLog('winner=' + winner);
+
+    assert.equal(winner, expectedWinner, 'winner should match fixture');
   }
 }
 
@@ -537,7 +549,6 @@ contract('Verifier', function () {
 
       let dispute = await verifier.disputes(disputeId);
       // TODO may add dispute result directly to Verifier?
-      const CHALLENGER_VERIFIED = 1 << 3;
 
       assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
@@ -601,13 +612,12 @@ contract('Verifier', function () {
 
       let dispute = await verifier.disputes(disputeId);
       // TODO may add dispute result directly to Verifier?
-      const CHALLENGER_VERIFIED = 1 << 3;
 
       assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
   });
 
-  it('computationPath.left is zero, should revert', async () => {
+  it('computationPath.left is zero, challenger should win', async () => {
     const code = [
       OP.PUSH1, '20',
       OP.PUSH1, '00',
@@ -629,23 +639,39 @@ contract('Verifier', function () {
     tx = await enforcer.dispute(
       codeContract.address,
       callData,
-      TWO_HASH,
+      Merkelizer.hash(ONE_HASH, ZERO_HASH),
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
     tx = await tx.wait();
     let disputeId = tx.events[0].args.disputeId;
 
-    await assertRevert(
-      verifier.respond(
-        disputeId,
-        {
-          left: ZERO_HASH,
-          right: ONE_HASH,
-        },
-        [],
-        { gasLimit: GAS_LIMIT }
-      )
+    // challenger
+    tx = await verifier.respond(
+      disputeId,
+      {
+        left: ONE_HASH,
+        right: ZERO_HASH,
+      },
+      [],
+      { gasLimit: GAS_LIMIT }
     );
+    await tx.wait();
+
+    // solver
+    tx = await verifier.respond(
+      disputeId,
+      {
+        left: ZERO_HASH,
+        right: ONE_HASH,
+      },
+      [],
+      { gasLimit: GAS_LIMIT }
+    );
+    await tx.wait();
+
+    const dispute = await verifier.disputes(disputeId);
+
+    assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
   });
 });
