@@ -38,6 +38,7 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 solverPath;
         bytes32 challengerPath;
         uint256 treeDepth;
+        bytes32 witness;
 
         ComputationPath solver;
         ComputationPath challenger;
@@ -120,6 +121,7 @@ contract Verifier is Ownable, HydratedRuntime {
             solverHashRoot,
             challengerHashRoot,
             executionDepth,
+            bytes32(0),
             ComputationPath(solverHashRoot, solverHashRoot),
             ComputationPath(challengerHashRoot, challengerHashRoot),
             INITIAL_STATE,
@@ -135,12 +137,12 @@ contract Verifier is Ownable, HydratedRuntime {
      */
     function respond(
         bytes32 disputeId,
-        ComputationPath memory computationPath
+        ComputationPath memory computationPath,
+        ComputationPath memory witnessPath
     ) public onlyPlaying(disputeId) {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.treeDepth > 0, "already reach leaf");
-        require(computationPath.left != bytes32(0), "left can not be zero");
 
         bytes32 h = keccak256(abi.encodePacked(computationPath.left, computationPath.right));
 
@@ -159,7 +161,7 @@ contract Verifier is Ownable, HydratedRuntime {
             dispute.challenger = computationPath;
         }
 
-        updateRound(disputeId, dispute);
+        updateRound(disputeId, dispute, witnessPath);
     }
 
     /*
@@ -195,6 +197,11 @@ contract Verifier is Ownable, HydratedRuntime {
         if ((inputHash != dispute.solver.left && inputHash != dispute.challenger.left) ||
             ((dispute.state & START_OF_EXECUTION) != 0 && inputHash != dispute.initialStateHash)) {
             return;
+        }
+        if (dispute.witness != bytes32(0)) {
+            if (inputHash != dispute.witness) {
+                return;
+            }
         }
 
         if ((dispute.state & END_OF_EXECUTION) != 0) {
@@ -325,9 +332,29 @@ contract Verifier is Ownable, HydratedRuntime {
       *         assume that both solver and challenger have the same tree depth
       */
     // solhint-disable-next-line code-complexity, function-max-lines
-    function updateRound(bytes32 disputeId, Dispute storage dispute) internal {
+    function updateRound(bytes32 disputeId, Dispute storage dispute, ComputationPath memory witnessPath) internal {
         if ((dispute.state & SOLVER_RESPONDED) == 0 || (dispute.state & CHALLENGER_RESPONDED) == 0) {
             return;
+        }
+
+        // left can not be zero
+        if (dispute.solver.left == bytes32(0)) {
+            enforcer.result(dispute.executionId, false, dispute.challengerAddr);
+            dispute.state |= CHALLENGER_VERIFIED;
+            return;
+        }
+        if (dispute.challenger.left == bytes32(0)) {
+            enforcer.result(dispute.executionId, true, dispute.challengerAddr);
+            dispute.state |= SOLVER_VERIFIED;
+            return;
+        }
+
+        if (dispute.witness != bytes32(0)) {
+            require(
+                keccak256(abi.encodePacked(witnessPath.left, witnessPath.right)) == dispute.witness
+            );
+
+            dispute.witness = witnessPath.right;
         }
 
         // refresh state and timeout
@@ -340,6 +367,7 @@ contract Verifier is Ownable, HydratedRuntime {
             (dispute.solver.right != 0) &&
             (dispute.challenger.right != 0)) {
             // following right
+            dispute.witness = dispute.solver.left;
             dispute.solverPath = dispute.solver.right;
             dispute.challengerPath = dispute.challenger.right;
 

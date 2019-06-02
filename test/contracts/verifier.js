@@ -3,6 +3,7 @@ const disputeFixtures = require('./../fixtures/dispute');
 const { onchainWait, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 const assertRevert = require('./../helpers/assertRevert');
+const debug = require('debug')('vgame-test');
 const GAS_LIMIT = OP.GAS_LIMIT;
 
 const Verifier = artifacts.require('Verifier.sol');
@@ -20,6 +21,21 @@ function debugLog (...args) {
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
 const TWO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000002';
+const ZERO_WITNESS_PATH = { left: ZERO_HASH, right: ZERO_HASH };
+const SOLVER_VERIFIED = (1 << 2);
+const CHALLENGER_VERIFIED = (1 << 3);
+
+function computeWitnessPath (dispute, merkleTree) {
+  const needsWitness = dispute.witness !== ZERO_HASH;
+
+  if (needsWitness) {
+    const path = merkleTree.getNode(dispute.witness);
+
+    return { left: path.left.hash, right: path.right.hash };
+  }
+
+  return ZERO_WITNESS_PATH;
+}
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const prevOutput = computationPath.left.executionState;
@@ -62,12 +78,11 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
 }
 
 async function disputeGame (
-  enforcer, verifier, codeContract, code, callData, solverSteps, challengerSteps, expectedWinner, expectedError
+  enforcer, verifier, codeContract, code, callData, solverMerkle, challengerMerkle, expectedWinner, expectedError
 ) {
-  try {
-    const solverMerkle = new Merkelizer().run(solverSteps, code, callData);
-    const challengerMerkle = new Merkelizer().run(challengerSteps, code, callData);
+  let disputeId;
 
+  try {
     if (DEBUG) {
       debugLog('solver depth=' + solverMerkle.depth);
       solverMerkle.printTree();
@@ -105,6 +120,8 @@ async function disputeGame (
     let dispute = await tx.wait();
     let event = dispute.events[0].args;
 
+    disputeId = event.disputeId;
+
     while (true) {
       dispute = await verifier.disputes(event.disputeId);
 
@@ -114,9 +131,6 @@ async function disputeGame (
         debugLog('Solver: SUBMITTING FOR l=' +
           solverComputationPath.left.hash + ' r=' + solverComputationPath.right.hash);
         await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
-
-        const SOLVER_VERIFIED = (1 << 2);
-        const CHALLENGER_VERIFIED = (1 << 3);
 
         // refresh
         dispute = await verifier.disputes(event.disputeId);
@@ -163,12 +177,19 @@ async function disputeGame (
 
         solverComputationPath = nextPath;
 
+        const witnessPath = computeWitnessPath(dispute, solverMerkle);
+
+        debug('Solver respond\n',
+          `\tleft = ${solverComputationPath.left.hash}`,
+          `\tright = ${solverComputationPath.right.hash}`,
+          `\twitnessPath = ${witnessPath}`);
         tx = await verifier.respond(
           event.disputeId,
           {
             left: solverComputationPath.left.hash,
             right: solverComputationPath.right.hash,
           },
+          witnessPath,
           txOverrides
         );
         await tx.wait();
@@ -200,12 +221,19 @@ async function disputeGame (
 
         challengerComputationPath = nextPath;
 
+        const witnessPath = computeWitnessPath(dispute, challengerMerkle);
+
+        debug('Challenger respond\n',
+          `\tleft = ${challengerComputationPath.left.hash}`,
+          `\tright = ${challengerComputationPath.right.hash}`,
+          `\twitnessPath = ${witnessPath}`);
         tx = await verifier.respond(
           event.disputeId,
           {
             left: challengerComputationPath.left.hash,
             right: challengerComputationPath.right.hash,
           },
+          witnessPath,
           txOverrides
         );
         await tx.wait();
@@ -217,7 +245,16 @@ async function disputeGame (
       return;
     }
 
-    throw e;
+    // refresh again
+    const dispute = await verifier.disputes(disputeId);
+
+    let winner = 'challenger';
+    if ((dispute.state & SOLVER_VERIFIED) !== 0) {
+      winner = 'solver';
+    }
+    debugLog('winner=' + winner);
+
+    assert.equal(winner, expectedWinner, 'winner should match fixture');
   }
 }
 
@@ -240,7 +277,7 @@ contract('Verifier', function () {
   });
 
   disputeFixtures(
-    async (code, callData, solverSteps, challengerSteps, expectedWinner) => {
+    async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
       const codeContract = await deployCode(code);
 
       await disputeGame(
@@ -249,8 +286,8 @@ contract('Verifier', function () {
         codeContract.address,
         code,
         callData,
-        solverSteps,
-        challengerSteps,
+        solverMerkle,
+        challengerMerkle,
         expectedWinner
       );
     }
@@ -432,6 +469,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: ZERO_HASH,
         },
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -484,6 +522,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: ZERO_HASH,
         },
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -494,7 +533,6 @@ contract('Verifier', function () {
 
       let dispute = await verifier.disputes(disputeId);
       // TODO may add dispute result directly to Verifier?
-      const CHALLENGER_VERIFIED = 1 << 3;
 
       assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
@@ -536,6 +574,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: TWO_HASH,
         },
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -546,6 +585,7 @@ contract('Verifier', function () {
           left: ONE_HASH,
           right: ZERO_HASH,
         },
+        ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
       );
 
@@ -556,13 +596,12 @@ contract('Verifier', function () {
 
       let dispute = await verifier.disputes(disputeId);
       // TODO may add dispute result directly to Verifier?
-      const CHALLENGER_VERIFIED = 1 << 3;
 
       assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
     });
   });
 
-  it('computationPath.left is zero, should revert', async () => {
+  it('computationPath.left is zero, challenger should win', async () => {
     const code = [
       OP.PUSH1, '20',
       OP.PUSH1, '00',
@@ -584,22 +623,39 @@ contract('Verifier', function () {
     tx = await enforcer.dispute(
       codeContract.address,
       callData,
-      TWO_HASH,
+      Merkelizer.hash(ONE_HASH, ZERO_HASH),
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
     tx = await tx.wait();
     let disputeId = tx.events[0].args.disputeId;
 
-    await assertRevert(
-      verifier.respond(
-        disputeId,
-        {
-          left: ZERO_HASH,
-          right: ONE_HASH,
-        },
-        { gasLimit: GAS_LIMIT }
-      )
+    // challenger
+    tx = await verifier.respond(
+      disputeId,
+      {
+        left: ONE_HASH,
+        right: ZERO_HASH,
+      },
+      ZERO_WITNESS_PATH,
+      { gasLimit: GAS_LIMIT }
     );
+    await tx.wait();
+
+    // solver
+    tx = await verifier.respond(
+      disputeId,
+      {
+        left: ZERO_HASH,
+        right: ONE_HASH,
+      },
+      ZERO_WITNESS_PATH,
+      { gasLimit: GAS_LIMIT }
+    );
+    await tx.wait();
+
+    const dispute = await verifier.disputes(disputeId);
+
+    assert.notEqual(dispute.state & CHALLENGER_VERIFIED, 0, 'challenger should win');
   });
 });
