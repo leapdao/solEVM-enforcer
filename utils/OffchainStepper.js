@@ -46,7 +46,8 @@ const OP_SWAP16 = parseInt(OP.SWAP16, 16);
 const OP_DUP1 = parseInt(OP.DUP1, 16);
 const OP_DUP16 = parseInt(OP.DUP16, 16);
 
-const MAX_MEM_SIZE = new BN(1024 * 8);
+// 256x32 bytes
+const MAX_MEM_WORD_COUNT = new BN(256);
 
 function NumToBuf32 (val) {
   val = val.toString(16);
@@ -248,8 +249,9 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       pc = runState.programCounter;
     }
 
-    if (runState.memoryWordCount.gt(MAX_MEM_SIZE)) {
-      throw new Error('Memory access too high');
+    if (runState.memoryWordCount.gt(MAX_MEM_WORD_COUNT)) {
+      runState.vmError = true;
+      errno = OP.ERROR_INTERNAL;
     }
 
     const compactStack = runState.stackIn ? stack.slice(-runState.stackIn) : (stackFixed || []);

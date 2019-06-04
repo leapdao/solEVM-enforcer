@@ -21,6 +21,9 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 right;
     }
 
+    // 256x32 bytes as the memory limit
+    uint constant internal MAX_MEM_WORD_COUNT = 256;
+
     uint8 constant internal SOLVER_RESPONDED = 1 << 0;
     uint8 constant internal CHALLENGER_RESPONDED = 1 << 1;
     uint8 constant internal SOLVER_VERIFIED = 1 << 2;
@@ -275,6 +278,10 @@ contract Verifier is Ownable, HydratedRuntime {
         // will be changed once we land merkle tree for memory
         if (evm.mem.size > 0) {
             executionState.memSize = evm.mem.size;
+        }
+
+        if (executionState.memSize > MAX_MEM_WORD_COUNT) {
+            executionState.errno = ERROR_INTERNAL;
         }
 
         bytes32 hash = executionState.stateHash(
