@@ -280,10 +280,6 @@ contract Verifier is Ownable, HydratedRuntime {
             executionState.memSize = evm.mem.size;
         }
 
-        if (executionState.memSize > MAX_MEM_WORD_COUNT) {
-            executionState.errno = ERROR_INTERNAL;
-        }
-
         bytes32 hash = executionState.stateHash(
             hydratedState.stackHash,
             hydratedState.memHash,
@@ -294,7 +290,7 @@ contract Verifier is Ownable, HydratedRuntime {
             return;
         }
 
-        if (hash == dispute.solver.right) {
+        if (hash == dispute.solver.right && executionState.memSize < MAX_MEM_WORD_COUNT) {
             dispute.state |= SOLVER_VERIFIED;
         }
 

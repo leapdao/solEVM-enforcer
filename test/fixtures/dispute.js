@@ -423,4 +423,31 @@ module.exports = (callback) => {
       await callback(code, data, merkle, challengerMerkle, 'solver');
     });
   });
+
+  describe('Fixture for Dispute/Verifier Logic #4', function () {
+    const code = [
+      OP.PUSH3, 'a1a1a1',
+      OP.PUSH3, 'ffffff',
+      OP.MSTORE,
+      OP.PUSH1, 'f0',
+      OP.MLOAD,
+      OP.PUSH1, '20',
+      OP.PUSH1, '00',
+      OP.RETURN,
+    ];
+    const data = '0x';
+
+    let steps;
+    let merkle;
+    const stepper = new OffchainStepper();
+
+    before(async () => {
+      steps = await stepper.run({ code, data });
+      merkle = new Merkelizer().run(steps, code, data);
+    });
+
+    it('both have the same result, solver looses because of overcommit on memory', async () => {
+      await callback(code, data, merkle, merkle, 'challenger');
+    });
+  });
 };
