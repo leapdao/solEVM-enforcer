@@ -268,11 +268,11 @@ contract Verifier is Ownable, HydratedRuntime {
         executionState.returnData = evm.returnData;
         executionState.gasRemaining = evm.gas;
 
-        uint stackSize = executionState.stackSize - executionState.stack.length;
-
-        if (stackSize < 0) {
+        if (executionState.stack.length > executionState.stackSize) {
             return;
         }
+
+        uint stackSize = executionState.stackSize - executionState.stack.length;
 
         executionState.stackSize = evm.stack.size + stackSize;
         // will be changed once we land merkle tree for memory
