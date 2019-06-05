@@ -2,7 +2,7 @@
 
 const ethers = require('ethers');
 
-const OffchainStepper = require('./OffchainStepper.js');
+const HydratedRuntime = require('./HydratedRuntime.js');
 const Merkelizer = require('./Merkelizer.js');
 const ProofHelper = require('./ProofHelper.js');
 const FragmentTree = require('./FragmentTree');
@@ -297,8 +297,8 @@ module.exports = class ExecutionPoker {
       codeFragmentTree = new FragmentTree().run(bytecode);
     }
 
-    const stepper = new OffchainStepper();
-    const steps = await stepper.run({ code, data });
+    const runtime = new HydratedRuntime();
+    const steps = await runtime.run({ code, data });
     const merkle = new Merkelizer().run(steps, bytecode, data);
 
     return { steps, merkle, codeFragmentTree };
