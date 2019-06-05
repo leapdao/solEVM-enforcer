@@ -275,6 +275,11 @@ contract Verifier is Ownable, HydratedRuntime {
         uint stackSize = executionState.stackSize - executionState.stack.length;
 
         executionState.stackSize = evm.stack.size + stackSize;
+        // stackSize cant be bigger than 1024 (stack limit)
+        if (executionState.stackSize > MAX_STACK_SIZE) {
+            return;
+        }
+
         // will be changed once we land merkle tree for memory
         if (evm.mem.size > 0) {
             executionState.memSize = evm.mem.size;
