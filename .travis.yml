@@ -42,4 +42,4 @@ jobs:
       name: "test ExecutionPoker cli tool"
       script:
         - yarn compile:contracts
-        - ./tools/executionPoker/bin.js build/contracts/SpendingConditionMock.json test 0xD8992E08C1Fb17775deF02e15B620A006c4726db [] []
+        - ./tools/executionPoker.js build/contracts/SpendingConditionMock.json test 0xD8992E08C1Fb17775deF02e15B620A006c4726db [] []

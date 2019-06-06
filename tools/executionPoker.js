@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const ExecutionPoker = require('./ExecutionPoker');
+const { ExecutionPoker } = require('./../utils');
 
 const fs = require('fs');
 const ethers = require('ethers');
@@ -36,8 +36,8 @@ async function main () {
   let Enforcer;
 
   try {
-    Verifier = require('./../../build/contracts/Verifier.json');
-    Enforcer = require('./../../build/contracts/Enforcer.json');
+    Verifier = require('./../build/contracts/Verifier.json');
+    Enforcer = require('./../build/contracts/Enforcer.json');
   } catch (e) {
     console.error('Please run `npm run compile:contracts` first. 😉');
     return;

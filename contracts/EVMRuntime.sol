@@ -318,7 +318,7 @@ contract EVMRuntime is EVMConstants {
                 opcodeHandler = handleMLOAD;
                 stackIn = 1;
                 stackOut = 1;
-                gasFee = GAS_VERYLOW;
+                gasFee = GAS_ADDITIONAL_HANDLING;
             } else if (opcode == 82) {
                 opcodeHandler = handleMSTORE;
                 stackIn = 2;
@@ -1438,7 +1438,18 @@ contract EVMRuntime is EVMConstants {
     }
 
     function handleMLOAD(EVM memory state) internal {
-        state.stack.push(state.mem.load(state.stack.pop()));
+        uint addr = state.stack.pop();
+        uint gasFee = GAS_VERYLOW + computeGasForMemory(state, addr + 32);
+
+        if (gasFee > state.gas) {
+            state.gas = 0;
+            state.errno = ERROR_OUT_OF_GAS;
+            return;
+        }
+
+        state.gas -= gasFee;
+
+        state.stack.push(state.mem.load(addr));
     }
 
     function handleMSTORE(EVM memory state) internal {
@@ -1526,10 +1537,9 @@ contract EVMRuntime is EVMConstants {
     // 0x6X, 0x7X
     function handlePUSH(EVM memory state) internal {
         assert(1 <= state.n && state.n <= 32);
-        if (state.pc + state.n > state.code.length) {
-            state.errno = ERROR_INDEX_OOB;
-            return;
-        }
+
+        // we do not throw a ERROR_INDEX_OOB here,
+        // instead we right-pad with zero
         state.stack.push(state.code.toUint(state.pc + 1, state.n));
     }
 
@@ -1580,7 +1590,7 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= gasFee;
 
-        state.returnData = state.mem.toArray(start, len);
+        state.returnData = state.mem.toBytes(start, len);
     }
 
     function handleDELEGATECALL(EVM memory state) internal {
@@ -1615,7 +1625,7 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= retEvm.gas;
 
-        retEvm.data = state.mem.toArray(inOffset, inSize);
+        retEvm.data = state.mem.toBytes(inOffset, inSize);
         retEvm.customDataPtr = state.customDataPtr;
         retEvm.context = state.context;
 
@@ -1665,7 +1675,7 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= gasFee;
 
-        state.returnData = state.mem.toArray(start, len);
+        state.returnData = state.mem.toBytes(start, len);
         state.errno = ERROR_STATE_REVERTED;
     }
 

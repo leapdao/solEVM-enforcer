@@ -3,32 +3,7 @@ const VM = require('ethereumjs-vm');
 const BN = VM.deps.ethUtil.BN;
 const OP = require('./constants');
 
-const toHex = arr => arr.map(e => '0x' + e.toString(16));
-const MEMORY_OPCODES =
-  [
-    'SHA3',
-    'MLOAD',
-    'MSIZE',
-    'LOG0',
-    'LOG1',
-    'LOG2',
-    'LOG3',
-    'LOG4',
-    'CREATE',
-    'CREATE2',
-    'CALL',
-    'RETURN',
-    'DELEGATECALL',
-    'STATICCALL',
-    'REVERT',
-    'CALLDATACOPY',
-    'CODECOPY',
-    'CALLCODE',
-    'EXTCODECOPY',
-    'RETURNDATACOPY',
-    'MSTORE',
-    'MSTORE8',
-  ];
+const toHex = arr => arr.map(e => '0x' + e.toString(16).padStart(64, '0'));
 
 // Supported by ethereumjs-vm
 const ERRNO_MAP =
@@ -71,6 +46,9 @@ const OP_SWAP16 = parseInt(OP.SWAP16, 16);
 const OP_DUP1 = parseInt(OP.DUP1, 16);
 const OP_DUP16 = parseInt(OP.DUP16, 16);
 
+// 256x32 bytes
+const MAX_MEM_WORD_COUNT = new BN(256);
+
 function NumToBuf32 (val) {
   val = val.toString(16);
 
@@ -89,6 +67,68 @@ function NumToHex (val) {
   }
 
   return val;
+}
+
+class RangeProofHelper {
+  constructor (mem) {
+    const self = this;
+
+    const handler = {
+      get: function (obj, prop) {
+        if (prop === 'slice') {
+          return this.slice;
+        }
+
+        const x = parseInt(prop);
+        if (Number.isInteger(x)) {
+          if (x < self.readLow || self.readLow === -1) {
+            self.readLow = x;
+          }
+          if (x > self.readHigh || self.readHigh === -1) {
+            self.readHigh = x;
+          }
+        }
+
+        return obj[prop];
+      },
+
+      set: function (obj, prop, val) {
+        obj[prop] = val;
+
+        const x = parseInt(prop);
+        if (Number.isInteger(x)) {
+          if (x < self.writeLow || self.writeLow === -1) {
+            self.writeLow = x;
+          }
+          if (x > self.writeHigh || self.writeHigh === -1) {
+            self.writeHigh = x;
+          }
+        }
+
+        return true;
+      },
+
+      slice: function (a, b) {
+        if (a < self.readLow || self.readLow === -1) {
+          self.readLow = a;
+        }
+        if (b > self.readHigh || self.readHigh === -1) {
+          self.readHigh = b;
+        }
+        return mem.slice(a, b);
+      },
+    };
+
+    this.data = mem;
+    this.proxy = new Proxy(mem, handler);
+  }
+
+  reset () {
+    this.readLow = -1;
+    this.readHigh = -1;
+    this.writeLow = -1;
+    this.writeHigh = -1;
+  }
 }
 
 module.exports = class OffchainStepper extends VM.MetaVM {
@@ -155,27 +195,25 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       return;
     }
 
-    runState.stateManager.checkpoint(() => {});
-
-    let stack = toHex(runState.stack);
+    let prevStep = runState.context.steps[runState.context.steps.length - 1] || {};
+    // re-use if possible
+    let stack = prevStep.stack || toHex(runState.stack);
     let pc = runState.programCounter;
     let gasLeft = runState.gasLeft.addn(0);
     let exceptionError;
 
+    const memProof = runState.memProof;
+    const callDataProof = runState.callDataProof;
+
+    callDataProof.reset();
+    memProof.reset();
     try {
       await super.runNextStep(runState);
     } catch (e) {
       exceptionError = e;
     }
 
-    let isCallDataRequired = false;
     let opcodeName = runState.opName;
-    if (opcodeName === 'CALLDATASIZE' ||
-      opcodeName === 'CALLDATACOPY' ||
-      opcodeName === 'CALLDATALOAD') {
-      isCallDataRequired = true;
-    }
-
     let opcode = runState.opCode;
     let stackFixed;
 
@@ -211,19 +249,50 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       pc = runState.programCounter;
     }
 
-    // TODO: compact memory -& callData
-    const isMemoryRequired = MEMORY_OPCODES.indexOf(opcodeName) !== -1;
+    if (runState.memoryWordCount.gt(MAX_MEM_WORD_COUNT)) {
+      runState.vmError = true;
+      errno = OP.ERROR_INTERNAL;
+    }
+
     const compactStack = runState.stackIn ? stack.slice(-runState.stackIn) : (stackFixed || []);
-    const returnData = runState.returnValue ? runState.returnValue.toString('hex') : '';
+    const returnData = '0x' + (runState.returnValue ? runState.returnValue.toString('hex') : '');
     const gasRemaining = runState.gasLeft.toNumber();
     const gasFee = gasLeft.sub(runState.gasLeft).toNumber();
-    let mem = Buffer.from(runState.memory).toString('hex');
-    while ((mem.length % 64) !== 0) {
-      mem += '00';
+    const memStore = runState.memProof.data;
+    const mem = [];
+
+    let i = 0;
+    while (i < memStore.length) {
+      let hexVal = Buffer.from(memStore.slice(i, i += 32)).toString('hex');
+      while (hexVal.length !== 64) {
+        hexVal += '00';
+      }
+      mem.push('0x' + hexVal);
+    }
+    // fill the remaing zero slots
+    let memSize = runState.memoryWordCount.toNumber();
+    while (mem.length < memSize) {
+      mem.push(OP.ZERO_HASH);
     }
 
     stack = toHex(runState.stack);
+    let isMemoryRequired = false;
+    if (memProof.readHigh !== -1 || memProof.writeHigh !== -1) {
+      isMemoryRequired = true;
+    }
+
+    let isCallDataRequired = false;
+    if (callDataProof.readHigh !== -1 || callDataProof.writeHigh !== -1) {
+      isCallDataRequired = true;
+    }
+
     runState.context.steps.push({
+      memReadLow: memProof.readLow,
+      memReadHigh: memProof.readHigh,
+      memWriteLow: memProof.writeLow,
+      memWriteHigh: memProof.writeHigh,
+      callDataReadLow: callDataProof.readLow,
+      callDataReadHigh: callDataProof.readHigh,
       opcodeName: opcodeName,
       isCallDataRequired: isCallDataRequired,
       isMemoryRequired: isMemoryRequired,
@@ -239,8 +308,8 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     });
   }
 
-  async run ({ code, data, stack, mem, gasLimit, blockGasLimit, gasRemaining, pc }) {
-    data = data ? data.replace('0x', '') : '';
+  async run ({ code, data, stack, mem, gasLimit, blockGasLimit, gasRemaining, pc, stepCount }) {
+    data = data || '0x';
     blockGasLimit = Buffer.from(NumToHex(blockGasLimit || OP.BLOCK_GAS_LIMIT), 'hex');
 
     // TODO: make it configurable by the user
@@ -275,7 +344,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
 
     const runState = await this.initRunState({
       code: Buffer.from(code.join(''), 'hex'),
-      data: Buffer.from(data, 'hex'),
+      data: Buffer.from(data.replace('0x', ''), 'hex'),
       gasLimit: Buffer.from(NumToHex(gasLimit || OP.BLOCK_GAS_LIMIT), 'hex'),
       gasPrice: 0,
       caller: DEFAULT_CALLER,
@@ -286,22 +355,31 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     });
     runState.context = context;
 
+    runState.memProof = new RangeProofHelper(runState.memory);
+    runState.callDataProof = new RangeProofHelper(runState.callData);
+    runState.callData = runState.callDataProof.proxy;
+    runState.memory = runState.memProof.proxy;
+
     if (context.stack) {
-      let len = context.stack.length;
+      const len = context.stack.length;
+
       for (let i = 0; i < len; i++) {
         runState.stack.push(new BN(context.stack[i].replace('0x', ''), 'hex'));
       }
     }
     if (context.mem) {
-      const tmp = context.mem.join ? context.mem.join('') : context.mem.replace('0x', '');
-      const len = tmp.length;
+      const len = context.mem.length;
 
-      for (let i = 0; i < len;) {
-        if (i % 64 === 0) {
-          runState.memoryWordCount.iaddn(1);
+      for (let i = 0; i < len; i++) {
+        const memSlot = context.mem[i];
+
+        runState.memoryWordCount.iaddn(1);
+
+        for (let x = 2; x < 66;) {
+          const hexVal = memSlot.substring(x, x += 2);
+
+          runState.memProof.data.push(hexVal ? parseInt(hexVal, 16) : 0);
         }
-        let x = tmp.substring(i, i += 2);
-        runState.memory.push(parseInt(x, 16));
       }
 
       const words = runState.memoryWordCount;
@@ -313,9 +391,24 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       runState.gasLeft.isub(runState.gasLeft.sub(new BN(context.gasRemaining)));
     }
 
-    await super.run(runState, 0);
+    await super.run(runState, stepCount | 0);
 
     return context.steps;
+  }
+
+  async handlePUSH (runState) {
+    // needs to be right-padded with zero
+    const numToPush = runState.opCode - 0x5f;
+    const result = new BN(
+      runState.code.slice(
+        runState.programCounter, runState.programCounter + numToPush
+      ).toString('hex').padEnd(numToPush * 2, '0')
+      ,
+      16
+    );
+
+    runState.programCounter += numToPush;
+    runState.stack.push(result);
   }
 
   async handleCALL (runState) {
@@ -338,6 +431,10 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     runState.stack = runState.stack.slice(0, runState.stack.length - 6);
     runState.stack.push(new BN(0));
 
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleCALLCODE (runState) {
     throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
 

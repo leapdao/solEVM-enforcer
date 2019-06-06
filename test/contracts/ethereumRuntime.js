@@ -1,4 +1,4 @@
-const { toNum, toStr, getCode, deployContract, deployCode } =
+const { getCode, deployContract, deployCode } =
   require('./../helpers/utils');
 const fixtures = require('./../fixtures/runtime');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
@@ -64,7 +64,7 @@ contract('Runtime', function () {
           mem: res.mem,
         }
       );
-      assert.deepEqual(toNum(stack), [8]);
+      assert.deepEqual(stack, ['0x0000000000000000000000000000000000000000000000000000000000000008']);
     });
 
     let totalGasUsed = 0;
@@ -73,7 +73,7 @@ contract('Runtime', function () {
       const { code, pc, opcodeUnderTest } = getCode(fixture);
       it(fixture.description || opcodeUnderTest, async () => {
         const stack = fixture.stack || [];
-        const mem = fixture.memory || '0x';
+        const mem = fixture.memory || [];
         const data = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
@@ -97,7 +97,7 @@ contract('Runtime', function () {
         }
 
         if (fixture.result.stack) {
-          assert.deepEqual(toStr(res.stack), fixture.result.stack, 'stack');
+          assert.deepEqual(res.stack, fixture.result.stack, 'stack');
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.mem, fixture.result.memory, 'memory');
@@ -205,7 +205,7 @@ contract('Runtime', function () {
 
   it('should stack overflow', async function () {
     const code = [OP.PUSH1, '00'];
-    const stack = Array(1024).fill(0);
+    const stack = Array(1024).fill(OP.ZERO_HASH);
     const codeContract = await deployCode(code);
     const res = await rt.execute({ code: codeContract.address, stack });
     assert.equal(res.errno, OP.ERROR_STACK_OVERFLOW);

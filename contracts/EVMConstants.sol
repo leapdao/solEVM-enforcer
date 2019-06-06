@@ -233,6 +233,7 @@ contract EVMConstants {
     uint8 constant internal ERROR_ILLEGAL_WRITE_OPERATION = 0x0b;
     uint8 constant internal ERROR_PRECOMPILE_NOT_IMPLEMENTED = 0x0c;
     uint8 constant internal ERROR_OUT_OF_GAS = 0x0d;
+    uint8 constant internal ERROR_INTERNAL = 0xff;
 
     // ENV
 

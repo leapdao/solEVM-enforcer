@@ -1,8 +1,7 @@
-
-const Merkelizer = require('./../../utils/Merkelizer');
-const OffchainStepper = require('./../../utils/OffchainStepper');
-
-const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const OffchainStepper = require('./OffchainStepper.js');
+const Merkelizer = require('./Merkelizer.js');
+const ProofHelper = require('./ProofHelper.js');
+const { ZERO_HASH } = require('./constants.js');
 
 module.exports = class ExecutionPoker {
   constructor (enforcer, verifier, wallet, gasLimit, logTag) {
@@ -202,34 +201,15 @@ module.exports = class ExecutionPoker {
   }
 
   async submitProof (disputeId, computationPath) {
-    const prevOutput = computationPath.left.executionState;
-    const execState = computationPath.right.executionState;
+    const args = ProofHelper.constructProof(computationPath);
 
-    const proofs = {
-      stackHash: Merkelizer.stackHash(
-        prevOutput.stack.slice(0, prevOutput.stack.length - execState.compactStack.length)
-      ),
-      memHash: execState.isMemoryRequired ? ZERO_HASH : Merkelizer.memHash(prevOutput.mem),
-      dataHash: execState.isCallDataRequired ? ZERO_HASH : Merkelizer.dataHash(prevOutput.data),
-    };
-
-    const execStateArgs = {
-      data: '0x' + (execState.isCallDataRequired ? prevOutput.data : ''),
-      stack: execState.compactStack,
-      mem: '0x' + (execState.isMemoryRequired ? prevOutput.mem : ''),
-      returnData: '0x' + prevOutput.returnData,
-      pc: prevOutput.pc,
-      gasRemaining: prevOutput.gasRemaining,
-      customEnvironmentHash: ZERO_HASH,
-    };
-
-    this.log('submitting proof - proofs', proofs);
-    this.log('submitting proof - executionState', execStateArgs);
+    this.log('submitting proof - proofs', args.proofs);
+    this.log('submitting proof - executionState', args.executionInput);
 
     let tx = await this.verifier.submitProof(
       disputeId,
-      proofs,
-      execStateArgs,
+      args.proofs,
+      args.executionInput,
       { gasLimit: this.gasLimit }
     );
 
