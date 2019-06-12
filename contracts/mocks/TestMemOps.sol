@@ -2,8 +2,7 @@ pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
 
-import "truffle/Assert.sol";
-import {MemOps} from "../../contracts/MemOps.slb";
+import { MemOps } from "../MemOps.slb";
 
 
 contract TestMemOps {
@@ -21,7 +20,7 @@ contract TestMemOps {
         assembly {
             fMem2 := mload(0x40)
         }
-        Assert.equal(fMem2, fMem + NUM_WORDS*WORD_SIZE, "Free Memory Pointer after alocate32");
+        require(fMem2 == fMem + NUM_WORDS*WORD_SIZE, "Free Memory Pointer after alocate32");
     }
 
     function testMemcopy32() public {
@@ -48,7 +47,7 @@ contract TestMemOps {
             assembly {
                 val := mload(pos)
             }
-            Assert.equal(val, i + 1, "memcopy32");
+            require(val == i + 1, "memcopy32");
         }
     }
 }
