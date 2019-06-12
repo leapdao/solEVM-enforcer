@@ -23,37 +23,35 @@ contract('PlasmaVerifier', () => {
     interceptor = await deployContract(Interceptor, 1000000);
   });
 
-  describe('SpendingConditionMock', () => {
-    it('should pass', async () => {
-      let tx;
-      let data = spendingCondition.interface.functions.test.encode(
-        [tokenContract.address, receivers, txAmounts]
-      );
+  it('should pass with SpendingConditionMock', async () => {
+    let tx;
+    let data = spendingCondition.interface.functions.test.encode(
+      [tokenContract.address, receivers, txAmounts]
+    );
 
-      tx = await interceptor.testRun(
-        {
-          caller: wallets[0].address,
-          spendingCondition: spendingCondition.address,
-          callData: data,
-        },
-        txOverrides
-      );
-      tx = await tx.wait();
+    tx = await interceptor.testRun(
+      {
+        caller: wallets[0].address,
+        spendingCondition: spendingCondition.address,
+        callData: data,
+      },
+      txOverrides
+    );
+    tx = await tx.wait();
 
-      tx.events.forEach(
-        (ele) => {
-          if (ele.args.pc !== undefined) {
-            let hexStr = ele.args.opcode.toString(16);
-            if (hexStr.length === 1) {
-              hexStr = '0' + hexStr;
-            }
-            console.log(ele.args.stepRun + ' pc=' + ele.args.pc + 'opcode=' + opcodeNames[hexStr]);
-            return;
+    tx.events.forEach(
+      (ele) => {
+        if (ele.args.pc !== undefined) {
+          let hexStr = ele.args.opcode.toString(16);
+          if (hexStr.length === 1) {
+            hexStr = '0' + hexStr;
           }
-
-          console.log(ele.args);
+          console.log(ele.args.stepRun + ' pc=' + ele.args.pc + 'opcode=' + opcodeNames[hexStr]);
+          return;
         }
-      );
-    });
+
+        console.log(ele.args);
+      }
+    );
   });
 });
