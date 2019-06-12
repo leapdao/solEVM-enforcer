@@ -245,7 +245,8 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       runState.vmError = true;
     }
 
-    if (errno === 0 && opcodeName !== 'RETURN') {
+    // if we have no errors and opcode is not RETURN or STOP, update pc
+    if (errno === 0 && (opcode !== 0xf3 && opcode !== 0x00)) {
       pc = runState.programCounter;
     }
 

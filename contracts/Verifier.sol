@@ -419,33 +419,4 @@ contract Verifier is Ownable, HydratedRuntime {
         }
         emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
     }
-
-    function handleCREATE(EVM memory state) internal {
-        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-    }
-
-    function handleCREATE2(EVM memory state) internal {
-        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-    }
-
-    function handleCALL(EVM memory state) internal {
-        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-    }
-
-    function handleDELEGATECALL(EVM memory state) internal {
-        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-    }
-
-    function handleSTATICCALL(EVM memory state) internal {
-        // TODO: only support precompiles
-        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-    }
-
-    function handleCALLCODE(EVM memory state) internal {
-        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-    }
-
-    function handleEXTCODEHASH(EVM memory state) internal {
-        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-    }
 }

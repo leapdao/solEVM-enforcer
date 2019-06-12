@@ -3355,7 +3355,7 @@ module.exports = [
   {
     code: OP.STOP,
     result: {
-      pc: 1,
+      pc: 0,
     },
   },
   {
