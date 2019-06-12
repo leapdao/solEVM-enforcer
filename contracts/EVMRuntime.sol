@@ -634,7 +634,7 @@ contract EVMRuntime is EVMConstants {
                 evm.pc = pc;
                 opcodeHandler(evm);
                 pcNext = evm.pc;
-            } else if (opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_SELFDESTRUCT) {
+            } else if (opcode == OP_STOP || opcode == OP_RETURN || opcode == OP_REVERT || opcode == OP_SELFDESTRUCT) {
                 opcodeHandler(evm);
                 break;
             } else {
@@ -657,9 +657,6 @@ contract EVMRuntime is EVMConstants {
             }
             if (evm.errno == NO_ERROR) {
                 pc = pcNext;
-            }
-            if (opcode == OP_STOP) {
-                break;
             }
             stepRun = stepRun + 1;
         }
