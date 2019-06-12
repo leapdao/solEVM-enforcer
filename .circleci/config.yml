@@ -1,0 +1,125 @@
+version: 2
+
+defaults: &defaults
+  working_directory: ~/solEVM-enforcer
+  docker:
+    - image: circleci/node:lts
+
+restore_node_modules: &restore_node_modules
+  restore_cache:
+    name: 'restore_cache'
+    keys:
+      - v1-node-{{ .Branch }}-{{ checksum 'package.json' }}
+      - v1-node-{{ checksum 'package.json' }}
+
+jobs:
+  setup:
+    <<: *defaults
+    steps:
+      - checkout
+      - *restore_node_modules
+      - run:
+          name: 'setup dependencies'
+          command:
+            - yarn
+            - yarn add codecov
+            - yarn add https://github.com/leapdao/solidity-coverage.git#bb22d28edb700040ddb614bb2a4605f641383ced
+      - save_cache:
+          name: 'save_cache'
+          key: v1-node-{{ .Branch }}-{{ checksum 'package.json' }}
+          paths:
+            - node_modules/
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - solEVM-enforcer
+
+  lint:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - *restore_node_modules
+      - run:
+          name: 'lint:all'
+          command: yarn lint:all
+
+  test_contracts:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - *restore_node_modules
+      - run:
+          name: 'test:contracts'
+          command: yarn test:contracts
+
+  test_utils:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - *restore_node_modules
+      - run:
+          name: 'test:utils'
+          command: yarn test:utils
+
+  test_coverage:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - *restore_node_modules
+      - run:
+          name: 'Solidity Coverage'
+          command:
+            - yarn coverage
+            - ./node_modules/.bin/codecov -f coverage/lcov.info
+
+  test_contracts_geth:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - *restore_node_modules
+      - run:
+          name: 'test:contracts with geth'
+          command:
+            - wget 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.22-7fa3509e.tar.gz' -O - | tar -xz; mv geth-*/geth .
+            - PATH=`pwd`:$PATH ./scripts/test_geth.sh test/contracts/*
+
+  test_execution_poker:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: ~/
+      - *restore_node_modules
+      - run:
+          name: 'test ExecutionPoker cli tool'
+          command:
+            - yarn compile:contracts
+            - ./tools/executionPoker.js build/contracts/SpendingConditionMock.json test 0xD8992E08C1Fb17775deF02e15B620A006c4726db [] []
+
+workflows:
+  version: 2
+  setup-lint-test:
+    jobs:
+      - setup
+      - lint:
+          requires:
+            - setup
+      - test_contracts:
+          requires:
+            - setup
+      - test_utils:
+          requires:
+            - setup
+      - test_coverage:
+          requires:
+            - setup
+      - test_contracts_geth:
+          requires:
+            - setup
+      - test_execution_poker:
+          requires:
+            - setup
