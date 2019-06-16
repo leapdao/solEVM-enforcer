@@ -30,7 +30,7 @@ contract Enforcer {
         _;
     }
 
-    event Registered(bytes32 indexed executionId, address indexed solver, address codeContractAddress, bytes _callData);
+    event Registered(bytes32 indexed executionId, address indexed solver, bytes32 codeHashRoot, bytes _callData);
     event DisputeInitialised(bytes32 indexed disputeId, bytes32 indexed executionId);
     event Slashed(bytes32 indexed executionId, address indexed _address);
 
@@ -43,7 +43,7 @@ contract Enforcer {
 
     // register a new execution
     function register(
-        address codeContractAddress,
+        bytes32 codeHashRoot,
         bytes memory _callData,
         bytes32 endHash,
         uint256 executionDepth,
@@ -55,7 +55,7 @@ contract Enforcer {
         require(msg.value == bondAmount, "Bond is required");
         require(executionDepth <= maxExecutionDepth, "Execution too long");
 
-        bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
+        bytes32 executionId = keccak256(abi.encodePacked(codeHashRoot, _callData));
 
         require(executions[executionId].startBlock == 0, "Execution already registered");
         executions[executionId] = Execution(
@@ -67,7 +67,7 @@ contract Enforcer {
         );
         bonds[msg.sender] += bondAmount;
 
-        emit Registered(executionId, msg.sender, codeContractAddress, _callData);
+        emit Registered(executionId, msg.sender, codeHashRoot, _callData);
     }
 
     /**
@@ -76,10 +76,10 @@ contract Enforcer {
       *     in case challenger's tree is shallower, he should use node with zero hash to make it deeper
       *     in case challenger's tree is deeper, he should submit only the left subtree with the same depth with solver's
       */
-    function dispute(address codeContractAddress, bytes memory _callData, bytes32 endHash)
+    function dispute(bytes32 codeHashRoot, bytes memory _callData, bytes32 endHash)
         public payable
     {
-        bytes32 executionId = keccak256(abi.encodePacked(codeContractAddress, _callData));
+        bytes32 executionId = keccak256(abi.encodePacked(codeHashRoot, _callData));
 
         Execution storage execution = executions[executionId];
 
@@ -101,7 +101,7 @@ contract Enforcer {
             execution.customEnvironmentHash,
             // challenger
             msg.sender,
-            codeContractAddress,
+            codeHashRoot,
             _callData
         );
 

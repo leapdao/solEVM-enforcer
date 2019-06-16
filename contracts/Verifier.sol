@@ -35,7 +35,7 @@ contract Verifier is Ownable, HydratedRuntime {
     struct Dispute {
         bytes32 executionId;
         bytes32 initialStateHash;
-        address codeContractAddress;
+        bytes32 codeHashRoot;
         address challengerAddr;
 
         bytes32 solverPath;
@@ -96,7 +96,7 @@ contract Verifier is Ownable, HydratedRuntime {
         // optional for implementors
         bytes32 customEnvironmentHash,
         address challenger,
-        address codeContractAddress,
+        bytes32 codeHashRoot,
         // TODO: should be the bytes32 root hash later on
         bytes memory callData
     ) public onlyEnforcer() returns (bytes32 disputeId) {
@@ -119,7 +119,7 @@ contract Verifier is Ownable, HydratedRuntime {
         disputes[disputeId] = Dispute(
             executionId,
             initialStateHash,
-            codeContractAddress,
+            codeHashRoot,
             challenger,
             solverHashRoot,
             challengerHashRoot,
@@ -219,20 +219,21 @@ contract Verifier is Ownable, HydratedRuntime {
             }
         }
 
-        if ((dispute.state & END_OF_EXECUTION) != 0) {
-            address codeAddress = dispute.codeContractAddress;
-            uint pos = executionState.pc;
-            uint8 opcode;
+        // TODO no more extcodecopy
+        // if ((dispute.state & END_OF_EXECUTION) != 0) {
+        //     address codeAddress = dispute.codeContractAddress;
+        //     uint pos = executionState.pc;
+        //     uint8 opcode;
 
-            assembly {
-                extcodecopy(codeAddress, 31, pos, 1)
-                opcode := mload(0)
-            }
+        //     assembly {
+        //         extcodecopy(codeAddress, 31, pos, 1)
+        //         opcode := mload(0)
+        //     }
 
-            if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
-                return;
-            }
-        }
+        //     if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
+        //         return;
+        //     }
+        // }
 
         EVM memory evm;
         HydratedState memory hydratedState = initHydratedState(evm);
@@ -252,7 +253,8 @@ contract Verifier is Ownable, HydratedRuntime {
 
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
-        evm.code = EVMCode.fromAddress(dispute.codeContractAddress);
+        // TODO no more fromAddress
+        // evm.code = EVMCode.fromAddress(dispute.codeContractAddress);
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
