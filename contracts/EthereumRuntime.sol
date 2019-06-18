@@ -60,7 +60,7 @@ contract EthereumRuntime is HydratedRuntime {
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
 
-        evm.code = EVMCode.fromAddress(img.code);
+        // evm.code = EVMCode.fromAddress(img.code);
         evm.stack = EVMStack.fromArray(img.stack);
         evm.mem = EVMMemory.fromArray(img.mem);
 
