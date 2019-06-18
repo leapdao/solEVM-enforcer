@@ -1,21 +1,23 @@
-pragma experimental "v0.5.0";
+pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
-pragma solidity 0.4.24;
 
 import {MemOps} from "./MemOps.slb";
 
 
 library EVMStack {
-    
+
+    // TODO: make that programmable?
+    // possible could look like:
+    // EVMRuntime:defaultStackSize() < could be overwritten 
     uint constant internal INITIAL_CAP = 64;
     uint constant internal MAX_SIZE = 1024;
-    
+
     struct Stack {
         uint size;
         uint cap;
         uint dataPtr;
     }
-    
+
     // Re-sizes and re-allocates the stack.
     function expandCapacity(Stack memory self, uint capIncrease) internal pure {
         assert(capIncrease != 0);
@@ -26,31 +28,31 @@ library EVMStack {
         MemOps.memcopy32(src, dest, self.size);
         self.dataPtr = dest;
     }
-    
+
     function newStack() internal pure returns (Stack memory stk) {
         stk.size = 0;
         stk.cap = INITIAL_CAP;
         stk.dataPtr = MemOps.allocate32(INITIAL_CAP);
     }
-    
-    function fromArray(uint[] memory sArr) internal pure returns (Stack memory stk) {
+
+    function fromArray(bytes32[] memory sArr) internal pure returns (Stack memory stk) {
         stk.size = sArr.length;
         stk.cap = sArr.length + INITIAL_CAP;
         stk.dataPtr = MemOps.allocate32(sArr.length + INITIAL_CAP);
         for (uint i = 0; i < sArr.length; i++) {
-            uint val = sArr[i];
+            bytes32 val = sArr[i];
             uint slot = stk.dataPtr + 32*i;
             assembly {
                 mstore(slot, val)
             }
         }
     }
-    
-    function toArray(Stack memory self) internal pure returns (uint[] memory arr) {
+
+    function toArray(Stack memory self) internal pure returns (bytes32[] memory arr) {
         if (self.size == 0) {
-            return;
+            return arr;
         }
-        arr = new uint[](self.size);
+        arr = new bytes32[](self.size);
         uint dest;
         assembly {
             dest := add(arr, 0x20)
@@ -58,7 +60,7 @@ library EVMStack {
         MemOps.memcopy32(self.dataPtr, dest, self.size);
     }
     
-    function push(Stack self, uint val) internal pure {
+    function push(Stack memory self, uint val) internal pure {
         assert(self.size < MAX_SIZE);
         if (self.size == self.cap) {
             expandCapacity(self, 32);
@@ -69,7 +71,7 @@ library EVMStack {
         }
     }
     
-    function pop(Stack self) internal pure returns (uint) {
+    function pop(Stack memory self) internal pure returns (uint) {
         assert(self.size > 0);
         uint data;
         uint slot = self.dataPtr + --self.size*32;
@@ -79,18 +81,8 @@ library EVMStack {
         }
         return data;
     }
-    
-    function read(Stack self, uint index) internal pure returns (uint) {
-        assert(index < self.size);
-        uint data;
-        uint slot = self.dataPtr + index*32;
-        assembly {
-            data := mload(slot)
-        }
-        return data;
-    }
-    
-    function dup(Stack self, uint n) internal pure {
+
+    function dup(Stack memory self, uint n) internal pure {
         assert(self.size < MAX_SIZE);
         assert(1 <= n && n <= 16);
         assert(n <= self.size);
@@ -108,7 +100,7 @@ library EVMStack {
         }
     }
     
-    function swap(Stack self, uint n) internal pure {
+    function swap(Stack memory self, uint n) internal pure {
         assert(1 <= n && n <= 16);
         assert(n < self.size);
         uint slot1 = self.dataPtr + (self.size - 1)*32;
@@ -119,5 +111,4 @@ library EVMStack {
             mstore(slot2, data1)
         }
     }
-    
 }

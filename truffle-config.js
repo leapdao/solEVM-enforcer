@@ -1,13 +1,15 @@
-require('babel-register');
-require('babel-polyfill');
 
 module.exports = {
-  solc: {
-    // TODO: the code is supposed to work on constantinople EVM but fails if this is switched on
-    // evmVersion: 'constantinople',
-    optimizer: {
-      enabled: true,
-      runs: 2,
+  compilers: {
+    solc: {
+      version: '0.5.2',
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 2,
+        },
+        evmVersion: 'constantinople',
+      },
     },
   },
   networks: {
@@ -24,6 +26,20 @@ module.exports = {
       network_id: '*', // eslint-disable-line camelcase
       gas: 0xfffffffffffff,
       gasPrice: 0x01,
+    },
+    coverage: {
+      host: 'localhost',
+      port: 8555,
+      network_id: '*', // eslint-disable-line camelcase
+      gas: 0xfffffffffffff,
+      gasPrice: 0x01,
+    },
+    gasPrice: {
+      host: 'localhost',
+      port: 8545,
+      network_id: '*', // eslint-disable-line camelcase
+      gas: 0xfffffffffffff,
+      gasPrice: 3 * (10 ** 9),
     },
   },
 };

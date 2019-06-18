@@ -1,0 +1,70 @@
+pragma solidity ^0.5.2;
+pragma experimental ABIEncoderV2;
+
+
+library EVMCode {
+
+    struct Code {
+        address codeAddress;
+        bytes codeBytes;
+        uint length;
+    }
+
+    function fromAddress(address codeAddress) internal view returns (Code memory code) {
+        code.codeAddress = codeAddress;
+        uint codeSize;
+        assembly {
+            codeSize := extcodesize(codeAddress)
+        }
+
+        code.length = codeSize;
+    }
+
+    function fromBytes(bytes memory codeBytes) internal pure returns (Code memory code) {
+        code.codeBytes = codeBytes;
+        code.length = codeBytes.length;
+    }
+
+    function getOpcodeAt(Code memory self, uint pos) internal view returns (uint8 opcode) {
+        address codeContractAddress = self.codeAddress;
+
+        if (codeContractAddress == address(0)) {
+            opcode = uint8(self.codeBytes[pos]);
+        } else {
+            assembly {
+                extcodecopy(codeContractAddress, 31, pos, 1)
+                opcode := mload(0)
+            }
+        }
+    }
+
+    function toBytes(Code memory self) internal view returns (bytes memory bts) {
+        address codeContractAddress = self.codeAddress;
+
+        if (codeContractAddress == address(0)) {
+            bts = self.codeBytes;
+        } else {
+            uint size = self.length;
+            assembly {
+                bts := mload(0x40)
+                // padding up to word size
+                mstore(0x40, add(bts, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+                mstore(bts, size)
+                extcodecopy(codeContractAddress, add(bts, 0x20), 0, size)
+            }
+        }
+    }
+
+    function toUint(Code memory self, uint pos, uint numBytes) internal view returns (uint data) {
+        // if pos + numBytes > self.length, we get zeroes.
+        // this is the behaviour we want
+        assert(32 >= numBytes && numBytes > 0);
+
+        address codeContractAddress = self.codeAddress;
+        assembly {
+            extcodecopy(codeContractAddress, 0, pos, numBytes)
+            data := mload(0)
+        }
+        data = data >> 8 * (32 - numBytes);
+    }
+}

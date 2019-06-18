@@ -1,0 +1,80 @@
+pragma solidity ^0.5.2;
+pragma experimental ABIEncoderV2;
+
+
+library Merkelizer {
+    uint constant internal DEFAULT_GAS = 0x0fffffffffffff;
+
+    struct ExecutionState {
+        bytes data;
+        bytes32[] stack;
+        bytes32[] mem;
+        bytes32 customEnvironmentHash;
+        bytes returnData;
+        uint pc;
+        uint gasRemaining;
+        uint stackSize;
+        uint memSize;
+    }
+
+    function memHash(bytes32[] memory _mem) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_mem));
+    }
+
+    function dataHash(bytes memory _data) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_data));
+    }
+
+    function stackHash(ExecutionState memory self, bytes32 _sibling) internal pure returns (bytes32) {
+        bytes32 hash = _sibling;
+        bytes32[] memory stack = self.stack;
+
+        for (uint i = 0; i < stack.length; i++) {
+            assembly {
+                mstore(0, hash)
+                mstore(0x20, mload(add(add(stack, 0x20), mul(i, 0x20))))
+                hash := keccak256(0, 0x40)
+            }
+        }
+
+        return hash;
+    }
+
+    function stateHash(
+        ExecutionState memory self,
+        bytes32 _stackHash,
+        bytes32 _memHash,
+        bytes32 _dataHash
+    ) internal pure returns (bytes32) {
+        if (_memHash == 0) {
+            _memHash = memHash(self.mem);
+        }
+
+        if (_dataHash == 0) {
+            _dataHash = dataHash(self.data);
+        }
+
+        return keccak256(
+            abi.encodePacked(
+                _stackHash,
+                _memHash,
+                _dataHash,
+                self.customEnvironmentHash,
+                self.returnData,
+                self.pc,
+                self.gasRemaining,
+                self.stackSize,
+                self.memSize
+            )
+        );
+    }
+
+    function initialStateHash(bytes memory callData, bytes32 customEnvironmentHash) internal pure returns (bytes32) {
+        ExecutionState memory e;
+        e.data = callData;
+        e.gasRemaining = DEFAULT_GAS;
+        e.customEnvironmentHash = customEnvironmentHash;
+
+        return stateHash(e, 0, 0, 0);
+    }
+}
