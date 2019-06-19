@@ -160,7 +160,7 @@ contract('Enforcer', () => {
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
 
-    await assertRevert(tx, 'Execution does not existed');
+    await assertRevert(tx, 'Execution does not exist');
   });
 
   it('not allow dispute without bond', async () => {
@@ -221,7 +221,7 @@ contract('Enforcer', () => {
       true,
       challenger.address,
       { gasLimit: GAS_LIMIT });
-    await assertRevert(tx, 'Execution does not existed');
+    await assertRevert(tx, 'Execution does not exist');
   });
 
   it('not allow submit result of execution after challenge period', async () => {
