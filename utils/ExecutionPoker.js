@@ -10,16 +10,44 @@ module.exports = class ExecutionPoker {
     this.wallet = wallet;
     this.gasLimit = gasLimit || 0xfffffffffffff;
     this.logTag = logTag || 'unkn';
+    this.executionParams = {};
     this.disputes = {};
     this.solutions = {};
 
     this.enforcer.on(
-      this.enforcer.filters.Registered(),
-      async (execId, addr, code, data, tx) => {
-        if (addr !== this.wallet.address) {
-          this.validateExecution(execId, code, data);
+      this.enforcer.filters.Request(),
+      async (executionId, parameters, tx) => {
+        const params = {
+          origin: parameters[0],
+          target: parameters[1],
+          blockHash: parameters[2],
+          blockNumber: parameters[3],
+          time: parameters[4],
+          txGasLimit: parameters[5],
+          customEnvironmentHash: parameters[6],
+          codeHash: parameters[7],
+          dataHash: parameters[8],
+        };
+        this.executionParams[executionId] = params;
+
+        const receipt = await tx.getTransactionReceipt();
+
+        if (receipt.from === this.wallet.address) {
+          this.log('execution request', { executionId, params });
+          this.registerExecution(executionId, params);
         } else {
-          this.log('execution registered', execId);
+          this.log('execution requested', { executionId, params });
+        }
+      }
+    );
+
+    this.enforcer.on(
+      this.enforcer.filters.Registered(),
+      async (execId, solverAddr, executionResultId, endHash, executionDepth, resultHash, tx) => {
+        if (solverAddr !== this.wallet.address) {
+          this.validateExecution(execId, executionResultId);
+        } else {
+          this.log('execution result registered', execId);
         }
       }
     );
@@ -65,16 +93,25 @@ module.exports = class ExecutionPoker {
     console.log(this.logTag, ':', ...args);
   }
 
-  async registerExecution (contractAddr, data) {
+  async requestExecution (evmParameter) {
+    let tx = await this.enforcer.request(evmParameter);
+
+    tx = await tx.wait();
+
+    const executionId = tx.events[0].args.executionId;
+
+    return { executionId, evmParameter };
+  }
+
+  async registerExecution (executionId, evmParams) {
     // make the last step invalid
-    const res = await this.computeCall(contractAddr, data, true);
+    const res = await this.computeCall(evmParams, true);
     const bondAmount = await this.enforcer.bondAmount();
 
     this.log('registering execution:', res.steps.length, 'steps');
 
     let tx = await this.enforcer.register(
-      contractAddr,
-      data,
+      executionId,
       res.merkle.root.hash,
       res.merkle.depth,
       ZERO_HASH,
@@ -83,33 +120,35 @@ module.exports = class ExecutionPoker {
 
     tx = await tx.wait();
 
-    let evt = tx.events[0].args;
+    const evt = tx.events[0].args;
 
     this.solutions[evt.executionId] = res;
   }
 
-  async validateExecution (execId, contractAddr, data) {
-    this.log('validating execution', execId);
+  async validateExecution (execId, execResultId) {
+    this.log('validating execution result', execResultId);
 
-    const execution = await this.enforcer.executions(execId);
-    const res = await this.computeCall(contractAddr, data);
+    const executionParams = this.executionParams[execId];
+    const executionResult = await this.enforcer.executionResults(execResultId);
 
-    const solverHash = execution.endHash;
+    const res = await this.computeCall(executionParams);
+
+    const solverHash = executionResult.endHash;
     const challengerHash = res.merkle.root.hash;
 
     // TODO: MerkleTree resizing
     // check execution length and resize tree if necessary
 
-    console.log('solverHash', solverHash);
-    console.log('challengerHash', challengerHash);
+    this.log('solverHash', solverHash);
+    this.log('challengerHash', challengerHash);
 
     if (solverHash !== challengerHash) {
       const bondAmount = await this.enforcer.bondAmount();
 
       let tx = await this.enforcer.dispute(
-        contractAddr,
-        data,
+        execResultId,
         challengerHash,
+        executionParams,
         { value: bondAmount, gasLimit: this.gasLimit }
       );
 
@@ -220,8 +259,9 @@ module.exports = class ExecutionPoker {
     return tx;
   }
 
-  async computeCall (addr, data, invalidateLastStep) {
-    let bytecode = await this.wallet.provider.getCode(addr);
+  async computeCall (evmParams, invalidateLastStep) {
+    let bytecode = await this.getCodeForParams(evmParams);
+    let data = await this.getDataForParams(evmParams);
     let code = [];
     let len = bytecode.length;
 
@@ -235,7 +275,7 @@ module.exports = class ExecutionPoker {
       this.log('making one execution step invalid');
       steps[steps.length - 1].gasRemaining = 22;
     }
-    const merkle = new Merkelizer().run(steps, addr, data);
+    const merkle = new Merkelizer().run(steps, bytecode, data);
 
     return { steps, merkle };
   }
