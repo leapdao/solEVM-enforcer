@@ -37,12 +37,12 @@ class MyExecutionPoker extends ExecutionPoker {
     return super.requestExecution(evmParams);
   }
 
-  async getCodeForParams(evmParams) {
+  async getCodeForParams (evmParams) {
     const addr = evmParams.codeHash.substring(0, 42);
     return this.wallet.provider.getCode(addr);
   }
 
-  async getDataForParams(evmParams) {
+  async getDataForParams (evmParams) {
     return this.constructor.DATA_STORAGE[evmParams.dataHash];
   }
 }
