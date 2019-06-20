@@ -19,8 +19,12 @@ jobs:
       - checkout
       - *restore_node_modules
       - run:
-          name: 'setup dependencies'
-          command: yarn && yarn add codecov && yarn add https://github.com/leapdao/solidity-coverage.git#bb22d28edb700040ddb614bb2a4605f641383ced
+          name: 'setup workspace'
+          command: |
+            yarn
+            yarn add codecov
+            yarn add https://github.com/leapdao/solidity-coverage.git#bb22d28edb700040ddb614bb2a4605f641383ced
+            yarn compile:contracts
       - save_cache:
           name: 'save_cache'
           key: v1-node-{{ .Branch }}-{{ checksum "package.json" }}
