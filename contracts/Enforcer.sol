@@ -2,109 +2,94 @@ pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
 import "./IEnforcer.sol";
-import "./Verifier.sol";
+import "./Merkelizer.slb";
 
 
 contract Enforcer is IEnforcer {
-    uint256 public requestPeriod;
-    uint256 public challengePeriod;
-    uint256 public maxExecutionDepth;
-    uint256 public bondAmount;
-    Verifier public verifier;
-
-    mapping(address => uint256) public bonds;
-    // For tracking the block number of the `request(...)`
-    mapping(bytes32 => uint256) public executionRequests;
-    mapping(bytes32 => ExecutionResult) public executionResults;
-
-    /*
-     * @dev Enforcer constructor
-     *     _verifer: ... 
-     */
+    /// @param _taskPeriod should be min. two times the `_challengePeriod`
     constructor(
         address _verifier,
-        uint256 _requestPeriod,
+        uint256 _taskPeriod,
         uint256 _challengePeriod,
         uint256 _bondAmount,
         uint256 _maxExecutionDepth
     ) public {
         verifier = Verifier(_verifier);
-        requestPeriod = _requestPeriod;
+        taskPeriod = _taskPeriod;
         challengePeriod = _challengePeriod;
         bondAmount = _bondAmount;
         maxExecutionDepth = _maxExecutionDepth;
     }
 
-    function request(EVMParameters memory _parameters) public returns (bytes32) {
-        bytes32 executionId = parameterHash(_parameters);
-        uint256 startBlock = executionRequests[executionId];
+    function request(EVMParameters memory _parameters, bytes memory callData) public returns (bytes32) {
+        if (_parameters.dataHash == bytes32(0) && callData.length > 0) {
+            _parameters.dataHash = Merkelizer.dataHash(callData);
+        }
 
-        require(startBlock == 0, "Parameters already registered");
+        bytes32 taskHash = parameterHash(_parameters);
+        Task storage task = tasks[taskHash];
 
-        executionRequests[executionId] = block.number;
-        emit Request(
-            executionId,
-            _parameters
+        require(task.startBlock == 0, "Parameters already registered");
+
+        task.startBlock = block.number;
+
+        emit Requested(
+            taskHash,
+            _parameters,
+            callData
         );
 
-        return executionId;
+        return taskHash;
     }
 
-    /*
-     */
     function register(
-        bytes32 _executionId,
-        bytes32 _endHash,
-        uint256 _executionDepth,
-        bytes32 _resultHash
+        bytes32 _taskHash,
+        bytes32 _solverPathRoot,
+        bytes32[] memory _resultProof,
+        bytes memory _result
     ) public payable
     {
-        bytes32 executionResultId = keccak256(abi.encodePacked(_executionId, _resultHash));
-        ExecutionResult memory executionResult = executionResults[executionResultId];
-        uint256 startBlock = executionRequests[_executionId];
+        uint256 executionDepth = _resultProof.length;
+        bytes32 executionId = keccak256(abi.encodePacked(_taskHash, _solverPathRoot));
 
-        require(startBlock != 0, "Execution request does not exist");
-        require(startBlock + requestPeriod > block.number, "Registration period is over");
+        ExecutionResult storage executionResult = executions[executionId];
+        Task storage task = tasks[_taskHash];
+
+        require(task.startBlock != 0, "Execution request does not exist");
+        //require(task.startBlock + taskPeriod > block.number, "Task period is over");
+        require((block.number + (challengePeriod * 2)) < (task.startBlock + taskPeriod), "Too late for registration");
         require(executionResult.startBlock == 0, "Execution already registered");
         require(msg.value == bondAmount, "Bond is required");
-        require(_executionDepth <= maxExecutionDepth, "Execution too long");
+        require(executionDepth <= maxExecutionDepth, "Execution too long");
 
-        // update the struct
         executionResult.startBlock = block.number;
-        executionResult.endHash = _endHash;
-        executionResult.executionDepth = _executionDepth;
-        executionResult.resultHash = _resultHash;
+        executionResult.taskHash = _taskHash;
+        executionResult.executionDepth = executionDepth;
+        executionResult.solverPathRoot = _solverPathRoot;
+        executionResult.resultHash = keccak256(abi.encodePacked(_result));
         executionResult.solver = msg.sender;
 
-        executionResults[executionResultId] = executionResult;
+        task.executions.push(executionId);
+
         bonds[msg.sender] += msg.value;
 
         emit Registered(
-            _executionId,
-            msg.sender,
-            executionResultId,
-            _endHash,
-            _executionDepth,
-            _resultHash
+            _taskHash,
+            _solverPathRoot,
+            executionDepth,
+            _result
         );
     }
 
-    /**
-      * @dev dispute is called by challenger to start a new dispute
-      *     assumed that challenger's execution tree is of the same depth as solver's
-      *     in case challenger's tree is shallower, he should use node with zero hash to make it deeper
-      *     in case challenger's tree is deeper, he should submit only the left subtree with the same depth with solver's
-      */
-    function dispute(bytes32 _executionResultId, bytes32 _endHash, EVMParameters memory _parameters)
+    function dispute(bytes32 _solverPathRoot, bytes32 _challengerPathRoot, EVMParameters memory _parameters)
         public payable
     {
-        ExecutionResult memory executionResult = executionResults[_executionResultId];
-        bytes32 executionId = parameterHash(_parameters);
-        bytes32 executionResultId = keccak256(abi.encodePacked(executionId, executionResult.resultHash));
+        bytes32 taskHash = parameterHash(_parameters);
+        bytes32 executionId = keccak256(abi.encodePacked(taskHash, _solverPathRoot));
+        ExecutionResult memory executionResult = executions[executionId];
 
         require(msg.value == bondAmount, "Bond amount is required");
         require(executionResult.startBlock != 0, "Execution does not exist");
-        require(_executionResultId == executionResultId, "_executionResultId is wrong");
         // executionDepth round plus 1 for submitProof
         require(
             executionResult.startBlock + challengePeriod > block.number + (executionResult.executionDepth + 1) * verifier.timeoutDuration(),
@@ -115,9 +100,9 @@ contract Enforcer is IEnforcer {
 
         // TODO: Verifier needs to support all EVMParameters
         bytes32 disputeId = verifier.initGame(
-            _executionResultId,
-            executionResult.endHash,
-            _endHash,
+            executionId,
+            _solverPathRoot,
+            _challengerPathRoot,
             executionResult.executionDepth,
             _parameters.customEnvironmentHash,
             _parameters.codeHash,
@@ -129,12 +114,9 @@ contract Enforcer is IEnforcer {
         emit DisputeInitialised(disputeId, executionId);
     }
 
-    /*
-     * @dev receive result from Verifier contract
-     *     only callable from verifier
-     */
-    function result(bytes32 _executionResultId, bool solverWon, address challenger) public {
-        ExecutionResult memory execution = executionResults[_executionResultId];
+    /// only callable from verifier
+    function result(bytes32 _executionId, bool solverWon, address challenger) public {
+        ExecutionResult memory execution = executions[_executionId];
 
         require(msg.sender == address(verifier));
         require(execution.startBlock != 0, "Execution does not exist");
@@ -145,15 +127,58 @@ contract Enforcer is IEnforcer {
             bonds[challenger] -= bondAmount;
 
             address(bytes20(execution.solver)).transfer(bondAmount);
-            emit Slashed(_executionResultId, challenger);
+            emit Slashed(_executionId, challenger);
         } else {
+            // clear the slot in the `Task.executions` array
+            bytes32[] storage taskExecutions = tasks[executions[_executionId].taskHash].executions;
+
+            for (uint i = 0; i < taskExecutions.length; i++) {
+                if (taskExecutions[i] == _executionId) {
+                    taskExecutions[i] = bytes32(0);
+                    break;
+                }
+            }
+
+            delete executions[_executionId];
+
             // slash deposit of solver
             bonds[execution.solver] -= bondAmount;
-
             address(bytes20(challenger)).transfer(bondAmount);
-            emit Slashed(_executionResultId, execution.solver);
-            // delete execution
-            delete executionResults[_executionResultId];
+
+            emit Slashed(_executionId, execution.solver);
         }
+    }
+
+    function getStatus(bytes32 _taskHash) public view returns (uint256, bytes32[] memory, bytes32[] memory) {
+        Task storage task = tasks[_taskHash];
+
+        require(task.startBlock != 0, "Task does not exist");
+
+        bytes32[] storage taskExecutions = task.executions;
+        uint256 len = taskExecutions.length;
+        bytes32[] memory pathRoots = new bytes32[](len);
+        bytes32[] memory resultHashes = new bytes32[](len);
+
+        uint256 realIndex = 0;
+        for (uint256 i = 0; i < len; i++) {
+            bytes32 execId = taskExecutions[i];
+
+            if (execId == bytes32(0)) {
+                continue;
+            }
+
+            ExecutionResult storage execResult = executions[execId];
+
+            pathRoots[realIndex] = execResult.solverPathRoot;
+            resultHashes[realIndex] = execResult.resultHash;
+            realIndex++;
+        }
+
+        assembly {
+            mstore(pathRoots, realIndex)
+            mstore(resultHashes, realIndex)
+        }
+
+        return (task.startBlock + taskPeriod, pathRoots, resultHashes);
     }
 }

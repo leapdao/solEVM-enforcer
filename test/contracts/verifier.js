@@ -36,12 +36,12 @@ async function requestExecution (enforcer, code, callData) {
   const dataHash = Merkelizer.dataHash(callData);
   const params = Object.assign(EVMParameters, { codeHash, dataHash });
 
-  let tx = await enforcer.request(params);
+  let tx = await enforcer.request(params, callData);
   tx = await tx.wait();
 
-  const executionId = tx.events[0].args.executionId;
+  const taskHash = tx.events[0].args.taskHash;
 
-  return { executionId, params };
+  return { taskHash, params };
 }
 
 function computeWitnessPath (dispute, merkleTree) {
@@ -94,21 +94,19 @@ async function disputeGame (
     }
 
     const bondAmount = await enforcer.bondAmount();
-    const { executionId, params } = await requestExecution(enforcer, code, callData);
+    const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
     let tx = await enforcer.register(
-      executionId,
+      taskHash,
       solverComputationPath.hash,
-      solverMerkle.depth,
+      new Array(solverMerkle.depth).fill(ZERO_HASH),
       ZERO_HASH,
       { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
 
-    const executionResultId = tx.events[0].args.executionResultId;
-
     tx = await enforcer.dispute(
-      executionResultId,
+      solverComputationPath.hash,
       challengerComputationPath.hash,
       params,
       { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -260,7 +258,7 @@ contract('Verifier', function () {
   let verifier;
 
   before(async () => {
-    const requestPeriod = 1000000;
+    const taskPeriod = 1000000;
     const challengePeriod = 1000;
     const timeoutDuration = 10;
     const bondAmount = 1;
@@ -268,7 +266,7 @@ contract('Verifier', function () {
 
     verifier = await deployContract(Verifier, timeoutDuration);
     enforcer = await deployContract(
-      Enforcer, verifier.address, requestPeriod, challengePeriod, bondAmount, maxExecutionDepth
+      Enforcer, verifier.address, taskPeriod, challengePeriod, bondAmount, maxExecutionDepth
     );
 
     let tx = await verifier.setEnforcer(enforcer.address);
@@ -301,22 +299,20 @@ contract('Verifier', function () {
         OP.RETURN,
       ];
       const callData = '0x12345678';
-      const { executionId, params } = await requestExecution(enforcer, code, callData);
+      const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
       let tx = await enforcer.register(
-        executionId,
+        taskHash,
         ZERO_HASH,
-        1,
+        [ZERO_HASH],
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
 
-      const executionResultId = tx.events[0].args.executionResultId;
-
       tx = await enforcer.dispute(
-        executionResultId,
+        ZERO_HASH,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -367,22 +363,20 @@ contract('Verifier', function () {
         OP.RETURN,
       ];
       const callData = '0x12345679';
-      const { executionId, params } = await requestExecution(enforcer, code, callData);
+      const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
       let tx = await enforcer.register(
-        executionId,
+        taskHash,
         ZERO_HASH,
-        1,
+        [ZERO_HASH],
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
 
-      const executionResultId = tx.events[0].args.executionResultId;
-
       tx = await enforcer.dispute(
-        executionResultId,
+        ZERO_HASH,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -402,21 +396,19 @@ contract('Verifier', function () {
         OP.RETURN,
       ];
       const callData = '0x12345680';
-      const { executionId, params } = await requestExecution(enforcer, code, callData);
+      const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
       let tx = await enforcer.register(
-        executionId,
+        taskHash,
         ZERO_HASH,
-        1,
+        [ZERO_HASH],
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
-      const executionResultId = tx.events[0].args.executionResultId;
-
       tx = await enforcer.dispute(
-        executionResultId,
+        ZERO_HASH,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -446,23 +438,21 @@ contract('Verifier', function () {
         OP.RETURN,
       ];
       const callData = '0x12345680';
-      const { executionId, params } = await requestExecution(enforcer, code, callData);
+      const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
       let solverHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
 
       let tx = await enforcer.register(
-        executionId,
+        taskHash,
         solverHash,
-        1,
+        [ZERO_HASH],
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
-      const executionResultId = tx.events[0].args.executionResultId;
-
       tx = await enforcer.dispute(
-        executionResultId,
+        solverHash,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -500,22 +490,20 @@ contract('Verifier', function () {
         OP.RETURN,
       ];
       const callData = '0x12345680';
-      const { executionId, params } = await requestExecution(enforcer, code, callData);
+      const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
       let tx = await enforcer.register(
-        executionId,
+        taskHash,
         ZERO_HASH,
-        1,
+        [ZERO_HASH],
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
-      const executionResultId = tx.events[0].args.executionResultId;
-
       let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
       tx = await enforcer.dispute(
-        executionResultId,
+        ZERO_HASH,
         challengerHash,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -552,23 +540,21 @@ contract('Verifier', function () {
         OP.REVERT,
       ];
       const callData = '0x12345680';
-      const { executionId, params } = await requestExecution(enforcer, code, callData);
+      const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
       let solverHash = Merkelizer.hash(ONE_HASH, TWO_HASH);
       let tx = await enforcer.register(
-        executionId,
+        taskHash,
         solverHash,
-        1,
+        [ZERO_HASH],
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
-      const executionResultId = tx.events[0].args.executionResultId;
-
       let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
       tx = await enforcer.dispute(
-        executionResultId,
+        solverHash,
         challengerHash,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -618,22 +604,20 @@ contract('Verifier', function () {
       OP.RETURN,
     ];
     const callData = '0x12345679';
-    const { executionId, params } = await requestExecution(enforcer, code, callData);
+    const { taskHash, params } = await requestExecution(enforcer, code, callData);
 
     let tx = await enforcer.register(
-      executionId,
+      taskHash,
       Merkelizer.hash(ZERO_HASH, ONE_HASH),
-      1,
+      [ZERO_HASH],
       ZERO_HASH,
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
     tx = await tx.wait();
 
-    const executionResultId = tx.events[0].args.executionResultId;
-
     tx = await enforcer.dispute(
-      executionResultId,
+      Merkelizer.hash(ZERO_HASH, ONE_HASH),
       Merkelizer.hash(ONE_HASH, ZERO_HASH),
       params,
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }

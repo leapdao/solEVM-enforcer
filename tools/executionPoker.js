@@ -29,24 +29,11 @@ class MyExecutionPoker extends ExecutionPoker {
   async requestExecution (contractAddr, callData) {
     const codeHash = `0x${contractAddr.replace('0x', '').toLowerCase().padEnd(64, '0')}`;
     const dataHash = Merkelizer.dataHash(callData);
-
-    this.constructor.DATA_STORAGE[dataHash] = callData;
-
     const evmParams = Object.assign(EVMParameters, { codeHash, dataHash });
 
-    return super.requestExecution(evmParams);
-  }
-
-  async getCodeForParams (evmParams) {
-    const addr = evmParams.codeHash.substring(0, 42);
-    return this.wallet.provider.getCode(addr);
-  }
-
-  async getDataForParams (evmParams) {
-    return this.constructor.DATA_STORAGE[evmParams.dataHash];
+    return super.requestExecution(evmParams, callData);
   }
 }
-MyExecutionPoker.DATA_STORAGE = {};
 
 async function deployContract (truffleContract, wallet, ...args) {
   const _factory = new ethers.ContractFactory(
@@ -102,7 +89,7 @@ async function main () {
   challengerWallet = challengerWallet.connect(new ethers.providers.Web3Provider(provider));
 
   const timeout = 10;
-  const requestPeriod = 100000;
+  const taskPeriod = 100000;
   const challengePeriod = 10000;
   const bondAmount = 1;
   const maxExecutionDepth = 10;
@@ -117,7 +104,7 @@ async function main () {
     Enforcer,
     deployerWallet,
     verifier.address,
-    requestPeriod,
+    taskPeriod,
     challengePeriod,
     bondAmount,
     maxExecutionDepth
