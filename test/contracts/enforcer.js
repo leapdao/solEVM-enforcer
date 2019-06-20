@@ -290,9 +290,14 @@ contract('Enforcer', () => {
 
   it('Enforcer.request / Enforcer.getStatus()', async () => {
     const evmParams = Object.assign(params, { txGasLimit: 0xfafafafa });
+
     let tx = await enforcer.request(evmParams, '0x');
     tx = await tx.wait();
     taskHash = tx.events[0].args.taskHash;
+
+    // should not work the second time 😊
+    tx = enforcer.request(evmParams, '0x');
+    await assertRevert(tx, 'Parameters already registered');
 
     const _solverPathRoot = solverPathRoot.replace('11', 'ac');
     const resultBytes = result.replace('00', '99');
@@ -304,11 +309,11 @@ contract('Enforcer', () => {
     tx = await tx.wait();
 
     // should not work the second time 😊
-    tx = await enforcer.register(
+    tx = enforcer.register(
       taskHash, _solverPathRoot, resultProof, resultBytes,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
-    await assertRevert(tx, 'Parameters already registered');
+    await assertRevert(tx, 'Execution already registered');
 
     // XXX: ethers returns not the `Task` struct -  wtf???
     const task = await enforcer.tasks(taskHash);
