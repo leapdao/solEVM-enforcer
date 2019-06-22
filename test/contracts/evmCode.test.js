@@ -21,4 +21,8 @@ contract('TestEVMCode', function () {
   it('toUint', async function () {
     await evmCode.testToUint();
   });
+
+  it('toBytes', async function () {
+    await evmCode.testToBytes();
+  });
 });

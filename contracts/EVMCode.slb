@@ -66,24 +66,42 @@ library EVMCode {
         return 0xfe;
     }
 
-    // function toBytes(Code memory self, uint pos, uint numBytes) internal view returns (bytes memory bts) {
-    function toBytes(Code memory self) internal view returns (bytes memory bts) {
-        return "0x";
-        // TODO no more code address
-        // address codeContractAddress = self.codeAddress;
+    /**
+      * @dev return code as bytes array, from a position for a number of bytes
+      *     revert if the known code cannot fulfill the requirement
+      */
+    function toBytes(Code memory self, uint pos, uint numBytes) internal view returns (bytes memory bts) {
+        uint wordPos = pos >> 5;
+        uint fragmentPos = findFragment(self, wordPos);
+        require(fragmentPos != uint(-1), "Code not found");
 
-        // if (codeContractAddress == address(0)) {
-        //     bts = self.codeBytes;
-        // } else {
-        //     uint size = self.length;
-        //     assembly {
-        //         bts := mload(0x40)
-        //         // padding up to word size
-        //         mstore(0x40, add(bts, and(add(add(size, 0x20), 0x1f), not(0x1f))))
-        //         mstore(bts, size)
-        //         extcodecopy(codeContractAddress, add(bts, 0x20), 0, size)
-        //     }
-        // }
+        assembly {
+            bts := mload(0x40)
+            mstore(0x40, add(bts, and(add(add(numBytes, 0x20), 0x1f), not(0x1f))))
+            mstore(bts, numBytes)
+        }
+        RawCode[50] memory fragments = self.fragments;
+        uint copiedLen = 0;
+        // copy first fragment, which do not fit in whole word
+        if (pos % 32 != 0) {
+            assembly {
+                // store value at fragmentPos to bts, shift left to correct for pos
+                mstore(add(bts, 0x20), shl(mul(mod(pos, 0x20), 0x08), mload(add(mload(add(fragments, mul(fragmentPos, 0x20))), 0x20))))
+            }
+            fragmentPos += 1;
+            copiedLen += 32 - pos % 32;
+        }
+
+        // copy the rest
+        while (copiedLen < numBytes) {
+            require(fragmentPos == 0 ||
+                    self.fragments[fragmentPos].pos == self.fragments[fragmentPos-1].pos + 1, "Known code not enough");
+            assembly {
+                mstore(add(bts, add(copiedLen, 0x20)), mload(add(mload(add(fragments, mul(fragmentPos, 0x20))), 0x20)))
+            }
+            fragmentPos += 1;
+            copiedLen += 32;
+        }
     }
 
     function toUint(Code memory self, uint pos, uint numBytes) internal view returns (uint data) {
@@ -96,7 +114,7 @@ library EVMCode {
         // - return data span 2 fragments
         uint wordPos = pos >> 5;
         uint fragmentPos = findFragment(self, wordPos);
-        require(fragmentPos != uint(-1), 'Code not found');
+        require(fragmentPos != uint(-1), "Code not found");
 
         // only need to retrieve 32 bytes
         if (fragmentPos == ((pos + numBytes - 1) >> 5)) {
@@ -108,7 +126,7 @@ library EVMCode {
         }
 
         // require fetching an additional 32 bytes
-        require(self.fragments[fragmentPos+1].pos == self.fragments[fragmentPos].pos + 1, 'Code not found 2');
+        require(self.fragments[fragmentPos+1].pos == self.fragments[fragmentPos].pos + 1, "Code not enough");
         //   the left part should be the rightmost part of the first word
         //   to retrieve: shift left to strip, then shift back to correct position in numBytes
         uint left = (self.fragments[fragmentPos].value << ((pos % 32) * 8)) >> ((32 - numBytes) * 8);
