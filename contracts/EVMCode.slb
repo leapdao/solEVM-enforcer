@@ -4,7 +4,8 @@ pragma experimental ABIEncoderV2;
 
 library EVMCode {
     struct Code {
-        uint length; // length is zero-based, this is length of fragments array, not the actually length of code
+        uint length;
+        uint fragLength; // length is zero-based, this is length of fragments array, not the actually length of code
         // TODO improve this
         //   we have to use memory for EVMCode, so this must be an fixed-size array, not a mapping or dynamic-size array
         // although 50 should me enough for most cases
@@ -16,11 +17,13 @@ library EVMCode {
         uint value;
     }
 
-    function fromArray(RawCode[50] memory codes, uint length) internal pure returns (Code memory code) {
+    function fromArray(RawCode[50] memory codes, uint fragLength, uint length) internal pure returns (Code memory code) {
+        code.fragLength = fragLength;
         code.length = length;
-        for (uint i = 0; i < length; i++) {
+        for (uint i = 0; i < fragLength; i++) {
             // require to submit array in ascending order
             require(i == 0 || codes[i].pos > codes[i-1].pos, "wrong code order");
+            require(codes[i].pos < (length >> 5), "incorrect code length");
             code.fragments[i] = RawCode(codes[i].pos, codes[i].value);
         }
     }
@@ -30,7 +33,7 @@ library EVMCode {
       */
     function findFragment(Code memory self, uint wordPos) internal view returns (uint pos) {
         uint left = 0;
-        uint right = self.length;
+        uint right = self.fragLength;
         uint mid;
 
         while (left < right) {

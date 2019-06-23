@@ -1356,7 +1356,7 @@ contract EVMRuntime is EVMConstants {
         state.gas -= gasFee;
 
         // TODO no more all codes available
-        state.mem.storeBytes(state.code.toBytes(), cAddr, mAddr, len);
+        state.mem.storeBytes(state.code.toBytes(cAddr, len), 0, mAddr, len);
     }
 
     function handleGASPRICE(EVM memory state) internal {
