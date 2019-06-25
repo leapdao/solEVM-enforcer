@@ -1,7 +1,7 @@
 const Merkelizer = require('./../../utils/Merkelizer');
 const ProofHelper = require('./../../utils/ProofHelper');
 const disputeFixtures = require('./../fixtures/dispute');
-const { onchainWait, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
+const { onchainWait, toBytes32, deployContract, txOverrides } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 const assertRevert = require('./../helpers/assertRevert');
 const debug = require('debug')('vgame-test');
@@ -53,7 +53,7 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
 }
 
 async function disputeGame (
-  enforcer, verifier, codeContract, code, callData, solverMerkle, challengerMerkle, expectedWinner, expectedError
+  enforcer, verifier, codeHash, code, callData, solverMerkle, challengerMerkle, expectedWinner, expectedError
 ) {
   let disputeId;
 
@@ -69,7 +69,7 @@ async function disputeGame (
     const bondAmount = await enforcer.bondAmount();
 
     let tx = await enforcer.register(
-      codeContract,
+      codeHash,
       callData,
       solverComputationPath.hash,
       solverMerkle.depth,
@@ -79,7 +79,7 @@ async function disputeGame (
 
     tx = await tx.wait();
     tx = await enforcer.dispute(
-      codeContract,
+      codeHash,
       callData,
       challengerComputationPath.hash,
       { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -244,22 +244,22 @@ contract('Verifier', function () {
     await tx.wait();
   });
 
-  disputeFixtures(
-    async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
-      const codeContract = await deployCode(code);
+  // disputeFixtures(
+  //   async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
+  //     const codeHash = Merkelizer.codeHash(code.join(''));
 
-      await disputeGame(
-        enforcer,
-        verifier,
-        codeContract.address,
-        code,
-        callData,
-        solverMerkle,
-        challengerMerkle,
-        expectedWinner
-      );
-    }
-  );
+  //     await disputeGame(
+  //       enforcer,
+  //       verifier,
+  //       codeHash,
+  //       code,
+  //       callData,
+  //       solverMerkle,
+  //       challengerMerkle,
+  //       expectedWinner
+  //     );
+  //   }
+  // );
 
   describe('submitProof', async () => {
     it('not allow preemptive submission of proof', async () => {
@@ -268,11 +268,11 @@ contract('Verifier', function () {
         OP.PUSH1, '00',
         OP.RETURN,
       ];
-      const codeContract = await deployCode(code);
+      const codeHash = Merkelizer.codeHash(code.join(''));
       const callData = '0x12345678';
 
       let tx = await enforcer.register(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         1,
@@ -282,7 +282,7 @@ contract('Verifier', function () {
 
       tx = await tx.wait();
       tx = await enforcer.dispute(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -332,11 +332,11 @@ contract('Verifier', function () {
         OP.PUSH1, '00',
         OP.RETURN,
       ];
-      const codeContract = await deployCode(code);
+      const codeHash = Merkelizer.codeHash(code.join(''));
       const callData = '0x12345679';
 
       let tx = await enforcer.register(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         1,
@@ -346,7 +346,7 @@ contract('Verifier', function () {
 
       tx = await tx.wait();
       tx = await enforcer.dispute(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -365,11 +365,11 @@ contract('Verifier', function () {
         OP.PUSH1, '00',
         OP.RETURN,
       ];
-      const codeContract = await deployCode(code);
+      const codeHash = Merkelizer.codeHash(code.join(''));
       const callData = '0x12345680';
 
       let tx = await enforcer.register(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         1,
@@ -379,7 +379,7 @@ contract('Verifier', function () {
       tx = await tx.wait();
 
       tx = await enforcer.dispute(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -408,13 +408,13 @@ contract('Verifier', function () {
         OP.PUSH1, '01',
         OP.RETURN,
       ];
-      const codeContract = await deployCode(code);
+      const codeHash = Merkelizer.codeHash(code.join(''));
       const callData = '0x12345680';
 
       let solverHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
 
       let tx = await enforcer.register(
-        codeContract.address,
+        codeHash,
         callData,
         solverHash,
         1,
@@ -424,7 +424,7 @@ contract('Verifier', function () {
       tx = await tx.wait();
 
       tx = await enforcer.dispute(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -461,11 +461,11 @@ contract('Verifier', function () {
         OP.PUSH1, '02',
         OP.RETURN,
       ];
-      const codeContract = await deployCode(code);
+      const codeHash = Merkelizer.codeHash(code.join(''));
       const callData = '0x12345680';
 
       let tx = await enforcer.register(
-        codeContract.address,
+        codeHash,
         callData,
         ZERO_HASH,
         1,
@@ -476,7 +476,7 @@ contract('Verifier', function () {
 
       let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
       tx = await enforcer.dispute(
-        codeContract.address,
+        codeHash,
         callData,
         challengerHash,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -512,12 +512,12 @@ contract('Verifier', function () {
         OP.PUSH1, '20',
         OP.REVERT,
       ];
-      const codeContract = await deployCode(code);
+      const codeHash = Merkelizer.codeHash(code.join(''));
       const callData = '0x12345680';
 
       let solverHash = Merkelizer.hash(ONE_HASH, TWO_HASH);
       let tx = await enforcer.register(
-        codeContract.address,
+        codeHash,
         callData,
         solverHash,
         1,
@@ -528,7 +528,7 @@ contract('Verifier', function () {
 
       let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
       tx = await enforcer.dispute(
-        codeContract.address,
+        codeHash,
         callData,
         challengerHash,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -577,11 +577,11 @@ contract('Verifier', function () {
       OP.PUSH1, '00',
       OP.RETURN,
     ];
-    const codeContract = await deployCode(code);
+    const codeHash = Merkelizer.codeHash(code.join(''));
     const callData = '0x12345679';
 
     let tx = await enforcer.register(
-      codeContract.address,
+      codeHash,
       callData,
       Merkelizer.hash(ZERO_HASH, ONE_HASH),
       1,
@@ -591,7 +591,7 @@ contract('Verifier', function () {
 
     tx = await tx.wait();
     tx = await enforcer.dispute(
-      codeContract.address,
+      codeHash,
       callData,
       Merkelizer.hash(ONE_HASH, ZERO_HASH),
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }

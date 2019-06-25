@@ -202,6 +202,7 @@ contract Verifier is Ownable, HydratedRuntime {
         // TODO: verify all inputs, check access pattern(s) for memory, calldata, stack
         bytes32 dataHash = executionState.data.length != 0 ? Merkelizer.dataHash(executionState.data) : proofs.dataHash;
         bytes32 memHash = executionState.mem.length != 0 ? Merkelizer.memHash(executionState.mem) : proofs.memHash;
+        // TODO: verify code
 
         bytes32 inputHash = executionState.stateHash(
             executionState.stackHash(proofs.stackHash),
@@ -218,22 +219,6 @@ contract Verifier is Ownable, HydratedRuntime {
                 return;
             }
         }
-
-        // TODO no more extcodecopy
-        // if ((dispute.state & END_OF_EXECUTION) != 0) {
-        //     address codeAddress = dispute.codeContractAddress;
-        //     uint pos = executionState.pc;
-        //     uint8 opcode;
-
-        //     assembly {
-        //         extcodecopy(codeAddress, 31, pos, 1)
-        //         opcode := mload(0)
-        //     }
-
-        //     if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
-        //         return;
-        //     }
-        // }
 
         EVM memory evm;
         HydratedState memory hydratedState = initHydratedState(evm);
@@ -253,12 +238,18 @@ contract Verifier is Ownable, HydratedRuntime {
 
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
-        // TODO no more fromAddress
-        // evm.code = EVMCode.fromAddress(dispute.codeContractAddress);
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
         evm.mem = EVMMemory.fromArray(executionState.mem);
+        evm.code = EVMCode.fromArray(executionState.code, executionState.codeLength, executionState.codeFragLength);
+
+        uint8 opcode = evm.code.getOpcodeAt(executionState.pc);
+        if ((dispute.state & END_OF_EXECUTION) != 0) {
+            if (opcode != OP_REVERT && opcode != OP_REVERT && opcode != OP_STOP) {
+                return;
+            }
+        }
 
         _run(evm, executionState.pc, 1);
 

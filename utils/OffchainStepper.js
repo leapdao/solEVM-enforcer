@@ -1,4 +1,3 @@
-
 const VM = require('ethereumjs-vm');
 const BN = VM.deps.ethUtil.BN;
 const OP = require('./constants');
@@ -287,6 +286,21 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       isCallDataRequired = true;
     }
 
+    let rawCodes;
+    if (parseInt(OP.PUSH1, 16) <= opcode && opcode <= parseInt(OP.PUSH32, 16)) {
+      // PUSH opcode need some code data
+      const len = opcode - parseInt(OP.PUSH1) + 1;
+      rawCodes = this.getCodeInWord(runState.code, pc + 1, len);
+    } else if (opcode === parseInt(OP.JUMP, 16)) {
+      // JUMP need the targeted pc is JUMPDEST
+      rawCodes = this.getCodeInWord(runState.code, stack[stack.length - 1], 1);
+    } else if (opcode === parseInt(OP.CODECOPY, 16)) {
+      // CODECOPY need code of the required segment
+      const offset = stack[stack.length - 2];
+      const len = stack[stack.length - 3];
+      rawCodes = this.getCodeInWord(runState.code, offset, len);
+    }
+
     runState.context.steps.push({
       memReadLow: memProof.readLow,
       memReadHigh: memProof.readHigh,
@@ -295,6 +309,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       callDataReadLow: callDataProof.readLow,
       callDataReadHigh: callDataProof.readHigh,
       opcodeName: opcodeName,
+      opcode: opcode,
       isCallDataRequired: isCallDataRequired,
       isMemoryRequired: isMemoryRequired,
       gasFee: gasFee,
@@ -306,6 +321,8 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       pc: pc,
       errno: errno,
       gasRemaining: gasRemaining,
+      rawCodes,
+      codeLength: runState.code.length / 2, // TODO check
     });
   }
 
@@ -395,6 +412,26 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     await super.run(runState, stepCount | 0);
 
     return context.steps;
+  }
+
+  /**
+   * @dev RawCode format:
+   * [
+   *   {
+   *     pos: position (in word),
+   *     value: uint256
+   *   }
+   * ]
+   */
+  getCodeInWord (code, offset, len) {
+    let wordPos = len / 32;
+    let res = [];
+    while (len > 0) {
+      res.push({ pos: wordPos, value: code.slice(wordPos * 64, (wordPos + 1) * 64) });
+      wordPos++;
+      len -= 32;
+    }
+    return res;
   }
 
   async handlePUSH (runState) {

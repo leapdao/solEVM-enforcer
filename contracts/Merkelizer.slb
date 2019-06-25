@@ -1,6 +1,7 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
+import "./EVMCode.slb";
 
 library Merkelizer {
     uint constant internal DEFAULT_GAS = 0x0fffffffffffff;
@@ -15,6 +16,9 @@ library Merkelizer {
         uint gasRemaining;
         uint stackSize;
         uint memSize;
+        EVMCode.RawCode[50] code;
+        uint codeLength;
+        uint codeFragLength;
     }
 
     function memHash(bytes32[] memory _mem) internal pure returns (bytes32) {

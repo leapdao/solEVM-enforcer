@@ -32,6 +32,41 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
     return res;
   }
 
+  /**
+   * @dev return Merkle hash root of code
+   *    - split code string into words
+   *    - each words correspond to a leaf
+   *    - calculate Merkle root, stub zero_hash when needed
+   *
+   * @param code string
+   */
+  static codeHash (code) {
+    // split code to 64 char string - bytes32
+    const fragments = [];
+    for (let pos = 0; pos < code.length; pos += 64) {
+      fragments.push(code.slice(pos, pos + 64));
+    }
+    if (fragments[fragments.length - 1].length < 64) {
+      fragments[fragments.length - 1] += '0'.repeat(64 - fragments[fragments.length - 1].length);
+    }
+
+    let tree = [[]];
+    tree[0] = fragments.map(x => ethers.utils.solidityKeccak256(['bytes32'], [`0x${x}`]));
+    let stage = 0;
+    while (tree[stage].length > 1) {
+      let next = stage + 1;
+      tree.push([]);
+      if (tree[stage].length % 2 === 1) tree[stage].push(ZERO_HASH);
+      for (let pos = 0; pos < tree[stage].length; pos += 2) {
+        tree[next].push(
+          ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [tree[stage][pos], tree[stage][pos + 1]])
+        );
+      }
+      stage++;
+    }
+    return tree[stage][0];
+  }
+
   static stackHash (stack, sibling) {
     let res = sibling || ZERO_HASH;
 
