@@ -286,7 +286,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       isCallDataRequired = true;
     }
 
-    let rawCodes;
+    let rawCodes = [];
     if (parseInt(OP.PUSH1, 16) <= opcode && opcode <= parseInt(OP.PUSH32, 16)) {
       // PUSH opcode need some code data
       const len = opcode - parseInt(OP.PUSH1) + 1;
@@ -323,6 +323,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       gasRemaining: gasRemaining,
       rawCodes,
       codeLength: runState.code.length / 2, // TODO check
+      codeFragLength: rawCodes.length,
     });
   }
 

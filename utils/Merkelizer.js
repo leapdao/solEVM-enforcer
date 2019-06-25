@@ -32,6 +32,14 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
     return res;
   }
 
+  static emptyRawCode () {
+    let res = [];
+    for (let i = 0; i < 50; i++) {
+      res.push({ pos: 0, value: 0 });
+    }
+    return res;
+  }
+
   /**
    * @dev return Merkle hash root of code
    *    - split code string into words

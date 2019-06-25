@@ -14,6 +14,9 @@ module.exports = class ProofHelper {
       // TODO put code proof here
     };
 
+    let code = prevOutput.rawCodes.slice();
+    while (code.length < 50) code.push({ pos: 0, value: 0 });
+
     return {
       proofs,
       executionInput: {
@@ -26,9 +29,9 @@ module.exports = class ProofHelper {
         gasRemaining: prevOutput.gasRemaining,
         stackSize: prevOutput.stackSize,
         memSize: prevOutput.memSize,
-        code: prevOutput.rawCodes,
+        code,
         codeLength: prevOutput.codeLength,
-        codeFragLength: prevOutput.rawCodes.length,
+        codeFragLength: prevOutput.codeFragLength,
       },
     };
   }

@@ -66,8 +66,14 @@ async function disputeGame (
       challengerComputationPath = challengerMerkle.tree[solverMerkle.depth - 1][0];
     }
 
+    debug('Code Hash', codeHash);
+    debug('Solver Hash', solverComputationPath.hash);
+    debug('Custom Hash', ZERO_HASH);
+    debug('Calldata', callData);
+    debug('Depth', solverMerkle.depth);
     const bondAmount = await enforcer.bondAmount();
 
+    debug('Submitting');
     let tx = await enforcer.register(
       codeHash,
       callData,
@@ -76,6 +82,8 @@ async function disputeGame (
       ZERO_HASH,
       { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
+
+    debug('Submitted');
 
     tx = await tx.wait();
     tx = await enforcer.dispute(
@@ -244,22 +252,22 @@ contract('Verifier', function () {
     await tx.wait();
   });
 
-  // disputeFixtures(
-  //   async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
-  //     const codeHash = Merkelizer.codeHash(code.join(''));
+  disputeFixtures(
+    async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
+      const codeHash = Merkelizer.codeHash(code.join(''));
 
-  //     await disputeGame(
-  //       enforcer,
-  //       verifier,
-  //       codeHash,
-  //       code,
-  //       callData,
-  //       solverMerkle,
-  //       challengerMerkle,
-  //       expectedWinner
-  //     );
-  //   }
-  // );
+      await disputeGame(
+        enforcer,
+        verifier,
+        codeHash,
+        code,
+        callData,
+        solverMerkle,
+        challengerMerkle,
+        expectedWinner
+      );
+    }
+  );
 
   describe('submitProof', async () => {
     it('not allow preemptive submission of proof', async () => {
@@ -311,6 +319,9 @@ contract('Verifier', function () {
           stackSize: 0,
           memSize: 0,
           customEnvironmentHash: ZERO_HASH,
+          code: Merkelizer.emptyRawCode(),
+          codeLength: 1,
+          codeFragLength: 0,
         },
         txOverrides
       ));
