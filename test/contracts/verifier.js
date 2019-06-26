@@ -108,6 +108,8 @@ async function disputeGame (
     tx = await enforcer.dispute(
       solverComputationPath.hash,
       challengerComputationPath.hash,
+      [],
+      '0x',
       params,
       { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
@@ -314,6 +316,8 @@ contract('Verifier', function () {
       tx = await enforcer.dispute(
         ZERO_HASH,
         ZERO_HASH,
+        [],
+        '0x',
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
@@ -378,6 +382,8 @@ contract('Verifier', function () {
       tx = await enforcer.dispute(
         ZERO_HASH,
         ZERO_HASH,
+        [],
+        '0x',
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
@@ -410,6 +416,8 @@ contract('Verifier', function () {
       tx = await enforcer.dispute(
         ZERO_HASH,
         ZERO_HASH,
+        [],
+        '0x',
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
@@ -454,6 +462,8 @@ contract('Verifier', function () {
       tx = await enforcer.dispute(
         solverHash,
         ZERO_HASH,
+        [],
+        '0x',
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
@@ -505,6 +515,8 @@ contract('Verifier', function () {
       tx = await enforcer.dispute(
         ZERO_HASH,
         challengerHash,
+        [],
+        '0x',
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
@@ -556,6 +568,8 @@ contract('Verifier', function () {
       tx = await enforcer.dispute(
         solverHash,
         challengerHash,
+        [],
+        '0x',
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
@@ -619,6 +633,8 @@ contract('Verifier', function () {
     tx = await enforcer.dispute(
       Merkelizer.hash(ZERO_HASH, ONE_HASH),
       Merkelizer.hash(ONE_HASH, ZERO_HASH),
+      [],
+      '0x',
       params,
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
