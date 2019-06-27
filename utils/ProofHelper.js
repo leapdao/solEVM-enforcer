@@ -14,6 +14,7 @@ module.exports = class ProofHelper {
       // TODO put code proof here
     };
 
+    console.log('PrevOutput', prevOutput);
     let code = prevOutput.rawCodes.slice();
     while (code.length < 50) code.push({ pos: 0, value: 0 });
 

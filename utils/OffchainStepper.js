@@ -135,6 +135,35 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     super({ hardfork: 'petersburg' });
   }
 
+  static initialState (code, callData, customEnvironmentHash) {
+    const DEFAULT_GAS = 0x0fffffffffffff;
+
+    // first opcode
+    let rawCodes = [OffchainStepper.getCodeInWord(Buffer.from(code.join(''), 'hex'), 0, 1)];
+    if (parseInt(code[0], 16) === parseInt(OP.PUSH32, 16)) {
+      // second opcode
+      rawCodes.push(OffchainStepper.getCodeInWord(Buffer.from(code.join(''), 'hex'), 32, 1));
+    }
+
+    return {
+      executionState: {
+        code: code,
+        rawCodes,
+        data: callData,
+        compactStack: [],
+        stack: [],
+        mem: [],
+        returnData: '0x',
+        pc: 0,
+        errno: 0,
+        gasRemaining: DEFAULT_GAS,
+        stackSize: 0,
+        memSize: 0,
+        customEnvironmentHash: customEnvironmentHash || OP.ZERO_HASH,
+      },
+    };
+  }
+
   async initAccounts (accounts) {
     const self = this;
 
@@ -198,6 +227,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     // re-use if possible
     let stack = prevStep.stack || toHex(runState.stack);
     let pc = runState.programCounter;
+    let oldPC = pc;
     let gasLeft = runState.gasLeft.addn(0);
     let exceptionError;
 
@@ -289,17 +319,32 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     let rawCodes = [];
     if (parseInt(OP.PUSH1, 16) <= opcode && opcode <= parseInt(OP.PUSH32, 16)) {
       // PUSH opcode need some code data
-      const len = opcode - parseInt(OP.PUSH1) + 1;
-      rawCodes = this.getCodeInWord(runState.code, pc + 1, len);
+      const len = opcode - parseInt(OP.PUSH1, 16) + 1;
+      rawCodes = OffchainStepper.getCodeInWord(runState.code, oldPC + 1, len);
     } else if (opcode === parseInt(OP.JUMP, 16)) {
       // JUMP need the targeted pc is JUMPDEST
-      rawCodes = this.getCodeInWord(runState.code, stack[stack.length - 1], 1);
+      rawCodes = OffchainStepper.getCodeInWord(runState.code, stack[stack.length - 1], 1);
     } else if (opcode === parseInt(OP.CODECOPY, 16)) {
       // CODECOPY need code of the required segment
       const offset = stack[stack.length - 2];
       const len = stack[stack.length - 3];
-      rawCodes = this.getCodeInWord(runState.code, offset, len);
+      rawCodes = OffchainStepper.getCodeInWord(runState.code, offset, len);
     }
+
+    // get code contains current pc
+    let pcCode = OffchainStepper.getCodeInWord(runState.code, oldPC, 1)[0];
+    const found = rawCodes.find((el) => {
+      return el.pos === pcCode.pos;
+    });
+    if (found === undefined) {
+      rawCodes.push(pcCode);
+    }
+
+    rawCodes.sort((a, b) => {
+      if (a.pos < b.pos) return -1;
+      if (a.pos >= b.pos) return 1;
+      return 0;
+    });
 
     runState.context.steps.push({
       memReadLow: memProof.readLow,
@@ -322,7 +367,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       errno: errno,
       gasRemaining: gasRemaining,
       rawCodes,
-      codeLength: runState.code.length / 2, // TODO check
+      codeLength: runState.code.length,
       codeFragLength: rawCodes.length,
     });
   }
@@ -424,11 +469,17 @@ module.exports = class OffchainStepper extends VM.MetaVM {
    *   }
    * ]
    */
-  getCodeInWord (code, offset, len) {
-    let wordPos = len / 32;
+  static getCodeInWord (code, offset, len) {
+    console.log('GETTING CODE', code, offset, len);
+    let wordPos = offset >> 5;
     let res = [];
+    let val;
+
     while (len > 0) {
-      res.push({ pos: wordPos, value: code.slice(wordPos * 64, (wordPos + 1) * 64) });
+      // console.log('CODE', wordPos, code.slice(wordPos * 32, (wordPos + 1) * 32).toString('hex').padEnd(64, '0'));
+      // val = new BN(code.slice(wordPos * 32, (wordPos + 1) * 32).toString('hex').padEnd(64, '0'), 'hex');
+      val = '0x' + code.slice(wordPos * 32, (wordPos + 1) * 32).toString('hex').padEnd(64, '0');
+      res.push({ pos: wordPos, value: val });
       wordPos++;
       len -= 32;
     }

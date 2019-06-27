@@ -1,28 +1,12 @@
 const ethers = require('ethers');
+const OffchainStepper = require('./OffchainStepper');
 
 const AbstractMerkleTree = require('./AbstractMerkleTree');
 const { ZERO_HASH } = require('./constants');
 
 module.exports = class Merkelizer extends AbstractMerkleTree {
   static initialStateHash (code, callData, customEnvironmentHash) {
-    const DEFAULT_GAS = 0x0fffffffffffff;
-    const res = {
-      executionState: {
-        code: code,
-        data: callData,
-        compactStack: [],
-        stack: [],
-        mem: [],
-        returnData: '0x',
-        pc: 0,
-        errno: 0,
-        gasRemaining: DEFAULT_GAS,
-        stackSize: 0,
-        memSize: 0,
-        customEnvironmentHash: customEnvironmentHash || ZERO_HASH,
-      },
-    };
-
+    let res = OffchainStepper.initialState(code, callData, customEnvironmentHash);
     // Note:
     //   This value needs to be taken into account for the dispute logic (timeout function).
     //   If the first (left-most) hash is not the same as this,
