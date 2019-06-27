@@ -14,6 +14,8 @@ contract EVMRuntime is EVMConstants {
     using EVMStack for EVMStack.Stack;
     using EVMCode for EVMCode.Code;
 
+    event GetOpcodeAt(uint pc, uint8 opcode);
+
     struct Context {
         address origin;
         uint gasPrice;
@@ -62,6 +64,7 @@ contract EVMRuntime is EVMConstants {
             uint stackOut;
             uint gasFee;
             uint8 opcode = evm.code.getOpcodeAt(pc);
+            emit GetOpcodeAt(pc, opcode);
             function(EVM memory) internal opcodeHandler;
 
             if (opcode == 0) {

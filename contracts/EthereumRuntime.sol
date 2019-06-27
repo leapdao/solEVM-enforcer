@@ -95,7 +95,7 @@ contract EthereumRuntime is HydratedRuntime {
 
         bytes32 dataHash = keccak256(abi.encodePacked(
             evm.gas,
-            evm.code.toBytes(),
+            // evm.code.toBytes(), temporary remove
             evm.data,
             evm.lastRet,
             evm.returnData,

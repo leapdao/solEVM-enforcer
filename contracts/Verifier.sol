@@ -242,7 +242,7 @@ contract Verifier is Ownable, HydratedRuntime {
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
         evm.mem = EVMMemory.fromArray(executionState.mem);
-        evm.code = EVMCode.fromArray(executionState.code, executionState.codeLength, executionState.codeFragLength);
+        evm.code = EVMCode.fromArray(executionState.code, executionState.codeFragLength, executionState.codeLength);
 
         uint8 opcode = evm.code.getOpcodeAt(executionState.pc);
         if ((dispute.state & END_OF_EXECUTION) != 0) {

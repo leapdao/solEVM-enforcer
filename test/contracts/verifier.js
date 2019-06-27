@@ -31,6 +31,7 @@ function computeWitnessPath (dispute, merkleTree) {
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const args = ProofHelper.constructProof(computationPath);
+  debug('ExecState', args.executionInput);
 
   let tx = await verifier.submitProof(
     disputeId,
@@ -66,15 +67,12 @@ async function disputeGame (
       challengerComputationPath = challengerMerkle.tree[solverMerkle.depth - 1][0];
     }
 
-    debug('Code Hash', codeHash);
-    debug('Solver Hash', solverComputationPath.hash);
-    debug('Custom Hash', ZERO_HASH);
-    debug('Calldata', callData);
-    debug('Depth', solverMerkle.depth);
     const bondAmount = await enforcer.bondAmount();
 
-    debug('Submitting');
-    let tx = await enforcer.register(
+    await enforcer.remove(codeHash, callData);
+    let tx;
+
+    tx = await enforcer.register(
       codeHash,
       callData,
       solverComputationPath.hash,
@@ -83,9 +81,6 @@ async function disputeGame (
       { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
-    debug('Submitted');
-
-    tx = await tx.wait();
     tx = await enforcer.dispute(
       codeHash,
       callData,
@@ -106,14 +101,22 @@ async function disputeGame (
 
         debug('Solver: SUBMITTING FOR l=' +
           solverComputationPath.left.hash + ' r=' + solverComputationPath.right.hash);
-        await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
+        try {
+          await submitProofHelper(verifier, event.disputeId, code, solverComputationPath);
+        } catch (err) {
+          debug(err);
+        }
 
         // refresh
         dispute = await verifier.disputes(event.disputeId);
         if ((dispute.state & SOLVER_VERIFIED === 0) && (dispute.state & CHALLENGER_VERIFIED === 0)) {
           debug('Challenger: SUBMITTING FOR l=' +
           challengerComputationPath.left.hash + ' r=' + challengerComputationPath.right.hash);
-          await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
+          try {
+            await submitProofHelper(verifier, event.disputeId, code, challengerComputationPath);
+          } catch (err) {
+            debug(err);
+          }
         }
 
         // refresh again

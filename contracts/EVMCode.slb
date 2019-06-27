@@ -23,7 +23,7 @@ library EVMCode {
         for (uint i = 0; i < fragLength; i++) {
             // require to submit array in ascending order
             require(i == 0 || codes[i].pos > codes[i-1].pos, "wrong code order");
-            require(codes[i].pos < (length >> 5), "incorrect code length");
+            require(codes[i].pos <= (length >> 5), "incorrect code length");
             code.fragments[i] = RawCode(codes[i].pos, codes[i].value);
         }
     }
@@ -120,7 +120,7 @@ library EVMCode {
         require(fragmentPos != uint(-1), "Code not found");
 
         // only need to retrieve 32 bytes
-        if (fragmentPos == ((pos + numBytes - 1) >> 5)) {
+        if (self.fragments[fragmentPos].pos == ((pos + numBytes - 1) >> 5)) {
             // retrieve the word which contains the required data
             //   shift left to strip unnecessary data on the left
             uint temp = self.fragments[fragmentPos].value << ((pos % 32) * 8);

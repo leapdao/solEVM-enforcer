@@ -25,4 +25,6 @@ contract('TestEVMCode', function () {
   it('toBytes', async function () {
     await evmCode.testToBytes();
   });
+
+  // TODO test with half word
 });
