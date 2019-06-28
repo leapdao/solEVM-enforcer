@@ -99,8 +99,6 @@ contract IEnforcer {
     function dispute(
         bytes32 _solverPathRoot,
         bytes32 _challengerPathRoot,
-        bytes32[] memory _resultProof,
-        bytes memory _result,
         EVMParameters memory _parameters
     ) public payable;
 

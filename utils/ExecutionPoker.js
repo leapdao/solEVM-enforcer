@@ -158,8 +158,6 @@ module.exports = class ExecutionPoker {
       let tx = await this.enforcer.dispute(
         solverHash,
         challengerHash,
-        [],
-        '0x',
         taskParams,
         { value: bondAmount, gasLimit: this.gasLimit }
       );

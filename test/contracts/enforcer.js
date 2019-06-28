@@ -65,7 +65,7 @@ contract('Enforcer', () => {
 
     // start dispute
     tx = await enforcer.dispute(
-      solverPathRoot, challengerPathRoot, resultProof, result, params,
+      solverPathRoot, challengerPathRoot, params,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
@@ -155,7 +155,7 @@ contract('Enforcer', () => {
   // dispute
   it('not allow dispute with nonexistent execution', async () => {
     let tx = enforcer.dispute(
-      solverPathRoot.replace('71', '00'), challengerPathRoot, resultProof, result, params,
+      solverPathRoot.replace('71', '00'), challengerPathRoot, params,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
 
@@ -164,7 +164,7 @@ contract('Enforcer', () => {
 
   it('not allow dispute without bond', async () => {
     let tx = enforcer.dispute(
-      solverPathRoot, challengerPathRoot, [], '0x', params,
+      solverPathRoot, challengerPathRoot, params,
       { value: 0, gasLimit: GAS_LIMIT }
     );
     await assertRevert(tx, 'Bond amount is required');
@@ -174,7 +174,7 @@ contract('Enforcer', () => {
     await onchainWait(challengePeriod - (executionDepth + 1) * timeoutDuration);
 
     let tx = enforcer.dispute(
-      solverPathRoot, challengerPathRoot, resultProof, result, params,
+      solverPathRoot, challengerPathRoot, params,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await assertRevert(tx, 'Execution is out of challenge period');
@@ -192,7 +192,7 @@ contract('Enforcer', () => {
     const challengerBond = await enforcer.bonds(challenger.address);
 
     tx = await enforcer.connect(challenger).dispute(
-      _solverPathRoot, challengerPathRoot, resultProof, result, params,
+      _solverPathRoot, challengerPathRoot, params,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
@@ -272,7 +272,7 @@ contract('Enforcer', () => {
     await tx.wait();
 
     tx = await enforcer.connect(challenger).dispute(
-      _solverPathRoot, challengerPathRoot, resultProof, result, params,
+      _solverPathRoot, challengerPathRoot, params,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await tx.wait();
@@ -325,7 +325,7 @@ contract('Enforcer', () => {
     assert.deepEqual(status[2], [ethers.utils.solidityKeccak256(['bytes'], [resultBytes])], 'resultHashes');
 
     tx = await enforcer.connect(challenger).dispute(
-      _solverPathRoot, challengerPathRoot, resultProof, resultBytes, evmParams,
+      _solverPathRoot, challengerPathRoot, evmParams,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
