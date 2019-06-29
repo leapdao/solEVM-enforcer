@@ -58,15 +58,13 @@ library EVMCode {
         uint wordPos = pos >> 5;
         uint fragmentPos = findFragment(self, wordPos);
 
-        if (fragmentPos != uint(-1)) {
-            // 0x00000000 11111111 22222222 ... (256 bit)
-            // to get a byte at position x, we need to shift all these byte at position > x + 8
-            // x = 0 -> shift 248 = (32 - 1) * 8
-            // x = 1 -> shift 242 = (32 - 2) * 8
-            // x = 31 -> shift 0 = (32 - 32) * 8
-            return uint8(self.fragments[fragmentPos].value >> ((31 - (pos % 32)) * 8));
-        }
-        return 0xfe;
+        require(fragmentPos != uint(-1), 'Opcode missing');
+        // 0x00000000 11111111 22222222 ... (256 bit)
+        // to get a byte at position x, we need to shift all these byte at position > x + 8
+        // x = 0 -> shift 248 = (32 - 1) * 8
+        // x = 1 -> shift 242 = (32 - 2) * 8
+        // x = 31 -> shift 0 = (32 - 32) * 8
+        return uint8(self.fragments[fragmentPos].value >> ((31 - (pos % 32)) * 8));
     }
 
     /**

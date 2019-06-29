@@ -246,7 +246,7 @@ contract Verifier is Ownable, HydratedRuntime {
 
         uint8 opcode = evm.code.getOpcodeAt(executionState.pc);
         if ((dispute.state & END_OF_EXECUTION) != 0) {
-            if (opcode != OP_REVERT && opcode != OP_REVERT && opcode != OP_STOP) {
+            if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
                 return;
             }
         }

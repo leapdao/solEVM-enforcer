@@ -138,17 +138,19 @@ module.exports = class OffchainStepper extends VM.MetaVM {
   static initialState (code, callData, customEnvironmentHash) {
     const DEFAULT_GAS = 0x0fffffffffffff;
 
-    // first opcode
-    let rawCodes = [OffchainStepper.getCodeInWord(Buffer.from(code.join(''), 'hex'), 0, 1)];
+    let codeBuffer = Buffer.from(code.join(''), 'hex');
+    let rawCodes = OffchainStepper.getCodeInWord(codeBuffer, 0, 1);
     if (parseInt(code[0], 16) === parseInt(OP.PUSH32, 16)) {
       // second opcode
-      rawCodes.push(OffchainStepper.getCodeInWord(Buffer.from(code.join(''), 'hex'), 32, 1));
+      rawCodes.push(OffchainStepper.getCodeInWord(codeBuffer, 32, 1));
     }
 
     return {
       executionState: {
         code: code,
         rawCodes,
+        codeLength: codeBuffer.length,
+        codeFragLength: rawCodes.length,
         data: callData,
         compactStack: [],
         stack: [],
@@ -244,15 +246,16 @@ module.exports = class OffchainStepper extends VM.MetaVM {
 
     let opcodeName = runState.opName;
     let opcode = runState.opCode;
+    let nextOpcode = runState.code[pc];
     let stackFixed;
 
-    if (opcode >= OP_SWAP1 && opcode <= OP_SWAP16) {
-      let x = 16 - (OP_SWAP16 - opcode);
+    if (nextOpcode >= OP_SWAP1 && nextOpcode <= OP_SWAP16) {
+      let x = 16 - (OP_SWAP16 - nextOpcode);
       stackFixed = stack.slice(-(x * 2));
     }
 
-    if (opcode >= OP_DUP1 && opcode <= OP_DUP16) {
-      let x = 16 - (OP_DUP16 - opcode);
+    if (nextOpcode >= OP_DUP1 && nextOpcode <= OP_DUP16) {
+      let x = 16 - (OP_DUP16 - nextOpcode);
       stackFixed = stack.slice(-x);
     }
 
@@ -317,14 +320,14 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     }
 
     let rawCodes = [];
-    if (parseInt(OP.PUSH1, 16) <= opcode && opcode <= parseInt(OP.PUSH32, 16)) {
+    if (parseInt(OP.PUSH1, 16) <= nextOpcode && nextOpcode <= parseInt(OP.PUSH32, 16)) {
       // PUSH opcode need some code data
-      const len = opcode - parseInt(OP.PUSH1, 16) + 1;
-      rawCodes = OffchainStepper.getCodeInWord(runState.code, oldPC + 1, len);
-    } else if (opcode === parseInt(OP.JUMP, 16)) {
+      const len = nextOpcode - parseInt(OP.PUSH1, 16) + 1;
+      rawCodes = OffchainStepper.getCodeInWord(runState.code, pc + 1, len);
+    } else if (nextOpcode === parseInt(OP.JUMP, 16)) {
       // JUMP need the targeted pc is JUMPDEST
       rawCodes = OffchainStepper.getCodeInWord(runState.code, stack[stack.length - 1], 1);
-    } else if (opcode === parseInt(OP.CODECOPY, 16)) {
+    } else if (nextOpcode === parseInt(OP.CODECOPY, 16)) {
       // CODECOPY need code of the required segment
       const offset = stack[stack.length - 2];
       const len = stack[stack.length - 3];
@@ -332,7 +335,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     }
 
     // get code contains current pc
-    let pcCode = OffchainStepper.getCodeInWord(runState.code, oldPC, 1)[0];
+    let pcCode = OffchainStepper.getCodeInWord(runState.code, pc, 1)[0];
     const found = rawCodes.find((el) => {
       return el.pos === pcCode.pos;
     });
@@ -354,7 +357,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       callDataReadLow: callDataProof.readLow,
       callDataReadHigh: callDataProof.readHigh,
       opcodeName: opcodeName,
-      opcode: opcode,
+      opcode: nextOpcode,
       isCallDataRequired: isCallDataRequired,
       isMemoryRequired: isMemoryRequired,
       gasFee: gasFee,
@@ -483,6 +486,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       wordPos++;
       len -= 32;
     }
+    console.log('GOT', res);
     return res;
   }
 

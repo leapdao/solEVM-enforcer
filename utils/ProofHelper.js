@@ -21,7 +21,9 @@ module.exports = class ProofHelper {
     return {
       proofs,
       executionInput: {
-        data: (execState.isCallDataRequired ? prevOutput.data : '0x'),
+        // TODO don't know why but this suddenly failed
+        // data: (execState.isCallDataRequired ? prevOutput.data : '0x'),
+        data: prevOutput.data,
         stack: execState.compactStack,
         mem: execState.isMemoryRequired ? prevOutput.mem : [],
         customEnvironmentHash: OP.ZERO_HASH,
