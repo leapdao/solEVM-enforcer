@@ -229,7 +229,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     // re-use if possible
     let stack = prevStep.stack || toHex(runState.stack);
     let pc = runState.programCounter;
-    let oldPC = pc;
     let gasLeft = runState.gasLeft.addn(0);
     let exceptionError;
 
@@ -327,6 +326,7 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     } else if (nextOpcode === parseInt(OP.JUMP, 16)) {
       // JUMP need the targeted pc is JUMPDEST
       rawCodes = OffchainStepper.getCodeInWord(runState.code, stack[stack.length - 1], 1);
+      // TODO JUMPI
     } else if (nextOpcode === parseInt(OP.CODECOPY, 16)) {
       // CODECOPY need code of the required segment
       const offset = stack[stack.length - 2];
@@ -356,7 +356,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       memWriteHigh: memProof.writeHigh,
       callDataReadLow: callDataProof.readLow,
       callDataReadHigh: callDataProof.readHigh,
-      opcodeName: opcodeName,
       opcode: nextOpcode,
       isCallDataRequired: isCallDataRequired,
       isMemoryRequired: isMemoryRequired,
