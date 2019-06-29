@@ -35,7 +35,7 @@ contract Verifier is Ownable, HydratedRuntime {
     struct Dispute {
         bytes32 executionId;
         bytes32 initialStateHash;
-        address codeContractAddress;
+        bytes32 codeHash;
         address challengerAddr;
 
         bytes32 solverPath;
@@ -95,12 +95,12 @@ contract Verifier is Ownable, HydratedRuntime {
         uint256 executionDepth,
         // optional for implementors
         bytes32 customEnvironmentHash,
-        address challenger,
-        address codeContractAddress,
         // TODO: should be the bytes32 root hash later on
-        bytes memory callData
+        bytes32 codeHash,
+        bytes32 dataHash,
+        address challenger
     ) public onlyEnforcer() returns (bytes32 disputeId) {
-        bytes32 initialStateHash = Merkelizer.initialStateHash(callData, customEnvironmentHash);
+        bytes32 initialStateHash = Merkelizer.initialStateHash(dataHash, customEnvironmentHash);
 
         disputeId = keccak256(
             abi.encodePacked(
@@ -119,7 +119,7 @@ contract Verifier is Ownable, HydratedRuntime {
         disputes[disputeId] = Dispute(
             executionId,
             initialStateHash,
-            codeContractAddress,
+            codeHash,
             challenger,
             solverHashRoot,
             challengerHashRoot,
@@ -220,7 +220,8 @@ contract Verifier is Ownable, HydratedRuntime {
         }
 
         if ((dispute.state & END_OF_EXECUTION) != 0) {
-            address codeAddress = dispute.codeContractAddress;
+            // TODO: support both code from bytes and from address (Future PR)
+            address codeAddress = address(bytes20(dispute.codeHash));
             uint pos = executionState.pc;
             uint8 opcode;
 
@@ -252,7 +253,7 @@ contract Verifier is Ownable, HydratedRuntime {
 
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
-        evm.code = EVMCode.fromAddress(dispute.codeContractAddress);
+        evm.code = EVMCode.fromAddress(address(bytes20(dispute.codeHash)));
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);

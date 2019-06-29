@@ -1,20 +1,37 @@
 #!/usr/bin/env node
 
-const { ExecutionPoker } = require('./../utils');
+const { ExecutionPoker, Merkelizer } = require('./../utils');
 
 const fs = require('fs');
 const ethers = require('ethers');
 const ganache = require('ganache-cli');
 
 const GAS_LIMIT = 0xfffffffffffff;
-
-// let submissionCounter = 0;
+const EVMParameters = {
+  origin: '0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1',
+  target: '0xfeefeefeefeefeefeefeefeefeefeefeefeefee0',
+  blockHash: '0xdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdc',
+  blockNumber: 123,
+  time: 1560775755,
+  txGasLimit: 0xffffffffff,
+  customEnvironmentHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  codeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+  dataHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+};
 
 class MyExecutionPoker extends ExecutionPoker {
   onSlashed (execId) {
     this.log(`got slashed, executionId(${execId})`);
     // we are done
     process.exit(0);
+  }
+
+  async requestExecution (contractAddr, callData) {
+    const codeHash = `0x${contractAddr.replace('0x', '').toLowerCase().padEnd(64, '0')}`;
+    const dataHash = Merkelizer.dataHash(callData);
+    const evmParams = Object.assign(EVMParameters, { codeHash, dataHash });
+
+    return super.requestExecution(evmParams, callData);
   }
 }
 
@@ -71,21 +88,23 @@ async function main () {
   solverWallet = solverWallet.connect(new ethers.providers.Web3Provider(provider));
   challengerWallet = challengerWallet.connect(new ethers.providers.Web3Provider(provider));
 
-  let timeout = 10;
-  let challengePeriod = 10000;
-  let bondAmount = 1;
-  let maxExecutionDepth = 10;
+  const timeout = 10;
+  const taskPeriod = 100000;
+  const challengePeriod = 10000;
+  const bondAmount = 1;
+  const maxExecutionDepth = 10;
 
   console.log(
     `Deploying Verifier & Enforcer\n\
     \tTimeout: ${timeout}\n\tChallengePeriod: ${challengePeriod}\n\tBond amount: ${bondAmount}`
   );
 
-  let verifier = await deployContract(Verifier, deployerWallet, timeout);
-  let enforcer = await deployContract(
+  const verifier = await deployContract(Verifier, deployerWallet, timeout);
+  const enforcer = await deployContract(
     Enforcer,
     deployerWallet,
     verifier.address,
+    taskPeriod,
     challengePeriod,
     bondAmount,
     maxExecutionDepth
@@ -141,14 +160,15 @@ async function main () {
 
     console.log('callData', data);
 
-    let tmp = new MyExecutionPoker(
+    const execPoker = new MyExecutionPoker(
       enforcer,
       verifier,
       solverWallet,
       GAS_LIMIT,
       'solver'
     );
-    tmp.registerExecution(target.address, data);
+    // will kick solver and later the challenger :)
+    execPoker.requestExecution(target.address, data);
   });
 }
 
