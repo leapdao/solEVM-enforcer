@@ -30,7 +30,7 @@ function computeWitnessPath (dispute, merkleTree) {
 }
 
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
-  const args = ProofHelper.constructProof(computationPath);
+  const args = ProofHelper.constructProof(computationPath, code.join(''));
   debug('ExecState', args.executionInput);
 
   let tx = await verifier.submitProof(

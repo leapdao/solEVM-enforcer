@@ -34,6 +34,18 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
    */
   static codeHash (code) {
     // split code to 64 char string - bytes32
+    const fragments = Merkelizer.fragmentCode(code);
+    const merkle = Merkelizer.generateMerkleTree(fragments);
+
+    return merkle.tree[merkle.depth - 1][0];
+  }
+
+  /**
+   * divide code in to fragments of bytes32, last element is padded
+   * code is a hex string
+   */
+  static fragmentCode (code) {
+    console.log('FRAGMENT');
     const fragments = [];
     for (let pos = 0; pos < code.length; pos += 64) {
       fragments.push(code.slice(pos, pos + 64));
@@ -41,22 +53,57 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
     if (fragments[fragments.length - 1].length < 64) {
       fragments[fragments.length - 1] += '0'.repeat(64 - fragments[fragments.length - 1].length);
     }
+    return fragments;
+  }
 
-    let tree = [[]];
-    tree[0] = fragments.map(x => ethers.utils.solidityKeccak256(['bytes32'], [`0x${x}`]));
-    let stage = 0;
-    while (tree[stage].length > 1) {
-      let next = stage + 1;
-      tree.push([]);
-      if (tree[stage].length % 2 === 1) tree[stage].push(ZERO_HASH);
-      for (let pos = 0; pos < tree[stage].length; pos += 2) {
-        tree[next].push(
-          ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [tree[stage][pos], tree[stage][pos + 1]])
+  /**
+   * @dev return the Merkle tree generated for a given array of values
+   */
+  static generateMerkleTree (arr) {
+    console.log('GENERATING', arr);
+    let merkle = {
+      depth: 0,
+      tree: [[]],
+    };
+    merkle.tree[0] = arr.map(x => ethers.utils.solidityKeccak256(['bytes32'], [`0x${x}`]));
+    let depth = 0;
+    while (merkle.tree[depth].length > 1) {
+      let next = depth + 1;
+      merkle.tree.push([]);
+      if (merkle.tree[depth].length % 2 === 1) merkle.tree[depth].push(ZERO_HASH);
+      for (let pos = 0; pos < merkle.tree[depth].length; pos += 2) {
+        merkle.tree[next].push(
+          ethers.utils.solidityKeccak256(
+            ['bytes32', 'bytes32'],
+            [merkle.tree[depth][pos], merkle.tree[depth][pos + 1]])
         );
       }
-      stage++;
+      depth++;
     }
-    return tree[stage][0];
+    merkle.depth = depth + 1;
+    return merkle;
+  }
+
+  /**
+   * @dev return hash proof that an element exists in arr at pos
+   *  - pos is position in arr
+   *  - arr is an array of values
+   *  - proof is of the form { pos: p, hashes: [ h, ... ] }
+   */
+  static hashProof (pos, arr) {
+    console.log('Getting proof', pos, arr);
+    let merkle = Merkelizer.generateMerkleTree(arr);
+    console.log('Merkle', merkle);
+    const proof = {
+      pos: pos,
+      hashes: [],
+    };
+    let p = pos;
+    for (let i = 0; i < merkle.depth - 1; i++) {
+      proof.hashes.push(merkle.tree[i][p ^ (p % 2)]);
+      p >>= 1;
+    }
+    return proof;
   }
 
   static stackHash (stack, sibling) {
