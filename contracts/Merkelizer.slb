@@ -19,6 +19,7 @@ library Merkelizer {
         EVMCode.RawCode[50] code;
         uint codeLength;
         uint codeFragLength;
+        uint codeProofLength;
     }
 
     function memHash(bytes32[] memory _mem) internal pure returns (bytes32) {

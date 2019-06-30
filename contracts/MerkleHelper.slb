@@ -1,0 +1,30 @@
+pragma solidity ^0.5.2;
+pragma experimental ABIEncoderV2;
+import "./EVMCode.slb";
+
+library MerkleHelper {
+    /**
+      * @dev verify that every data in an array exists using Merkle proofs
+      *
+      * @param data An array of data, each contains pos and value
+      * @param proofs An concatenated array of proofs, each is a bytes32
+      * @param proofLength The length of a proof in proofs array
+      * @param rootHash The root hash needed to verify against
+      */
+    function verifySeries(EVMCode.RawCode[50] memory data, uint dataLength, bytes32[] memory proofs, uint proofLength, bytes32 rootHash) internal pure returns (bool) {
+        for (uint i = 0; i < dataLength; i++) {
+            bytes32 hash = keccak256(abi.encodePacked(data[i].value));
+            uint nPos = data[i].pos;
+            for (uint j = 0; j < proofLength; j++) {
+                if (nPos % 2 == 0) {
+                    hash = keccak256(abi.encodePacked(hash, proofs[i * proofLength + j]));
+                } else {
+                    hash = keccak256(abi.encodePacked(proofs[i * proofLength + j], hash));
+                }
+                nPos >>= 1;
+            }
+            if (hash != rootHash) return false;
+        }
+        return true;
+    }
+}

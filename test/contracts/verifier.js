@@ -36,6 +36,7 @@ async function submitProofHelper (verifier, disputeId, code, computationPath) {
   let tx = await verifier.submitProof(
     disputeId,
     args.proofs,
+    args.codeProofs,
     args.executionInput,
     txOverrides
   );
@@ -312,6 +313,7 @@ contract('Verifier', function () {
       await assertRevert(verifier.submitProof(
         disputeId,
         proofs,
+        [],
         {
           data: '0x12345678',
           stack: [],
@@ -325,6 +327,7 @@ contract('Verifier', function () {
           code: Merkelizer.emptyRawCode(),
           codeLength: 1,
           codeFragLength: 0,
+          codeProofLength: 0,
         },
         txOverrides
       ));

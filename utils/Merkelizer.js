@@ -88,19 +88,16 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
    * @dev return hash proof that an element exists in arr at pos
    *  - pos is position in arr
    *  - arr is an array of values
-   *  - proof is of the form { pos: p, hashes: [ h, ... ] }
+   *  - proof is an array of hashes
    */
   static hashProof (pos, arr) {
     console.log('Getting proof', pos, arr);
     let merkle = Merkelizer.generateMerkleTree(arr);
     console.log('Merkle', merkle);
-    const proof = {
-      pos: pos,
-      hashes: [],
-    };
+    const proof = [];
     let p = pos;
     for (let i = 0; i < merkle.depth - 1; i++) {
-      proof.hashes.push(merkle.tree[i][p ^ (p % 2)]);
+      proof.push(merkle.tree[i][p ^ 1]);
       p >>= 1;
     }
     return proof;

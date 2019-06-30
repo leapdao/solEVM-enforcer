@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 import "./Enforcer.sol";
 import "./HydratedRuntime.sol";
 import "./Merkelizer.slb";
+import "./MerkleHelper.slb";
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
@@ -185,6 +186,7 @@ contract Verifier is Ownable, HydratedRuntime {
     function submitProof(
         bytes32 disputeId,
         Proofs memory proofs,
+        bytes32[] memory codeProofs,
         Merkelizer.ExecutionState memory executionState
         // solhint-disable-next-line function-max-lines
     ) public onlyPlaying(disputeId) {
@@ -202,7 +204,8 @@ contract Verifier is Ownable, HydratedRuntime {
         // TODO: verify all inputs, check access pattern(s) for memory, calldata, stack
         bytes32 dataHash = executionState.data.length != 0 ? Merkelizer.dataHash(executionState.data) : proofs.dataHash;
         bytes32 memHash = executionState.mem.length != 0 ? Merkelizer.memHash(executionState.mem) : proofs.memHash;
-        // TODO: verify code
+
+        require(MerkleHelper.verifySeries(executionState.code, executionState.codeFragLength, codeProofs, executionState.codeProofLength, dispute.codeHashRoot), 'code verification failed');
 
         bytes32 inputHash = executionState.stateHash(
             executionState.stackHash(proofs.stackHash),

@@ -11,14 +11,16 @@ module.exports = class ProofHelper {
 
     console.log('PrevOutput', prevOutput);
     let code = prevOutput.rawCodes.slice();
-    let codeProof = [];
+    let codeProofs = [];
     console.log('Code Length', code.length);
     for (let i = 0; i < code.length; i++) {
       console.log('Ci', code[i]);
-      codeProof.push(Merkelizer.hashProof(code[i].pos, Merkelizer.fragmentCode(fullCode)));
+      codeProofs = codeProofs.concat(Merkelizer.hashProof(code[i].pos, Merkelizer.fragmentCode(fullCode)));
       console.log('Ci', code[i]);
     }
-    console.log('Code Proof', codeProof);
+    let codeProofLength = codeProofs.length / code.length;
+    console.log('Code Proof', codeProofs);
+    // stub code
     while (code.length < 50) code.push({ pos: 0, value: 0 });
 
     const proofs = {
@@ -27,12 +29,11 @@ module.exports = class ProofHelper {
       ),
       memHash: execState.isMemoryRequired ? OP.ZERO_HASH : Merkelizer.memHash(prevOutput.mem),
       dataHash: execState.isCallDataRequired ? OP.ZERO_HASH : Merkelizer.dataHash(prevOutput.data),
-      codeProof,
-      // TODO put code proof here
     };
 
     return {
       proofs,
+      codeProofs,
       executionInput: {
         // TODO don't know why but this suddenly failed
         // data: (execState.isCallDataRequired ? prevOutput.data : '0x'),
@@ -48,6 +49,7 @@ module.exports = class ProofHelper {
         code,
         codeLength: prevOutput.codeLength,
         codeFragLength: prevOutput.codeFragLength,
+        codeProofLength,
       },
     };
   }
