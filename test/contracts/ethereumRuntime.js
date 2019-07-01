@@ -119,7 +119,7 @@ contract('Runtime', function () {
           const maxAllowedDiff = 5000;
 
           // Hack for ganache. It has wrong gas accounting 🤦
-          if (gasUsedBaseline >= 0xf810000000000) {
+          if (gasUsed >= 0xf810000000000) {
             console.log(`Skipping gas accounting for ${testName} because of broken gas accounting (ganache)`);
           } else {
             totalGasUsedBaseline += gasUsedBaseline;
