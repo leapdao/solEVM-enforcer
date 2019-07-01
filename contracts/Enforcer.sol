@@ -70,11 +70,6 @@ contract Enforcer {
         emit Registered(executionId, msg.sender, codeHashRoot, _callData);
     }
 
-    function remove(bytes32 codeHashRoot, bytes memory _callData) public {
-        bytes32 executionId = keccak256(abi.encodePacked(codeHashRoot, _callData));
-        executions[executionId].startBlock = 0;
-    }
-
     /**
       * @dev dispute is called by challenger to start a new dispute
       *     assumed that challenger's execution tree is of the same depth as solver's

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { ExecutionPoker } = require('./../utils');
+const Merkelizer = require('./../utils/Merkelizer');
 
 const fs = require('fs');
 const ethers = require('ethers');
@@ -101,16 +102,6 @@ async function main () {
   console.log(`Solver wallet: ${solverWallet.address}`);
   console.log(`Challenger wallet: ${challengerWallet.address}`);
 
-  // challenger
-  // eslint-disable-next-line no-new
-  new MyExecutionPoker(
-    enforcer,
-    verifier,
-    challengerWallet,
-    GAS_LIMIT,
-    'challenger'
-  );
-
   fs.realpath(process.argv[2], async function (err, path) {
     if (err) {
       onException(err);
@@ -128,6 +119,14 @@ async function main () {
 
     const contr = require(path);
     const target = await deployContract(contr, solverWallet);
+    let bytecode = await solverWallet.provider.getCode(target.address);
+    let code = [];
+    let len = bytecode.length;
+
+    for (let i = 2; i < len;) {
+      code.push(bytecode.substring(i, i += 2));
+    }
+    const codeHash = Merkelizer.codeHash(code.join(''));
 
     if (!target.interface.functions[functionName]) {
       console.log('available functions');
@@ -141,14 +140,28 @@ async function main () {
 
     console.log('callData', data);
 
+    // challenger
+    // eslint-disable-next-line no-new
+    new MyExecutionPoker(
+      enforcer,
+      verifier,
+      challengerWallet,
+      GAS_LIMIT,
+      code,
+      codeHash,
+      'challenger'
+    );
+
     let tmp = new MyExecutionPoker(
       enforcer,
       verifier,
       solverWallet,
       GAS_LIMIT,
+      code,
+      codeHash,
       'solver'
     );
-    tmp.registerExecution(target.address, data);
+    tmp.registerExecution(code, codeHash, data);
   });
 }
 

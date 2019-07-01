@@ -8,7 +8,7 @@ const debug = require('debug')('vgame-test');
 const GAS_LIMIT = OP.GAS_LIMIT;
 
 const Verifier = artifacts.require('Verifier.sol');
-const Enforcer = artifacts.require('Enforcer.sol');
+const Enforcer = artifacts.require('EnforcerMock.sol');
 
 const ZERO_HASH = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const ONE_HASH = '0x0000000000000000000000000000000000000000000000000000000000000001';
