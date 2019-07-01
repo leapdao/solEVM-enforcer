@@ -205,7 +205,13 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 dataHash = executionState.data.length != 0 ? Merkelizer.dataHash(executionState.data) : proofs.dataHash;
         bytes32 memHash = executionState.mem.length != 0 ? Merkelizer.memHash(executionState.mem) : proofs.memHash;
 
-        require(MerkleHelper.verifySeries(executionState.code, executionState.codeFragLength, codeProofs, executionState.codeProofLength, dispute.codeHashRoot), 'code verification failed');
+        require(MerkleHelper.verifySeries(
+            executionState.code,
+            executionState.codeFragLength,
+            codeProofs,
+            executionState.codeProofLength,
+            dispute.codeHashRoot),
+            "code verification failed");
 
         bytes32 inputHash = executionState.stateHash(
             executionState.stackHash(proofs.stackHash),

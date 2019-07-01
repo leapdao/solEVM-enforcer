@@ -58,7 +58,7 @@ library EVMCode {
         uint wordPos = pos >> 5;
         uint fragmentPos = findFragment(self, wordPos);
 
-        require(fragmentPos != uint(-1), 'Opcode missing');
+        require(fragmentPos != uint(-1), "Opcode missing");
         // 0x00000000 11111111 22222222 ... (256 bit)
         // to get a byte at position x, we need to shift all these byte at position > x + 8
         // x = 0 -> shift 248 = (32 - 1) * 8

@@ -1,6 +1,8 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
+
 import "./EVMCode.slb";
+
 
 library MerkleHelper {
     /**
@@ -11,7 +13,13 @@ library MerkleHelper {
       * @param proofLength The length of a proof in proofs array
       * @param rootHash The root hash needed to verify against
       */
-    function verifySeries(EVMCode.RawCode[50] memory data, uint dataLength, bytes32[] memory proofs, uint proofLength, bytes32 rootHash) internal pure returns (bool) {
+    function verifySeries(
+        EVMCode.RawCode[50] memory data,
+        uint dataLength, bytes32[] memory proofs,
+        uint proofLength,
+        bytes32 rootHash)
+        internal pure returns (bool)
+    {
         for (uint i = 0; i < dataLength; i++) {
             bytes32 hash = keccak256(abi.encodePacked(data[i].value));
             uint nPos = data[i].pos;
