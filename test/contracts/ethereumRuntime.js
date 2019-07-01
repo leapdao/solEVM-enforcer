@@ -118,11 +118,17 @@ contract('Runtime', function () {
           // The max increase in gas usage
           const maxAllowedDiff = 5000;
 
-          totalGasUsedBaseline += gasUsedBaseline;
-          assert.ok(
-            gasUsed <= (gasUsedBaseline + maxAllowedDiff),
-            `gasUsed(${gasUsed}) should be not more than baseline(${gasUsedBaseline}) + ${maxAllowedDiff}`
-          );
+          // Hack for ganache. It has wrong gas accounting 🤦
+          if (gasUsedBaseline >= 0xf810000000000) {
+            console.log(`Skipping gas accounting for ${testName} because of broken gas accounting (ganache)`);
+          } else {
+            totalGasUsedBaseline += gasUsedBaseline;
+
+            assert.ok(
+              gasUsed <= (gasUsedBaseline + maxAllowedDiff),
+              `gasUsed(${gasUsed}) should be not more than baseline(${gasUsedBaseline}) + ${maxAllowedDiff}`
+            );
+          }
         } else {
           console.log(`*** No gasUsed-baseline for ${testName} ***`);
         }
