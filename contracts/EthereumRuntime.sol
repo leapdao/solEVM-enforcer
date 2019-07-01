@@ -11,7 +11,9 @@ import { HydratedRuntime } from "./HydratedRuntime.sol";
 contract EthereumRuntime is HydratedRuntime {
 
     struct EVMPreimage {
-        address code;
+        EVMCode.RawCode[50] code;
+        uint codeFragLength;
+        uint codeLength;
         bytes data;
         uint gasLimit;
         uint pc;
@@ -60,7 +62,7 @@ contract EthereumRuntime is HydratedRuntime {
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
 
-        // evm.code = EVMCode.fromAddress(img.code);
+        evm.code = EVMCode.fromArray(img.code, img.codeFragLength, img.codeLength);
         evm.stack = EVMStack.fromArray(img.stack);
         evm.mem = EVMMemory.fromArray(img.mem);
 

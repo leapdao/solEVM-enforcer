@@ -1,4 +1,5 @@
 const OP = require('./../../utils/constants');
+const Merkelizer = require('./../../utils/Merkelizer');
 // TODO make a util contract
 const ethers = require('ethers');
 const { PUSH1 } = OP;
@@ -80,6 +81,24 @@ Utils.client = async () => {
 Utils.txOverrides = {
   gasLimit: 0xfffffffffffff,
   gasPrice: 0x01,
+};
+
+Utils.prepareCode = function (code) {
+  const codeFragments = Merkelizer.fragmentCode(code.join('')).map((el, i) => {
+    return {
+      pos: i,
+      value: `0x${el}`,
+    };
+  });
+  const codeFragLength = codeFragments.length;
+  // stub code
+  while (codeFragments.length < 50) codeFragments.push({ pos: 0, value: 0 });
+
+  return {
+    codeFragments,
+    codeFragLength,
+    codeLength: code.length,
+  };
 };
 
 Utils.deployContract = async function (truffleContract, ...args) {

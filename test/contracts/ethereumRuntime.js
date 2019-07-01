@@ -1,4 +1,4 @@
-const { getCode, deployContract, deployCode } =
+const { getCode, deployContract, prepareCode } =
   require('./../helpers/utils');
 const fixtures = require('./../fixtures/runtime');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
@@ -26,11 +26,14 @@ contract('Runtime', function () {
         OP.JUMPDEST, // 0x0c
       ];
       const data = '0x';
-      const codeContract = await deployCode(code);
+      const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
+
       const executeStep = async (stepCount) =>
         (await rt.execute(
           {
-            code: codeContract.address,
+            code: codeFragments,
+            codeFragLength,
+            codeLength,
             data: data,
             pc: 0,
             stepCount: stepCount,
@@ -47,17 +50,21 @@ contract('Runtime', function () {
   describe('initAndExecute', () => {
     it('can continue from non-zero program counter', async () => {
       const code = [PUSH1, '03', PUSH1, '05', OP.ADD];
-      const codeContract = await deployCode(code);
+      const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
       const res = await rt.execute(
         {
-          code: codeContract.address,
+          code: codeFragments,
+          codeFragLength,
+          codeLength,
           pc: 0,
           stepCount: 2,
         }
       );
       const { stack } = await rt.execute(
         {
-          code: codeContract.address,
+          code: codeFragments,
+          codeFragLength,
+          codeLength,
           pc: 4,
           stepCount: 0,
           stack: res.stack,
@@ -77,9 +84,11 @@ contract('Runtime', function () {
         const data = fixture.data || '0x';
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
-        const codeContract = await deployCode(code);
+        const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
         const args = {
-          code: codeContract.address,
+          code: codeFragments,
+          codeFragLength,
+          codeLength,
           data,
           pc,
           gasLimit,
@@ -136,8 +145,13 @@ contract('Runtime', function () {
     const code = [PUSH1, '03', PUSH1, '05', OP.ADD];
     const data = '0x';
     const gasLimit = 9;
-    const codeContract = await deployCode(code);
-    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
+    const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
+    const res = await rt.execute({
+      code: codeFragments,
+      codeFragLength,
+      codeLength,
+      data,
+      gasLimit });
     // should have zero gas left
     assert.equal(res.gas, 0);
   });
@@ -146,8 +160,13 @@ contract('Runtime', function () {
     const code = [PUSH1, '03', PUSH1, '05', OP.ADD];
     const data = '0x';
     const gasLimit = 8;
-    const codeContract = await deployCode(code);
-    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
+    const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
+    const res = await rt.execute({
+      code: codeFragments,
+      codeFragLength,
+      codeLength,
+      data,
+      gasLimit });
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
@@ -172,8 +191,13 @@ contract('Runtime', function () {
     ];
     const data = '0x';
     const gasLimit = 200;
-    const codeContract = await deployCode(code);
-    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
+    const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
+    const res = await rt.execute({
+      code: codeFragments,
+      codeFragLength,
+      codeLength,
+      data,
+      gasLimit });
     // 13 = out of gas
     assert.equal(res.errno, 13);
   });
@@ -198,25 +222,38 @@ contract('Runtime', function () {
     ];
     const data = '0x';
     const gasLimit = 2000;
-    const codeContract = await deployCode(code);
-    const res = await rt.execute({ code: codeContract.address, data, gasLimit });
+    const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
+    const res = await rt.execute({
+      code: codeFragments,
+      codeFragLength,
+      codeLength,
+      data,
+      gasLimit });
     assert.equal(res.errno, 0);
   });
 
   it('should stack overflow', async function () {
     const code = [OP.PUSH1, '00'];
     const stack = Array(1024).fill(OP.ZERO_HASH);
-    const codeContract = await deployCode(code);
-    const res = await rt.execute({ code: codeContract.address, stack });
+    const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
+    const res = await rt.execute({
+      code: codeFragments,
+      codeFragLength,
+      codeLength,
+      stack,
+    });
     assert.equal(res.errno, OP.ERROR_STACK_OVERFLOW);
   });
 
   it('Limited gas', async () => {
     let code = [OP.PUSH1, '00'];
-    let codeContract = await deployCode(code);
+    const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
     const res = await rt.execute(
+
       {
-        code: codeContract.address,
+        code: codeFragments,
+        codeFragLength,
+        codeLength,
         gasRemaining: 2,
         gasLimit: 1,
       }

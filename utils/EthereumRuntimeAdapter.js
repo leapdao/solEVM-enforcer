@@ -23,12 +23,14 @@ module.exports = class EthereumRuntimeAdapter {
   }
 
   execute (
-    { code, data, pc, stepCount, gasRemaining, gasLimit, stack, mem },
+    { code, codeFragLength, codeLength, data, pc, stepCount, gasRemaining, gasLimit, stack, mem },
     payable
   ) {
     return (payable ? this.payableRuntimeContract.execute : this.runtimeContract.execute)(
       {
-        code: code || '0x',
+        code,
+        codeFragLength,
+        codeLength,
         data: data || '0x',
         pc: pc | 0,
         errno: 0,

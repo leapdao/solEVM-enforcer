@@ -45,7 +45,6 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
    * code is a hex string
    */
   static fragmentCode (code) {
-    console.log('FRAGMENT');
     const fragments = [];
     for (let pos = 0; pos < code.length; pos += 64) {
       fragments.push(code.slice(pos, pos + 64));
