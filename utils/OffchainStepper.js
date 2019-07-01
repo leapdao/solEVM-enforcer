@@ -463,6 +463,14 @@ module.exports = class OffchainStepper extends VM.MetaVM {
     throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
 
+  async handleEXTCODESIZE (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
+  async handleEXTCODECOPY (runState) {
+    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+  }
+
   async handleEXTCODEHASH (runState) {
     throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
