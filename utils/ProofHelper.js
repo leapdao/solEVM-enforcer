@@ -9,17 +9,12 @@ module.exports = class ProofHelper {
     const prevOutput = computationPath.left.executionState;
     const execState = computationPath.right.executionState;
 
-    console.log('PrevOutput', prevOutput);
     let code = prevOutput.rawCodes.slice();
     let codeProofs = [];
-    console.log('Code Length', code.length);
     for (let i = 0; i < code.length; i++) {
-      console.log('Ci', code[i]);
       codeProofs = codeProofs.concat(Merkelizer.hashProof(code[i].pos, Merkelizer.fragmentCode(fullCode)));
-      console.log('Ci', code[i]);
     }
     let codeProofLength = codeProofs.length / code.length;
-    console.log('Code Proof', codeProofs);
     // stub code
     while (code.length < 50) code.push({ pos: 0, value: 0 });
 

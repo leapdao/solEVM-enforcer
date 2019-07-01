@@ -1,4 +1,4 @@
-const { getCodeWithStep, deployContract, deployCode, toBN } = require('./../helpers/utils');
+const { getCodeWithStep, deployContract, prepareCode, toBN } = require('./../helpers/utils');
 const onChainFixtures = require('./../fixtures/onChain');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
 
@@ -19,11 +19,13 @@ contract('Runtime', function () {
       let gasCost;
 
       it(opcodeUnderTest, async () => {
-        const codeContract = await deployCode(code);
         // 1. export the state right before the target opcode (this supposed to be off-chain)
+        const { codeFragments, codeFragLength, codeLength } = prepareCode(code);
         const beforeState = await rt.execute(
           {
-            code: codeContract.address,
+            code: codeFragments,
+            codeFragLength,
+            codeLength,
             data,
             pc: 0,
             stepCount: step,
@@ -33,7 +35,9 @@ contract('Runtime', function () {
         // 2. export state right after the target opcode (this supposed to be off-chain)
         const afterState = await rt.execute(
           {
-            code: codeContract.address,
+            code: codeFragments,
+            codeFragLength,
+            codeLength,
             data,
             pc: 0,
             stepCount: step + 1,
@@ -43,7 +47,9 @@ contract('Runtime', function () {
         // 3. init with beforeState and execute just one step (target opcode) (this supposed to be on-chain)
         const onChainState = await rt.execute(
           {
-            code: codeContract.address,
+            code: codeFragments,
+            codeFragLength,
+            codeLength,
             data,
             pc: beforeState.pc,
             stepCount: 1,
@@ -68,7 +74,9 @@ contract('Runtime', function () {
 
         const oogState = await rt.execute(
           {
-            code: codeContract.address,
+            code: codeFragments,
+            codeFragLength,
+            codeLength,
             data,
             pc: 0,
             stepCount: 0,

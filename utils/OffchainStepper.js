@@ -243,7 +243,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       exceptionError = e;
     }
 
-    let opcodeName = runState.opName;
     let opcode = runState.opCode;
     let nextOpcode = runState.code[pc];
     let stackFixed;
@@ -472,7 +471,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
    * ]
    */
   static getCodeInWord (code, offset, len) {
-    console.log('GETTING CODE', code, offset, len);
     let wordPos = offset >> 5;
     let res = [];
     let val;
@@ -485,7 +483,6 @@ module.exports = class OffchainStepper extends VM.MetaVM {
       wordPos++;
       len -= 32;
     }
-    console.log('GOT', res);
     return res;
   }
 

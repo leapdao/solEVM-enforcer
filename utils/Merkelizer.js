@@ -59,7 +59,6 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
    * @dev return the Merkle tree generated for a given array of values
    */
   static generateMerkleTree (arr) {
-    console.log('GENERATING', arr);
     let merkle = {
       depth: 0,
       tree: [[]],
@@ -90,9 +89,7 @@ module.exports = class Merkelizer extends AbstractMerkleTree {
    *  - proof is an array of hashes
    */
   static hashProof (pos, arr) {
-    console.log('Getting proof', pos, arr);
     let merkle = Merkelizer.generateMerkleTree(arr);
-    console.log('Merkle', merkle);
     const proof = [];
     let p = pos;
     for (let i = 0; i < merkle.depth - 1; i++) {
