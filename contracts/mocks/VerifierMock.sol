@@ -23,7 +23,7 @@ contract VerifierMock {
         uint256 treeDepth,
         bytes32 customEnvironmentHash,
         address challenger,
-        address codeContractAddress,
+        bytes32 codeHash,
         bytes memory callData
     ) public returns (bytes32 disputeId) {
         // do nothing

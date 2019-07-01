@@ -168,22 +168,18 @@ contract('Enforcer', () => {
 
   it('allow dispute with valid execution', async () => {
     let tx = await enforcer.register(
-      codeHash, '0x09', endHash, executionDepth, customEnvironmentHash,
+      codeHash, '0x03', endHash, executionDepth, customEnvironmentHash,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
     const executionId = tx.events[0].args.executionId;
 
     const challengerBond = await enforcer.bonds(challenger.address);
-    try {
-      tx = await enforcer.connect(challenger).dispute(
-        codeHash, '0x09', otherEndHash,
-        { value: bondAmount, gasLimit: GAS_LIMIT }
-      );
-      tx = await tx.wait();
-    } catch (err) {
-      console.log('ERR', err);
-    }
+    tx = await enforcer.connect(challenger).dispute(
+      codeHash, '0x03', otherEndHash,
+      { value: bondAmount, gasPrice: 0x01, gasLimit: GAS_LIMIT }
+    );
+    tx = await tx.wait();
 
     assert.equal(tx.events[0].args.executionId, executionId, 'dispute incorrect execution');
     assert.deepEqual(
