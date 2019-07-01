@@ -118,9 +118,12 @@ contract('Runtime', function () {
           // The max increase in gas usage
           const maxAllowedDiff = 5000;
 
-          // Hack for ganache. It has wrong gas accounting 🤦
-          if (gasUsed >= 0xf810000000000) {
-            console.log(`Skipping gas accounting for ${testName} because of broken gas accounting (ganache)`);
+          // Skip gas accounting if we do coverage.
+          // Ther other hack is for ganache. It has wrong gas accounting with some precompiles 🤦
+          if (process.env.COVERAGE || gasUsed >= 0xf810000000000) {
+            console.log(
+              `Skipping gas accounting for ${testName} because of broken gas accounting (ganache) or coverage`
+            );
           } else {
             totalGasUsedBaseline += gasUsedBaseline;
 
