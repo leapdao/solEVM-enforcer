@@ -148,7 +148,11 @@ module.exports = class ExecutionPoker {
       this.log('submitting for l=' +
         obj.computationPath.left.hash + ' r=' + obj.computationPath.right.hash);
 
-      await this.submitProof(disputeId, obj.computationPath);
+      try {
+        await this.submitProof(disputeId, obj.computationPath);
+      } catch (err) {
+        this.log(err);
+      }
       return;
     }
 
