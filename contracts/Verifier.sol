@@ -36,7 +36,7 @@ contract Verifier is Ownable, HydratedRuntime {
     struct Dispute {
         bytes32 executionId;
         bytes32 initialStateHash;
-        bytes32 codeHashRoot;
+        bytes32 codeHash;
         address challengerAddr;
 
         bytes32 solverPath;
@@ -96,12 +96,12 @@ contract Verifier is Ownable, HydratedRuntime {
         uint256 executionDepth,
         // optional for implementors
         bytes32 customEnvironmentHash,
-        address challenger,
-        bytes32 codeHashRoot,
         // TODO: should be the bytes32 root hash later on
-        bytes memory callData
+        bytes32 codeHash,
+        bytes32 dataHash,
+        address challenger
     ) public onlyEnforcer() returns (bytes32 disputeId) {
-        bytes32 initialStateHash = Merkelizer.initialStateHash(callData, customEnvironmentHash);
+        bytes32 initialStateHash = Merkelizer.initialStateHash(dataHash, customEnvironmentHash);
 
         disputeId = keccak256(
             abi.encodePacked(
@@ -120,7 +120,7 @@ contract Verifier is Ownable, HydratedRuntime {
         disputes[disputeId] = Dispute(
             executionId,
             initialStateHash,
-            codeHashRoot,
+            codeHash,
             challenger,
             solverHashRoot,
             challengerHashRoot,
@@ -210,7 +210,7 @@ contract Verifier is Ownable, HydratedRuntime {
             executionState.codeFragLength,
             codeProofs,
             executionState.codeProofLength,
-            dispute.codeHashRoot),
+            dispute.codeHash),
             "code verification failed");
 
         bytes32 inputHash = executionState.stateHash(
@@ -228,6 +228,24 @@ contract Verifier is Ownable, HydratedRuntime {
                 return;
             }
         }
+
+        /*
+        if ((dispute.state & END_OF_EXECUTION) != 0) {
+            // TODO: support both code from bytes and from address (Future PR)
+            address codeAddress = address(bytes20(dispute.codeHash));
+            uint pos = executionState.pc;
+            uint8 opcode;
+
+            assembly {
+                extcodecopy(codeAddress, 31, pos, 1)
+                opcode := mload(0)
+            }
+
+            if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
+                return;
+            }
+        }
+        */
 
         EVM memory evm;
         HydratedState memory hydratedState = initHydratedState(evm);
@@ -247,6 +265,7 @@ contract Verifier is Ownable, HydratedRuntime {
 
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
+        // evm.code = EVMCode.fromAddress(address(bytes20(dispute.codeHash)));
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);

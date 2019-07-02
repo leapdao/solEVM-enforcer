@@ -75,12 +75,11 @@ library Merkelizer {
         );
     }
 
-    function initialStateHash(bytes memory callData, bytes32 customEnvironmentHash) internal pure returns (bytes32) {
+    function initialStateHash(bytes32 dataHash, bytes32 customEnvironmentHash) internal pure returns (bytes32) {
         ExecutionState memory e;
-        e.data = callData;
         e.gasRemaining = DEFAULT_GAS;
         e.customEnvironmentHash = customEnvironmentHash;
 
-        return stateHash(e, 0, 0, 0);
+        return stateHash(e, 0, 0, dataHash);
     }
 }

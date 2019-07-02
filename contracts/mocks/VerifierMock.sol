@@ -20,11 +20,13 @@ contract VerifierMock {
         bytes32 executionId,
         bytes32 solverHashRoot,
         bytes32 challengerHashRoot,
-        uint256 treeDepth,
+        uint256 executionDepth,
+        // optional for implementors
         bytes32 customEnvironmentHash,
-        address challenger,
+        // TODO: should be the bytes32 root hash later on
         bytes32 codeHash,
-        bytes memory callData
+        bytes32 dataHash,
+        address challenger
     ) public returns (bytes32 disputeId) {
         // do nothing
     }
