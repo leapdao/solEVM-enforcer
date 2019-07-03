@@ -16,7 +16,7 @@ module.exports = class ProofHelper {
     }
     let codeProofLength = codeProofs.length / code.length;
     // stub code
-    while (code.length < 50) code.push({ pos: 0, value: 0 });
+    // while (code.length < 50) code.push({ pos: 0, value: 0 });
 
     const proofs = {
       stackHash: Merkelizer.stackHash(
@@ -29,6 +29,7 @@ module.exports = class ProofHelper {
     return {
       proofs,
       codeProofs,
+      rawCodes: prevOutput.rawCodes,
       executionInput: {
         // TODO don't know why but this suddenly failed
         // data: (execState.isCallDataRequired ? prevOutput.data : '0x'),
@@ -41,7 +42,6 @@ module.exports = class ProofHelper {
         gasRemaining: prevOutput.gasRemaining,
         stackSize: prevOutput.stackSize,
         memSize: prevOutput.memSize,
-        code,
         codeLength: prevOutput.codeLength,
         codeFragLength: prevOutput.codeFragLength,
         codeProofLength,

@@ -26,9 +26,9 @@ module.exports = class EthereumRuntimeAdapter {
     { code, codeFragLength, codeLength, data, pc, stepCount, gasRemaining, gasLimit, stack, mem },
     payable
   ) {
+    console.log('Code', code);
     return (payable ? this.payableRuntimeContract.execute : this.runtimeContract.execute)(
       {
-        code,
         codeFragLength,
         codeLength,
         data: data || '0x',
@@ -40,7 +40,8 @@ module.exports = class EthereumRuntimeAdapter {
         stack: stack || [],
         mem: mem || [],
         returnData: '0x',
-      }
+      },
+      code,
     );
   }
 };

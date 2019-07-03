@@ -186,6 +186,7 @@ contract Verifier is Ownable, HydratedRuntime {
     function submitProof(
         bytes32 disputeId,
         Proofs memory proofs,
+        EVMCode.RawCode[] memory code,
         bytes32[] memory codeProofs,
         Merkelizer.ExecutionState memory executionState
         // solhint-disable-next-line function-max-lines
@@ -206,7 +207,7 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 memHash = executionState.mem.length != 0 ? Merkelizer.memHash(executionState.mem) : proofs.memHash;
 
         require(MerkleHelper.verifySeries(
-            executionState.code,
+            code,
             executionState.codeFragLength,
             codeProofs,
             executionState.codeProofLength,
@@ -270,7 +271,7 @@ contract Verifier is Ownable, HydratedRuntime {
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
         evm.mem = EVMMemory.fromArray(executionState.mem);
-        evm.code = EVMCode.fromArray(executionState.code, executionState.codeFragLength, executionState.codeLength);
+        evm.code = EVMCode.fromArray(code, executionState.codeFragLength, executionState.codeLength);
 
         uint8 opcode = evm.code.getOpcodeAt(executionState.pc);
         if ((dispute.state & END_OF_EXECUTION) != 0) {

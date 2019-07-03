@@ -68,10 +68,12 @@ function computeWitnessPath (dispute, merkleTree) {
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const args = ProofHelper.constructProof(computationPath, code.join(''));
   debug('ExecState', args.executionInput);
+  debug('RawCode', args.rawCodes);
 
   let tx = await verifier.submitProof(
     disputeId,
     args.proofs,
+    args.rawCodes,
     args.codeProofs,
     args.executionInput,
     txOverrides
@@ -352,6 +354,7 @@ contract('Verifier', function () {
       await assertRevert(verifier.submitProof(
         disputeId,
         proofs,
+        [],
         [],
         {
           data: '0x12345678',

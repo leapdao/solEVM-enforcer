@@ -11,7 +11,6 @@ import { HydratedRuntime } from "./HydratedRuntime.sol";
 contract EthereumRuntime is HydratedRuntime {
 
     struct EVMPreimage {
-        EVMCode.RawCode[50] code;
         uint codeFragLength;
         uint codeLength;
         bytes data;
@@ -39,7 +38,7 @@ contract EthereumRuntime is HydratedRuntime {
 
     // Init EVM with given stack and memory and execute from the given opcode
     // solhint-disable-next-line function-max-lines
-    function execute(EVMPreimage memory img) public returns (EVMResult memory) {
+    function execute(EVMPreimage memory img, EVMCode.RawCode[] memory code) public returns (EVMResult memory) {
         // solhint-disable-next-line avoid-low-level-calls
         EVM memory evm;
 
@@ -62,7 +61,7 @@ contract EthereumRuntime is HydratedRuntime {
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
 
-        evm.code = EVMCode.fromArray(img.code, img.codeFragLength, img.codeLength);
+        evm.code = EVMCode.fromArray(code, img.codeFragLength, img.codeLength);
         evm.stack = EVMStack.fromArray(img.stack);
         evm.mem = EVMMemory.fromArray(img.mem);
 

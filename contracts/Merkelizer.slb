@@ -17,7 +17,6 @@ library Merkelizer {
         uint gasRemaining;
         uint stackSize;
         uint memSize;
-        EVMCode.RawCode[50] code;
         uint codeLength;
         uint codeFragLength;
         uint codeProofLength;

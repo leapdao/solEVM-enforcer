@@ -91,8 +91,7 @@ Utils.prepareCode = function (code) {
     };
   });
   const codeFragLength = codeFragments.length;
-  // stub code
-  while (codeFragments.length < 50) codeFragments.push({ pos: 0, value: 0 });
+  console.log(codeFragments);
 
   return {
     codeFragments,

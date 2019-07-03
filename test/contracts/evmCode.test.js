@@ -10,21 +10,23 @@ contract('TestEVMCode', function () {
     evmCode = await deployContract(EVMCodeMock);
   });
 
-  it('fromArray', async function () {
-    await evmCode.testFromArrayGetOpcode();
+  it('test to uint', async function () {
+    let res = await evmCode.testToUint(
+      [
+        {
+          pos: 0,
+          value: '0x7f10111213141516171819202122232425262728293031323334353637383940',
+        },
+        {
+          pos: 1,
+          value: '0x4100000000000000000000000000000000000000000000000000000000000000',
+        },
+      ],
+      2,
+      33,
+      1,
+      32
+    );
+    assert(res).equal(1);
   });
-
-  it('fromArray 2 element wrong order', async function () {
-    await assert.rejects(evmCode.testError_FromArrayWrongOrder());
-  });
-
-  it('toUint', async function () {
-    await evmCode.testToUint();
-  });
-
-  it('toBytes', async function () {
-    await evmCode.testToBytes();
-  });
-
-  // TODO test with half word
 });

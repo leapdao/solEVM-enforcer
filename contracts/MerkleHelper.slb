@@ -14,7 +14,7 @@ library MerkleHelper {
       * @param rootHash The root hash needed to verify against
       */
     function verifySeries(
-        EVMCode.RawCode[50] memory data,
+        EVMCode.RawCode[] memory data,
         uint dataLength, bytes32[] memory proofs,
         uint proofLength,
         bytes32 rootHash)
