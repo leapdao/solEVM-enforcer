@@ -5,11 +5,7 @@ pragma experimental ABIEncoderV2;
 library EVMCode {
     struct Code {
         uint length;
-        uint fragLength; // length is zero-based, this is length of fragments array, not the actually length of code
-        // TODO improve this
-        //   we have to use memory for EVMCode, so this must be an fixed-size array, not a mapping or dynamic-size array
-        // although 50 should me enough for most cases
-        // RawCode[50] fragments;
+        uint fragLength; // this is length of fragments array, not the actually length of code
         DataNode root;
     }
 
@@ -25,7 +21,6 @@ library EVMCode {
     }
 
     function nextDataNode(DataNode memory node) internal pure returns (DataNode memory next) {
-        // require(node.next != uint(-1), 'no more code');
         assembly {
             next := mload(add(node, 0x40))
         }
@@ -56,9 +51,6 @@ library EVMCode {
                 return current;
             }
             current = nextDataNode(current);
-            // assembly {
-            //     current := mload(add(current, 0x40))
-            // }
         }
         return DataNode(uint(-1), 0, 0);
     }

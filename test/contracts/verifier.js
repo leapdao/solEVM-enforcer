@@ -68,7 +68,6 @@ function computeWitnessPath (dispute, merkleTree) {
 async function submitProofHelper (verifier, disputeId, code, computationPath) {
   const args = ProofHelper.constructProof(computationPath, code.join(''));
   debug('ExecState', args.executionInput);
-  debug('RawCode', args.rawCodes);
 
   let tx = await verifier.submitProof(
     disputeId,
@@ -366,7 +365,6 @@ contract('Verifier', function () {
           stackSize: 0,
           memSize: 0,
           customEnvironmentHash: ZERO_HASH,
-          code: Merkelizer.emptyRawCode(),
           codeLength: 1,
           codeFragLength: 0,
           codeProofLength: 0,

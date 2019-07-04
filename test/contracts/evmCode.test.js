@@ -112,4 +112,15 @@ contract('TestEVMCode', function () {
     );
     assert.equal(res, '0x7f1011121314151617181920212223242526272829303132333435363738394041');
   });
+
+  it('test to bytes #4', async function () {
+    let res = await evmCode.testToBytes(
+      rawCodes,
+      2,
+      33,
+      31,
+      2
+    );
+    assert.equal(res, '0x4041');
+  });
 });
