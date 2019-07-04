@@ -78,7 +78,6 @@ contract('Runtime', function () {
 
     fixtures.forEach(async (fixture, index) => {
       const { code, pc, opcodeUnderTest } = getCode(fixture);
-      if (opcodeUnderTest !== 'PUSH32') return;
       it(fixture.description || opcodeUnderTest, async () => {
         const stack = fixture.stack || [];
         const mem = fixture.memory || [];

@@ -27,7 +27,7 @@ library EVMCode {
     function nextDataNode(DataNode memory node) internal pure returns (bool) {
         if (node.next == uint(-1)) return false;
         assembly {
-            mstore(node, mload(add(node, 0x40)))
+            node := mload(add(node, 0x40))
         }
         return true;
     }
@@ -44,7 +44,7 @@ library EVMCode {
 
             DataNode memory next = DataNode(codes[i].pos, codes[i].value, uint(-1));
             assembly {
-                mstore(add(mload(current), 0x40), next)
+                mstore(add(current, 0x40), next)
             }
             current = next;
         }
@@ -67,12 +67,11 @@ library EVMCode {
             if (current.pos == wordPos) {
                 return current;
             }
-            nextDataNode(current);
-            // assembly {
-            //     mstore(current, mload(add(mload(current), 0x40)))
-            // }
+            assembly {
+                current := mload(add(current, 0x40))
+            }
         }
-        return DataNode(uint(-1), 0, 0);
+        return DataNode(uint(-1), uint(-1), 0);
     }
 
     /**
@@ -179,7 +178,7 @@ library EVMCode {
         // require fetching an additional 32 bytes
         DataNode memory fragmentNext;
         assembly {
-            mstore(fragmentNext, mload(add(fragment, 0x40)))
+            fragmentNext := mload(add(fragment, 0x40))
         }
         // require(nextDataNode(fragmentNext), "Code not enough");
         require(fragmentNext.pos == fragment.pos + 1, "Code not enough");
