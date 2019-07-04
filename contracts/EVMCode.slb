@@ -80,7 +80,7 @@ library EVMCode {
     function getOpcodeAt(Code memory self, uint pos) internal view returns (uint8 opcode) {
         address codeContractAddress = self.codeAddress;
 
-        if (pos > self.length) {
+        if (pos >= self.length) {
             return 0;
         }
 
