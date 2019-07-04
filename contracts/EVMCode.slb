@@ -6,8 +6,48 @@ library EVMCode {
 
     struct Code {
         address codeAddress;
-        bytes codeBytes;
         uint length;
+        DataNode root;
+    }
+
+    struct DataNode {
+        uint pos;
+        uint value;
+        uint next;
+    }
+
+    struct RawCode {
+        uint pos;
+        uint value;
+    }
+
+    function nextDataNode(DataNode memory node) internal pure returns (DataNode memory next) {
+        if (node.next == 0) {
+            return DataNode(uint(-1), 0, 0);
+        }
+
+        assembly {
+            next := mload(add(node, 0x40))
+        }
+    }
+
+    function fromArray(RawCode[] memory codes, uint length) internal pure returns (Code memory code) {
+        require(codes.length >= 1, "Empty code array");
+
+        code.length = length;
+        code.root = DataNode(codes[0].pos, codes[0].value, 0);
+
+        DataNode memory current = code.root;
+        for (uint i = 1; i < codes.length; i++) {
+            require(codes[i].pos > codes[i-1].pos, "wrong code order");
+            require(codes[i].pos <= (length >> 5), "incorrect code length");
+
+            DataNode memory next = DataNode(codes[i].pos, codes[i].value, 0);
+            assembly {
+                mstore(add(current, 0x40), next)
+            }
+            current = next;
+        }
     }
 
     function fromAddress(address codeAddress) internal view returns (Code memory code) {
@@ -20,16 +60,41 @@ library EVMCode {
         code.length = codeSize;
     }
 
-    function fromBytes(bytes memory codeBytes) internal pure returns (Code memory code) {
-        code.codeBytes = codeBytes;
-        code.length = codeBytes.length;
+    function findFragment(Code memory self, uint wordPos) internal view returns (DataNode memory res) {
+        DataNode memory current = self.root;
+
+        while (current.pos != uint(-1)) {
+            if (current.pos == wordPos) {
+                return current;
+            }
+            current = nextDataNode(current);
+        }
+
+        return current;
     }
 
+    /**
+      * @dev return the opcode at position if known. Otherwise return 0
+      *
+      */
     function getOpcodeAt(Code memory self, uint pos) internal view returns (uint8 opcode) {
         address codeContractAddress = self.codeAddress;
 
+        if (pos > self.length) {
+            return 0;
+        }
+
         if (codeContractAddress == address(0)) {
-            opcode = uint8(self.codeBytes[pos]);
+            uint wordPos = pos >> 5;
+            DataNode memory fragment = findFragment(self, wordPos);
+
+            require(fragment.pos != uint(-1), "Opcode missing");
+            // 0x00000000 11111111 22222222 ... (256 bit)
+            // to get a byte at position x, we need to shift all these byte at position > x + 8
+            // x = 0 -> shift 248 = (32 - 1) * 8
+            // x = 1 -> shift 242 = (32 - 2) * 8
+            // x = 31 -> shift 0 = (32 - 32) * 8
+            opcode = uint8(fragment.value >> ((31 - (pos % 32)) * 8));
         } else {
             assembly {
                 extcodecopy(codeContractAddress, 31, pos, 1)
@@ -38,19 +103,62 @@ library EVMCode {
         }
     }
 
-    function toBytes(Code memory self) internal view returns (bytes memory bts) {
+    /**
+      * @dev return code as bytes array, from a position for a number of bytes
+      *     revert if the known code cannot fulfill the requirement
+      */
+    // solhint-disable-next-line function-max-lines
+    function toBytes(Code memory self, uint pos, uint numBytes) internal view returns (bytes memory bts) {
         address codeContractAddress = self.codeAddress;
+        assembly {
+            bts := mload(0x40)
+            // padding up to word size
+            mstore(0x40, add(bts, and(add(add(numBytes, 0x20), 0x1f), not(0x1f))))
+            mstore(bts, numBytes)
+        }
 
         if (codeContractAddress == address(0)) {
-            bts = self.codeBytes;
+            uint wordPos = pos >> 5;
+            DataNode memory fragment = findFragment(self, wordPos);
+
+            if (pos < self.length) {
+                require(fragment.pos != uint(-1), "Code not found");
+            }
+
+            uint copiedLen = 0;
+            uint prevPos;
+            // copy first fragment, which do not fit in whole word
+            if (pos % 32 != 0) {
+                assembly {
+                    // store value at fragmentPos to bts, shift left to correct for pos
+                    mstore(add(bts, 0x20), shl(mul(mod(pos, 0x20), 0x08), mload(add(fragment, 0x20))))
+                }
+                prevPos = fragment.pos;
+                fragment = nextDataNode(fragment);
+                copiedLen += 32 - pos % 32;
+            }
+
+            // copy the rest
+            while (copiedLen < numBytes) {
+                if (pos + copiedLen >= self.length) {
+                    // we are done, everything else is zero by default
+                    break;
+                }
+
+                require(fragment.pos == 0 ||
+                    fragment.pos == prevPos + 1, "Known code not enough");
+
+                assembly {
+                    mstore(add(bts, add(copiedLen, 0x20)), mload(add(fragment, 0x20)))
+                }
+
+                prevPos = fragment.pos;
+                fragment = nextDataNode(fragment);
+                copiedLen += 32;
+            }
         } else {
-            uint size = self.length;
             assembly {
-                bts := mload(0x40)
-                // padding up to word size
-                mstore(0x40, add(bts, and(add(add(size, 0x20), 0x1f), not(0x1f))))
-                mstore(bts, size)
-                extcodecopy(codeContractAddress, add(bts, 0x20), 0, size)
+                extcodecopy(codeContractAddress, add(bts, 0x20), pos, numBytes)
             }
         }
     }
@@ -60,11 +168,48 @@ library EVMCode {
         // this is the behaviour we want
         assert(32 >= numBytes && numBytes > 0);
 
-        address codeContractAddress = self.codeAddress;
-        assembly {
-            extcodecopy(codeContractAddress, 0, pos, numBytes)
-            data := mload(0)
+        if (pos >= self.length) {
+            return 0;
         }
-        data = data >> 8 * (32 - numBytes);
+
+        address codeContractAddress = self.codeAddress;
+
+        if (codeContractAddress == address(0)) {
+            // 2 cases:
+            // - return data fit in a fragment
+            // - return data span 2 fragments
+            uint wordPos = pos >> 5;
+            DataNode memory fragment = findFragment(self, wordPos);
+
+            require(fragment.pos != uint(-1), "Code not found");
+
+            // only need to retrieve 32 bytes
+            if (fragment.pos == ((pos + numBytes - 1) >> 5)) {
+                // retrieve the word which contains the required data
+                //   shift left to strip unnecessary data on the left
+                uint temp = fragment.value << ((pos % 32) * 8);
+                //   then shift right to strip unnecessary data on the right
+                return temp >> ((32 - numBytes) * 8);
+            }
+
+            // require fetching an additional 32 bytes
+            DataNode memory fragmentNext = nextDataNode(fragment);
+            require(fragmentNext.pos == fragment.pos + 1, "Code not enough");
+            //   the left part should be the rightmost part of the first word
+            //   to retrieve: shift left to strip, then shift back to correct position in numBytes
+            uint left = (fragment.value << ((pos % 32) * 8)) >> ((32 - numBytes) * 8);
+            //   the right part should be the leftmost part of the second word
+            //   to retrieve: shift all the way to the right
+            //   64 - numBytes - (pos % 32) = 32 - (numBytes - (32 - (pos % 32))) = word_length - (required_length - (left_path_length))
+            //   numBytes + (pos % 32) >= 32, if not, then it requires only 1 byte
+            uint right = (fragmentNext.value >> (64 - numBytes - (pos % 32)) * 8);
+            data = left | right;
+        } else {
+            assembly {
+                extcodecopy(codeContractAddress, 0, pos, numBytes)
+                data := mload(0)
+            }
+            data = data >> 8 * (32 - numBytes);
+        }
     }
 }
