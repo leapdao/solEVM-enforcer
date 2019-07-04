@@ -46,6 +46,7 @@ contract PlasmaVerifier is Verifier {
         );
         evm.data = input.callData;
         evm.gas = 0xffffffff;
+        // TODO check code
         // evm.code = EVMCode.fromAddress(input.spendingCondition);
         evm.stack = EVMStack.newStack();
         evm.mem = EVMMemory.newMemory();
