@@ -265,6 +265,7 @@ module.exports = class ExecutionPoker {
     let tx = await this.verifier.submitProof(
       disputeId,
       args.proofs,
+      args.rawCodes,
       args.codeProofs,
       args.executionInput,
       { gasLimit: this.gasLimit }

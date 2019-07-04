@@ -24,12 +24,11 @@ library EVMCode {
         uint value;
     }
 
-    function nextDataNode(DataNode memory node) internal pure returns (bool) {
-        if (node.next == uint(-1)) return false;
+    function nextDataNode(DataNode memory node) internal pure returns (DataNode memory next) {
+        // require(node.next != uint(-1), 'no more code');
         assembly {
-            node := mload(add(node, 0x40))
+            next := mload(add(node, 0x40))
         }
-        return true;
     }
 
     function fromArray(RawCode[] memory codes, uint fragLength, uint length) internal pure returns (Code memory code) {
@@ -50,51 +49,19 @@ library EVMCode {
         }
     }
 
-    // function fromArray(RawCode[50] memory codes, uint fragLength, uint length) internal pure returns (Code memory code) {
-    //     code.fragLength = fragLength;
-    //     code.length = length;
-    //     for (uint i = 0; i < fragLength; i++) {
-    //         // require to submit array in ascending order
-    //         require(i == 0 || codes[i].pos > codes[i-1].pos, "wrong code order");
-    //         require(codes[i].pos <= (length >> 5), "incorrect code length");
-    //         code.fragments[i] = RawCode(codes[i].pos, codes[i].value);
-    //     }
-    // }
-
     function findFragment(Code memory self, uint wordPos) internal view returns (DataNode memory res) {
         DataNode memory current = self.root;
         for (uint i = 0; i < self.fragLength; i++) {
             if (current.pos == wordPos) {
                 return current;
             }
-            assembly {
-                current := mload(add(current, 0x40))
-            }
+            current = nextDataNode(current);
+            // assembly {
+            //     current := mload(add(current, 0x40))
+            // }
         }
-        return DataNode(uint(-1), uint(-1), 0);
+        return DataNode(uint(-1), 0, 0);
     }
-
-    /**
-      * @dev find the position of the required word using binary search
-      */
-    // function findFragment(Code memory self, uint wordPos) internal view returns (uint pos) {
-    //     uint left = 0;
-    //     uint right = self.fragLength;
-    //     uint mid;
-
-    //     while (left < right) {
-    //         mid = (left + right) >> 1;
-    //         if (self.fragments[mid].pos == wordPos) {
-    //             return mid;
-    //         }
-    //         if (self.fragments[mid].pos > wordPos) {
-    //             right = mid;
-    //         } else {
-    //             left = mid+1;
-    //         }
-    //     }
-    //     return uint(-1);
-    // }
 
     /**
       * @dev return the opcode at position if known. Otherwise return fe, which is invalid opcode
@@ -137,7 +104,7 @@ library EVMCode {
                 mstore(add(bts, 0x20), shl(mul(mod(pos, 0x20), 0x08), mload(add(fragment, 0x20))))
             }
             prevPos = fragment.pos;
-            nextDataNode(fragment);
+            fragment = nextDataNode(fragment);
             copiedLen += 32 - pos % 32;
         }
 
@@ -149,7 +116,7 @@ library EVMCode {
                 mstore(add(bts, add(copiedLen, 0x20)), mload(add(fragment, 0x20)))
             }
             prevPos = fragment.pos;
-            nextDataNode(fragment);
+            fragment = nextDataNode(fragment);
             copiedLen += 32;
         }
     }
@@ -176,11 +143,7 @@ library EVMCode {
         }
 
         // require fetching an additional 32 bytes
-        DataNode memory fragmentNext;
-        assembly {
-            fragmentNext := mload(add(fragment, 0x40))
-        }
-        // require(nextDataNode(fragmentNext), "Code not enough");
+        DataNode memory fragmentNext = nextDataNode(fragment);
         require(fragmentNext.pos == fragment.pos + 1, "Code not enough");
         //   the left part should be the rightmost part of the first word
         //   to retrieve: shift left to strip, then shift back to correct position in numBytes

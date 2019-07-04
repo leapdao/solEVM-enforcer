@@ -18,4 +18,10 @@ contract EVMCodeMock {
         EVMCode.Code memory code = EVMCode.fromArray(rawCodes, codeFragLength, codeLength);
         res = code.toUint(pos, length);
     }
+
+    function testToBytes(EVMCode.RawCode[] memory rawCodes, uint codeFragLength, uint codeLength, uint pos, uint length)
+    public view returns (bytes memory res) {
+        EVMCode.Code memory code = EVMCode.fromArray(rawCodes, codeFragLength, codeLength);
+        res = code.toBytes(pos, length);
+    }
 }
