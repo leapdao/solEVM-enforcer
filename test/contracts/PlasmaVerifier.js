@@ -5,6 +5,11 @@ const SpendingConditionMock = artifacts.require('SpendingConditionMock.sol');
 const Interceptor = artifacts.require('PlasmaVerifier.sol');
 
 contract('PlasmaVerifier', () => {
+  // skip test if we do coverage
+  if (process.env.COVERAGE) {
+    return;
+  }
+
   const receivers = [
     '0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a',
     '0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b',
