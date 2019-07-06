@@ -938,10 +938,10 @@ ethereumjs-util@^6.0.0:
     rustbn.js "~0.2.0"
     safe-buffer "^5.1.1"
 
-ethers@^4.0.13:
-  version "4.0.27"
-  resolved "https://registry.yarnpkg.com/ethers/-/ethers-4.0.27.tgz#e570b0da9d805ad65c83d81919abe02b2264c6bf"
-  integrity sha512-+DXZLP/tyFnXWxqr2fXLT67KlGUfLuvDkHSOtSC9TUVG9OIj6yrG5JPeXRMYo15xkOYwnjgdMKrXp5V94rtjJA==
+ethers@^4.0.32:
+  version "4.0.32"
+  resolved "https://registry.yarnpkg.com/ethers/-/ethers-4.0.32.tgz#46378864cb3bf29b57c2effd17508b560743abf6"
+  integrity sha512-r0k2tBNF6MYEsvwmINeP3VPppD/7eAZyiOk/ifDDawXGCKqr3iEQkPq6OZSDVD+4Jie38WPteS9thXzpn2+A5Q==
   dependencies:
     "@types/node" "^10.3.2"
     aes-js "3.0.0"

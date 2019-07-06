@@ -13,7 +13,7 @@ cleanup() {
   fi
 }
 
-geth_port=8545
+geth_port=8222
 geth=$(which geth)
 
 geth_running() {
@@ -57,5 +57,4 @@ else
   start_geth
 fi
 
-echo 'running truffle'
-yarn truffle test "$@"
+RPC_PORT=$geth_port yarn mocha --timeout 60000 "$@"

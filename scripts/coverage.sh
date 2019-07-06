@@ -14,8 +14,8 @@ accounts=(
   --account="0x2bdd21761a483f71054e14f5b827213567971c676928d9a1808cbfa4b7501209,1000000000000000000000000"
 )
 
-./node_modules/.bin/testrpc-sc --hardfork petersburg --allowUnlimitedContractSize -p 8555 -g 0x01 -l 0xfffffffffffff "${accounts[@]}" > /dev/null &
+./node_modules/.bin/testrpc-sc --hardfork petersburg --allowUnlimitedContractSize -p 8333 -g 0x01 -l 0xfffffffffffff "${accounts[@]}" > /dev/null &
 pid=$!
-./node_modules/.bin/solidity-coverage
+RPC_PORT=8333 ./node_modules/.bin/solidity-coverage
 kill $pid
 exit 0

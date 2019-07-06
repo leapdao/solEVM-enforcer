@@ -1,4 +1,5 @@
 const fs = require('fs');
+const assert = require('assert');
 
 const { getCode, deployContract, deployCode } =
   require('./../helpers/utils');
@@ -9,9 +10,9 @@ const OP = require('./../../utils/constants');
 
 const { PUSH1, BLOCK_GAS_LIMIT } = OP;
 
-const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
+const EthereumRuntime = require('./../../build/contracts/EthereumRuntime.json');
 
-contract('Runtime', function () {
+describe('Runtime', function () {
   let rt;
 
   before(async () => {

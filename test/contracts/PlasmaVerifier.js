@@ -1,10 +1,10 @@
 
 const { wallets, deployContract, txOverrides, opcodeNames } = require('./../helpers/utils');
 
-const SpendingConditionMock = artifacts.require('SpendingConditionMock.sol');
-const Interceptor = artifacts.require('PlasmaVerifier.sol');
+const SpendingConditionMock = require('./../../build/contracts/SpendingConditionMock.json');
+const Interceptor = require('./../../build/contracts/PlasmaVerifier.json');
 
-contract('PlasmaVerifier', () => {
+describe('PlasmaVerifier', () => {
   // skip test if we do coverage
   if (process.env.COVERAGE) {
     return;

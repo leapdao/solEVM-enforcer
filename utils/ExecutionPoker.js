@@ -147,12 +147,21 @@ module.exports = class ExecutionPoker {
     // check execution length and resize tree if necessary
     const taskParams = this.taskParams[taskHash];
     const res = await this.computeCall(taskParams);
+
+    // TODO: handle the bigger case too
+    if (executionDepth < res.merkle.depth) {
+      // scale down
+      res.merkle.tree[0] = res.merkle.tree[0].slice(0, 2 ** (executionDepth.toNumber() - 1));
+      // recalculate tree
+      res.merkle.recal();
+    }
+
     const challengerHash = res.merkle.root.hash;
 
     this.log('solverHash', solverHash);
     this.log('challengerHash', challengerHash);
 
-    if (solverHash !== challengerHash) {
+    if (solverHash !== challengerHash || this.alwaysChallenge) {
       const bondAmount = await this.enforcer.bondAmount();
 
       let tx = await this.enforcer.dispute(
