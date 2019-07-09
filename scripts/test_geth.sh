@@ -3,16 +3,6 @@
 # Exit script as soon as a command fails.
 set -o errexit
 
-# Executes cleanup function at script exit.
-trap cleanup EXIT
-
-cleanup() {
-  # Kill the geth instance that we started (if we started one and if it's still running).
-  if [ -n "$geth_pid" ] && ps -p $geth_pid > /dev/null; then
-    kill -9 $geth_pid
-  fi
-}
-
 geth_port=8222
 geth=$(which geth)
 
