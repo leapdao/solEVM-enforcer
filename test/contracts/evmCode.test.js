@@ -1,9 +1,9 @@
 const { deployContract } = require('./../helpers/utils');
 const BN = require('ethers').utils.BigNumber;
-const EVMCodeMock = artifacts.require('EVMCodeMock.sol');
+const EVMCodeMock = require('./../../build/contracts/EVMCodeMock.json');
 const assert = require('assert');
 
-contract('TestEVMCode', function () {
+describe('TestEVMCode', function () {
   let evmCode;
 
   before(async () => {

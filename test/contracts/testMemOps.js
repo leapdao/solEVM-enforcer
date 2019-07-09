@@ -1,8 +1,8 @@
 const { deployContract } = require('./../helpers/utils');
 
-const TestMemOps = artifacts.require('TestMemOps.sol');
+const TestMemOps = require('./../../build/contracts/TestMemOps.json');
 
-contract('TestMemOps', function () {
+describe('TestMemOps', function () {
   let contract;
 
   before(async () => {

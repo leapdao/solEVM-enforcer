@@ -33,6 +33,14 @@ class MyExecutionPoker extends ExecutionPoker {
 
     return super.requestExecution(evmParams, callData);
   }
+
+  async submitProof (disputeId, computationPath) {
+    try {
+      await super.submitProof(disputeId, computationPath);
+    } catch (e) {
+      // ignore for unit test
+    }
+  }
 }
 
 async function deployContract (truffleContract, wallet, ...args) {
@@ -87,6 +95,10 @@ async function main () {
   deployerWallet = deployerWallet.connect(new ethers.providers.Web3Provider(provider));
   solverWallet = solverWallet.connect(new ethers.providers.Web3Provider(provider));
   challengerWallet = challengerWallet.connect(new ethers.providers.Web3Provider(provider));
+
+  // faster unit tests :)
+  solverWallet.provider.pollingInterval = 30;
+  challengerWallet.provider.pollingInterval = 30;
 
   const timeout = 10;
   const taskPeriod = 100000;

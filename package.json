@@ -16,7 +16,7 @@
   "main": "utils/index.js",
   "scripts": {
     "test": "yarn test:contracts && yarn test:utils",
-    "test:contracts": "scripts/test.sh test/contracts/*",
+    "test:contracts": "yarn compile:contracts && scripts/test.sh test/contracts/*",
     "test:utils": "mocha test/utils/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r5",
-    "ethers": "^4.0.13",
+    "ethers": "^4.0.32",
     "openzeppelin-solidity": "=2.1.1"
   }
 }

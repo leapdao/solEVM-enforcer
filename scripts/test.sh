@@ -3,17 +3,7 @@
 # Exit script as soon as a command fails.
 set -o errexit
 
-# Executes cleanup function at script exit.
-trap cleanup EXIT
-
-cleanup() {
-  # Kill the ganache instance that we started (if we started one and if it's still running).
-  if [ -n "$ganache_pid" ] && ps -p $ganache_pid > /dev/null; then
-    kill -9 $ganache_pid
-  fi
-}
-
-ganache_port=8545
+ganache_port=8111
 
 ganache_running() {
   nc -z localhost "$ganache_port"
@@ -44,6 +34,7 @@ if ganache_running; then
 else
   echo "Starting our own ganache instance"
   start_ganache
+  sleep 3
 fi
 
 if [ "$SOLC_NIGHTLY" = true ]; then
@@ -51,4 +42,4 @@ if [ "$SOLC_NIGHTLY" = true ]; then
   wget -q https://raw.githubusercontent.com/ethereum/solc-bin/gh-pages/bin/soljson-nightly.js -O /tmp/soljson.js && find . -name soljson.js -exec cp /tmp/soljson.js {} \;
 fi
 
-yarn truffle test "$@"
+RPC_PORT=$ganache_port yarn mocha --timeout 60000 "$@"

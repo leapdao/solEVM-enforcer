@@ -1,14 +1,16 @@
 const ethers = require('ethers');
+const assert = require('assert');
+
 const { onchainWait, toBytes32, wallets, deployContract, txOverrides } = require('./../helpers/utils');
 const assertRevert = require('./../helpers/assertRevert');
 
-const Enforcer = artifacts.require('./Enforcer.sol');
-const Verifier = artifacts.require('./Verifier.sol');
-const VerifierMock = artifacts.require('./mocks/VerifierMock.sol');
+const Enforcer = require('./../../build/contracts/Enforcer.json');
+const Verifier = require('./../../build/contracts/Verifier.json');
+const VerifierMock = require('./../../build/contracts/VerifierMock.json');
 
 const GAS_LIMIT = require('./../../utils/constants').GAS_LIMIT;
 
-contract('Enforcer', () => {
+describe('Enforcer', () => {
   const solverPathRoot = '0x712bc4532b751c4417b44cf11e2377778433ff720264dc8a47cb1da69d371433';
   const challengerPathRoot = '0x641db1239a480d87bdb76fc045d5f6a68ad1cbf9b93e3b2c92ea638cff6c2add';
   const result = '0x0000000000000000000000000000000000000000000000000000000000001111';
@@ -138,7 +140,7 @@ contract('Enforcer', () => {
 
     const execution = await enforcer.executions(executionId);
 
-    assert.isTrue(execution.startBlock.gt(0), 'start block not set');
+    assert.ok(execution.startBlock.gt(0), 'start block not set');
     assert.equal(execution.solverPathRoot, solverPathRoot, 'solverPathRoot not match');
     assert.equal(execution.executionDepth, executionDepth, 'execution length not match');
     assert.equal(execution.solver, solver.address, 'solver address not match');
@@ -240,7 +242,7 @@ contract('Enforcer', () => {
 
     tx = verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: GAS_LIMIT });
     await assertRevert(tx, 'Execution is out of challenge period');
-  });
+  }).timeout(10000);
 
   it('allow submit result of valid execution and slash solver', async () => {
     const _solverPathRoot = solverPathRoot.replace('11', '55');

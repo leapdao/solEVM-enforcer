@@ -425,6 +425,8 @@ module.exports = (callback) => {
   });
 
   describe('Fixture for Dispute/Verifier Logic #4', function () {
+    this.timeout(55550);
+
     const code = [
       OP.PUSH3, 'a1a1a1',
       OP.PUSH3, 'ffffff',

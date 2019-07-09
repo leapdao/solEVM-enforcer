@@ -1,10 +1,10 @@
 
 const { deployContract } = require('./../helpers/utils');
 
-const EVMStackMock = artifacts.require('EVMStackMock.sol');
+const EVMStackMock = require('./../../build/contracts/EVMStackMock.json');
 const assert = require('assert');
 
-contract('TestEVMStack', function () {
+describe('TestEVMStack', function () {
   let stack;
 
   before(async () => {

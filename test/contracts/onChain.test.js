@@ -1,11 +1,13 @@
+const assert = require('assert');
+
 const { getCodeWithStep, deployContract, deployCode, toBN } = require('./../helpers/utils');
 const onChainFixtures = require('./../fixtures/onChain');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
 
 const OP = require('./../../utils/constants');
-const EthereumRuntime = artifacts.require('EthereumRuntime.sol');
+const EthereumRuntime = require('./../../build/contracts/EthereumRuntime.json');
 
-contract('Runtime', function () {
+describe('Runtime', function () {
   let rt;
 
   before(async () => {
