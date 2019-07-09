@@ -1,0 +1,12 @@
+{
+  "name": "solevm-challenger",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "dashdash": "^1.14.1",
+    "ethers": "^4.0.32",
+    "level": "^5.0.1",
+    "web3": "^1.0.0-beta.55"
+  }
+}
