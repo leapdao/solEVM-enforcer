@@ -4,6 +4,7 @@ const OffchainStepper = require('./OffchainStepper.js');
 const Merkelizer = require('./Merkelizer.js');
 const ProofHelper = require('./ProofHelper.js');
 const ExecutionPoker = require('./ExecutionPoker.js');
+const FragmentTree = require('./FragmentTree.js');
 
 module.exports = {
   Constants,
@@ -12,4 +13,5 @@ module.exports = {
   Merkelizer,
   ProofHelper,
   ExecutionPoker,
+  FragmentTree,
 };
