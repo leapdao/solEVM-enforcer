@@ -15,23 +15,23 @@ try {
 }
 
 class MyExecutionPoker extends ExecutionPoker {
-  constructor(db, ...args) {
+  constructor (db, ...args) {
     super(...args);
     this.db = db;
     this.restoreSolutions();
     this.solutions = new Proxy(this.solutions, {
-      get(solutions, execId) {
+      get (solutions, execId) {
         return solutions[execId];
       },
-      set(solutions, execId, result) {
+      set (solutions, execId, result) {
         solutions[execId] = result;
 
         this.db.put('solutions', JSON.stringify(solutions));
-      }
-    })
+      },
+    });
   }
 
-  restoreSolutions() {
+  restoreSolutions () {
     this.db.get('solutions').then(json => {
       this.solutions = JSON.parse(json); // ToDo: do proper deserialise here
     }).catch(() => {
@@ -49,7 +49,7 @@ class MyExecutionPoker extends ExecutionPoker {
   const verifier = new ethers.Contract(verifierAddr, Verifier.abi, provider);
 
   // ExecutionPoker will do the rest ¯\_(ツ)_/¯
-  new MyExecutionPoker(db, enforcer, verifier, wallet);
+  new MyExecutionPoker(db, enforcer, verifier, wallet); // eslint-disable-line
 })();
 
 function onException (e) {
