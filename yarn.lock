@@ -752,9 +752,9 @@ ethereumjs-util@^6.0.0:
     safe-buffer "^5.1.1"
     secp256k1 "^3.0.1"
 
-"ethereumjs-vm@https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r5":
+"ethereumjs-vm@https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r6":
   version "2.6.0"
-  resolved "https://github.com/pinkiebell/ethereumjs-vm.git#365ab47807a1db4277273494905b3d49891fc87b"
+  resolved "https://github.com/pinkiebell/ethereumjs-vm.git#f156870ed84e2a86e0b295840509d3ba9f84fcd4"
   dependencies:
     async "^2.1.2"
     async-eventemitter "^0.2.2"

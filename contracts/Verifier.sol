@@ -14,6 +14,9 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32 stackHash;
         bytes32 memHash;
         bytes32 dataHash;
+        uint256 codeByteLength;
+        bytes32[] codeFragments;
+        bytes32[] codeProof;
     }
 
     struct ComputationPath {
@@ -221,23 +224,22 @@ contract Verifier is Ownable, HydratedRuntime {
             }
         }
 
-        if ((dispute.state & END_OF_EXECUTION) != 0) {
-            // TODO: support both code from bytes and from address (Future PR)
-            address codeAddress = address(bytes20(dispute.codeHash));
-            uint pos = executionState.pc;
-            uint8 opcode;
+        EVM memory evm;
+        evm.code = verifyCode(
+            dispute.codeHash,
+            proofs.codeFragments,
+            proofs.codeProof,
+            proofs.codeByteLength
+        );
 
-            assembly {
-                extcodecopy(codeAddress, 31, pos, 1)
-                opcode := mload(0)
-            }
+        if ((dispute.state & END_OF_EXECUTION) != 0) {
+            uint8 opcode = evm.code.getOpcodeAt(executionState.pc);
 
             if (opcode != OP_REVERT && opcode != OP_RETURN && opcode != OP_STOP) {
                 return;
             }
         }
 
-        EVM memory evm;
         HydratedState memory hydratedState = initHydratedState(evm);
 
         hydratedState.stackHash = proofs.stackHash;
@@ -255,7 +257,6 @@ contract Verifier is Ownable, HydratedRuntime {
 
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
-        evm.code = EVMCode.fromAddress(address(bytes20(dispute.codeHash)));
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
@@ -421,5 +422,83 @@ contract Verifier is Ownable, HydratedRuntime {
             }
         }
         emit DisputeNewRound(disputeId, dispute.timeout, dispute.solverPath, dispute.challengerPath);
+    }
+
+    /// @dev Verify FragmentTree for contract bytecode.
+    /// `codeFragments` must be power of two and consists of `slot/pos`, `value`.
+    /// If `codeHash`'s last 12 bytes are zero, `codeHash` assumed to be a contract address
+    /// and returns with `EVMCode.fromAddress(...)`.
+    /// @return EVMCode.Code
+    function verifyCode(
+        bytes32 codeHash,
+        bytes32[] memory codeFragments,
+        bytes32[] memory codeProofs,
+        uint256 codeByteLength
+        // solhint-disable-next-line function-max-lines
+    ) internal view returns (EVMCode.Code memory) {
+        // it's a contract address, pull code from there
+        if ((uint256(codeHash) & 0xffffffffffffffffffffffff) == 0) {
+            return EVMCode.fromAddress(address(bytes20(codeHash)));
+        }
+
+        // Codes will be supplied by the user
+        // TODO: we should support compressed-proofs in the future
+        // to save quite a bit of computation
+
+        // Enforce max. leaveCount here? :)
+        uint256 leaveCount = ((codeByteLength + 31) / 32);
+        require(leaveCount > 0);
+        leaveCount = leaveCount + leaveCount % 2;
+
+        // calculate tree depth
+        uint256 treeDepth = 0;
+        for (; leaveCount != 1; leaveCount >>= 1) {
+            treeDepth++;
+        }
+
+        require(codeFragments.length % 2 == 0);
+        require(codeProofs.length == ((codeFragments.length / 2) * (treeDepth)));
+
+        assembly {
+            // save memory slots, we are gonna use them
+            let tmp := mload(0x40)
+            mstore(0x40, codeByteLength)
+
+            let codeFragLen := mload(codeFragments)
+            let codeFrags := add(codeFragments, 0x20)
+            let proofs := add(codeProofs, 0x20)
+            for { let x := 0 } lt(x, codeFragLen) { x := add(x, 2) } {
+                let fragPtr := add(codeFrags, mul(x, 0x20))
+                let slot := mload(fragPtr)
+
+                mstore(0x00, mload(add(fragPtr, 0x20)))
+                mstore(0x20, slot)
+
+                let hash := keccak256(0x00, 0x60)
+
+                for { let i := 0 } lt(i, treeDepth) { i := add(i, 1) } {
+                    mstore(0x00, mload(proofs))
+                    mstore(0x20, hash)
+
+                    if iszero(mod(slot, 2)) {
+                        mstore(0x00, hash)
+                        mstore(0x20, mload(proofs))
+                    }
+
+                    hash := keccak256(0x00, 0x40)
+                    slot := shr(slot, 1)
+                    proofs := add(proofs, 0x20)
+                }
+
+                // require hash == codeHash
+                if iszero(eq(hash, codeHash)) {
+                    revert(0, 0)
+                }
+            }
+            // restore memory slots
+            mstore(0x40, tmp)
+        }
+
+        return EVMCode.fromArray(codeFragments, codeByteLength);
     }
 }

@@ -13,23 +13,23 @@ describe('TestEVMCode', function () {
   });
 
   const rawCodes = [
-    {
-      pos: 0,
-      value: '0x7f10111213141516171819202122232425262728293031323334353637383940',
-    },
-    {
-      pos: 1,
-      value: '0x4100000000000000000000000000000000000000000000000000000000000000',
-    },
-    {
-      pos: 3,
-      value: '0x3000000000000000000000000000000000000000000000000000000000000000',
-    },
+    // pos
+    '0x0000000000000000000000000000000000000000000000000000000000000000',
+    // val
+    '0x7f10111213141516171819202122232425262728293031323334353637383940',
+    // pos
+    '0x0000000000000000000000000000000000000000000000000000000000000001',
+    // val
+    '0x4100000000000000000000000000000000000000000000000000000000000000',
+    // pos
+    '0x0000000000000000000000000000000000000000000000000000000000000003',
+    // val
+    '0x3000000000000000000000000000000000000000000000000000000000000000',
   ];
 
   it('test findFragment #1', async function () {
     let res = await evmCode.testFindFragment(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       64,
       0
     );
@@ -39,7 +39,7 @@ describe('TestEVMCode', function () {
 
   it('test findFragment #2', async function () {
     let res = await evmCode.testFindFragment(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       64,
       1
     );
@@ -59,7 +59,7 @@ describe('TestEVMCode', function () {
 
   it('test to uint #1', async function () {
     let res = await evmCode.testToUint(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       33,
       1,
       32
@@ -69,7 +69,7 @@ describe('TestEVMCode', function () {
 
   it('test to uint #2', async function () {
     let res = await evmCode.testToUint(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       33,
       32,
       1
@@ -79,7 +79,7 @@ describe('TestEVMCode', function () {
 
   it('test to bytes #1', async function () {
     let res = await evmCode.testToBytes(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       33,
       1,
       1
@@ -89,7 +89,7 @@ describe('TestEVMCode', function () {
 
   it('test to bytes #2', async function () {
     let res = await evmCode.testToBytes(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       33,
       32,
       1
@@ -99,7 +99,7 @@ describe('TestEVMCode', function () {
 
   it('test to bytes #3', async function () {
     let res = await evmCode.testToBytes(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       33,
       0,
       33
@@ -109,7 +109,7 @@ describe('TestEVMCode', function () {
 
   it('test to bytes #4', async function () {
     let res = await evmCode.testToBytes(
-      rawCodes.slice(0, 2),
+      rawCodes.slice(0, 4),
       33,
       31,
       2
