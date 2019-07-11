@@ -86,7 +86,7 @@ module.exports = class AbstractMerkleTree {
       let last = this.tree[level - 1];
       let cur = [];
 
-      if (last.length === 1) {
+      if (last.length <= 1 && level > 1) {
         // done
         break;
       }
@@ -125,8 +125,8 @@ module.exports = class AbstractMerkleTree {
       for (let y = 0; y < row.length; y++) {
         const e = row[y];
         const h = e.hash.substring(2, 6);
-        const hl = e.left.hash.substring(2, 6);
-        const hr = e.right.hash.substring(2, 6);
+        const hl = e.left ? e.left.hash.substring(2, 6) : '?';
+        const hr = e.right ? e.right.hash.substring(2, 6) : '?';
 
         res += ` [ ${h} (l:${hl} r:${hr}) ] `;
       }
