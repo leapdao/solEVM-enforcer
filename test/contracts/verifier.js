@@ -44,7 +44,7 @@ async function requestExecution (enforcer, code, callData) {
 describe('Verifier', function () {
   const timeoutDuration = 2;
   const taskPeriod = 1000000;
-  const challengePeriod = 5;
+  const challengePeriod = 8;
   const bondAmount = 1;
   const maxExecutionDepth = 10;
   let enforcer;
