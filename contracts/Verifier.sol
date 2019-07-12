@@ -48,7 +48,7 @@ contract Verifier is Ownable, HydratedRuntime {
 
         uint8 state;
 
-        uint256 timeout; // currently is block number
+        uint256 timeout; // in seconds
     }
 
     event DisputeNewRound(bytes32 indexed disputeId, uint256 timeout, bytes32 solverPath, bytes32 challengerPath);
@@ -72,13 +72,13 @@ contract Verifier is Ownable, HydratedRuntime {
       */
     modifier onlyPlaying(bytes32 disputeId) {
         Dispute storage dispute = disputes[disputeId];
-        require(dispute.timeout >= block.number, "game timed out");
+        require(dispute.timeout >= block.timestamp, "game timed out");
         require((dispute.state & SOLVER_VERIFIED == 0) && (dispute.state & CHALLENGER_VERIFIED == 0), "dispute resolved");
         _;
     }
 
-    /// @param timeout The time the participants have to react to `submitRound, submitProof`.
-    /// Should be at least 100 blocks.
+    /// @param timeout The time (in seconds) the participants have to react to `submitRound, submitProof`.
+    /// 30 minutes is a good value for common use-cases.
     constructor(uint256 timeout) public Ownable() {
         timeoutDuration = timeout;
     }
@@ -330,7 +330,7 @@ contract Verifier is Ownable, HydratedRuntime {
         Dispute storage dispute = disputes[disputeId];
 
         require(dispute.timeout > 0, "dispute not exist");
-        require(dispute.timeout < block.number, "not timed out yet");
+        require(dispute.timeout < block.timestamp, "not timed out yet");
         require(
             (dispute.state & SOLVER_VERIFIED) == 0 && (dispute.state & CHALLENGER_VERIFIED) == 0,
             "already notified enforcer"
@@ -359,7 +359,7 @@ contract Verifier is Ownable, HydratedRuntime {
       * @dev refresh timeout of dispute
       */
     function getTimeout() internal view returns (uint256) {
-        return block.number + timeoutDuration;
+        return block.timestamp + timeoutDuration;
     }
 
     /**

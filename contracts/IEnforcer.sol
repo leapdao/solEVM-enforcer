@@ -28,12 +28,12 @@ contract IEnforcer {
     }
 
     struct Task {
-        uint256 startBlock;
+        uint256 startTime;
         bytes32[] executions;
     }
 
     struct ExecutionResult {
-        uint256 startBlock;
+        uint256 startTime;
         bytes32 taskHash;
         bytes32 solverPathRoot;
         bytes32 resultHash;

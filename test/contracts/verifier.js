@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 const Merkelizer = require('./../../utils/Merkelizer');
-const { onchainWait, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
+const { sleep, toBytes32, deployContract, txOverrides, deployCode } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');
 const assertRevert = require('./../helpers/assertRevert');
 const GAS_LIMIT = OP.GAS_LIMIT;
@@ -42,16 +42,15 @@ async function requestExecution (enforcer, code, callData) {
 }
 
 describe('Verifier', function () {
+  const timeoutDuration = 2;
+  const taskPeriod = 1000000;
+  const challengePeriod = 5;
+  const bondAmount = 1;
+  const maxExecutionDepth = 10;
   let enforcer;
   let verifier;
 
   before(async () => {
-    const taskPeriod = 1000000;
-    const challengePeriod = 1000;
-    const timeoutDuration = 10;
-    const bondAmount = 1;
-    const maxExecutionDepth = 10;
-
     verifier = await deployContract(Verifier, timeoutDuration);
     enforcer = await deployContract(
       Enforcer, verifier.address, taskPeriod, challengePeriod, bondAmount, maxExecutionDepth
@@ -187,7 +186,7 @@ describe('Verifier', function () {
       tx = await tx.wait();
       let disputeId = tx.events[0].args.disputeId;
 
-      await onchainWait(10);
+      await sleep(timeoutDuration);
 
       tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();
@@ -240,7 +239,7 @@ describe('Verifier', function () {
         { gasLimit: GAS_LIMIT }
       );
 
-      await onchainWait(10);
+      await sleep(timeoutDuration);
 
       tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();
@@ -289,7 +288,7 @@ describe('Verifier', function () {
         { gasLimit: GAS_LIMIT }
       );
 
-      await onchainWait(10);
+      await sleep(timeoutDuration);
 
       tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();
@@ -351,7 +350,7 @@ describe('Verifier', function () {
         { gasLimit: GAS_LIMIT }
       );
 
-      await onchainWait(10);
+      await sleep(timeoutDuration);
 
       tx = await verifier.claimTimeout(disputeId, { gasLimit: GAS_LIMIT });
       tx = await tx.wait();

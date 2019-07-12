@@ -7,9 +7,9 @@ import "./Merkelizer.slb";
 
 contract Enforcer is IEnforcer {
     /// @param _verifier is the verifier's contract address
-    /// @param _taskPeriod The time (in blocks) how long the verification game for a given task
+    /// @param _taskPeriod The time (in seconds) how long the verification game for a given task
     /// is active, should be min. two times the `_challengePeriod`.
-    /// @param _challengePeriod The time (in blocks) how long a execution can be challenged.
+    /// @param _challengePeriod The time (in seconds) how long a execution can be challenged.
     /// @param _bondAmount The stake each solver or challenger has to bring.
     /// @param _maxExecutionDepth The maximum depth of the execution's merkle tree.
     /// Depending how deep it is,
@@ -35,9 +35,9 @@ contract Enforcer is IEnforcer {
         bytes32 taskHash = parameterHash(_parameters);
         Task storage task = tasks[taskHash];
 
-        require(task.startBlock == 0, "Parameters already registered");
+        require(task.startTime == 0, "Parameters already registered");
 
-        task.startBlock = block.number;
+        task.startTime = block.timestamp;
 
         emit Requested(
             taskHash,
@@ -61,14 +61,13 @@ contract Enforcer is IEnforcer {
         ExecutionResult storage executionResult = executions[executionId];
         Task storage task = tasks[_taskHash];
 
-        require(task.startBlock != 0, "Execution request does not exist");
-        //require(task.startBlock + taskPeriod > block.number, "Task period is over");
-        require((block.number + (challengePeriod * 2)) < (task.startBlock + taskPeriod), "Too late for registration");
-        require(executionResult.startBlock == 0, "Execution already registered");
+        require(task.startTime != 0, "Execution request does not exist");
+        require((block.timestamp + (challengePeriod * 2)) < (task.startTime + taskPeriod), "Too late for registration");
+        require(executionResult.startTime == 0, "Execution already registered");
         require(msg.value == bondAmount, "Bond is required");
         require(executionDepth <= maxExecutionDepth, "Execution too long");
 
-        executionResult.startBlock = block.number;
+        executionResult.startTime = block.timestamp;
         executionResult.taskHash = _taskHash;
         executionResult.executionDepth = executionDepth;
         executionResult.solverPathRoot = _solverPathRoot;
@@ -95,10 +94,11 @@ contract Enforcer is IEnforcer {
         ExecutionResult memory executionResult = executions[executionId];
 
         require(msg.value == bondAmount, "Bond amount is required");
-        require(executionResult.startBlock != 0, "Execution does not exist");
+        require(executionResult.startTime != 0, "Execution does not exist");
         // executionDepth round plus 1 for submitProof
         require(
-            executionResult.startBlock + challengePeriod > block.number + (executionResult.executionDepth + 1) * verifier.timeoutDuration(),
+            (executionResult.startTime + challengePeriod)
+            > block.timestamp + (executionResult.executionDepth + 1) * verifier.timeoutDuration(),
             "Execution is out of challenge period"
         );
 
@@ -125,8 +125,8 @@ contract Enforcer is IEnforcer {
         ExecutionResult memory execution = executions[_executionId];
 
         require(msg.sender == address(verifier));
-        require(execution.startBlock != 0, "Execution does not exist");
-        require(execution.startBlock + challengePeriod > block.number, "Execution is out of challenge period");
+        require(execution.startTime != 0, "Execution does not exist");
+        require(execution.startTime + challengePeriod > block.timestamp, "Execution is out of challenge period");
 
         if (solverWon) {
             // slash deposit of challenger
@@ -158,7 +158,7 @@ contract Enforcer is IEnforcer {
     function getStatus(bytes32 _taskHash) public view returns (uint256, bytes32[] memory, bytes32[] memory) {
         Task storage task = tasks[_taskHash];
 
-        require(task.startBlock != 0, "Task does not exist");
+        require(task.startTime != 0, "Task does not exist");
 
         bytes32[] storage taskExecutions = task.executions;
         uint256 len = taskExecutions.length;
@@ -185,6 +185,6 @@ contract Enforcer is IEnforcer {
             mstore(resultHashes, realIndex)
         }
 
-        return (task.startBlock + taskPeriod, pathRoots, resultHashes);
+        return (task.startTime + taskPeriod, pathRoots, resultHashes);
     }
 }

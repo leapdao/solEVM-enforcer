@@ -1,7 +1,7 @@
 const ethers = require('ethers');
 const assert = require('assert');
 
-const { onchainWait, toBytes32, wallets, deployContract, txOverrides } = require('./../helpers/utils');
+const { sleep, toBytes32, wallets, deployContract, txOverrides } = require('./../helpers/utils');
 const assertRevert = require('./../helpers/assertRevert');
 
 const Enforcer = require('./../../build/contracts/Enforcer.json');
@@ -15,11 +15,11 @@ describe('Enforcer', () => {
   const challengerPathRoot = '0x641db1239a480d87bdb76fc045d5f6a68ad1cbf9b93e3b2c92ea638cff6c2add';
   const result = '0x0000000000000000000000000000000000000000000000000000000000001111';
   const taskPeriod = 100000000;
-  const challengePeriod = 30;
+  const challengePeriod = 5;
   const timeoutDuration = 2;
-  const executionDepth = 10;
+  const executionDepth = 1;
   const resultProof = new Array(executionDepth).fill(solverPathRoot);
-  const maxExecutionDepth = 10;
+  const maxExecutionDepth = 1;
   const bondAmount = 999;
   const params = {
     origin: '0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1',
@@ -75,7 +75,7 @@ describe('Enforcer', () => {
     const disputeId = tx.events[0].args.disputeId;
     const bondBefore = (await enforcer.bonds(enforcer.signer.address)).toNumber();
 
-    await onchainWait(timeoutDuration);
+    await sleep(timeoutDuration);
 
     // solver wins if nothing happened until claimTimeout
     tx = await verifier.claimTimeout(disputeId, txOverrides);
@@ -140,7 +140,7 @@ describe('Enforcer', () => {
 
     const execution = await enforcer.executions(executionId);
 
-    assert.ok(execution.startBlock.gt(0), 'start block not set');
+    assert.ok(execution.startTime.gt(0), 'start time not set');
     assert.equal(execution.solverPathRoot, solverPathRoot, 'solverPathRoot not match');
     assert.equal(execution.executionDepth, executionDepth, 'execution length not match');
     assert.equal(execution.solver, solver.address, 'solver address not match');
@@ -173,7 +173,7 @@ describe('Enforcer', () => {
   });
 
   it('not allow dispute when there is not enough time', async () => {
-    await onchainWait(challengePeriod - (executionDepth + 1) * timeoutDuration);
+    await sleep(challengePeriod - (executionDepth + 1) * timeoutDuration);
 
     let tx = enforcer.dispute(
       solverPathRoot, challengerPathRoot, params,
@@ -238,7 +238,7 @@ describe('Enforcer', () => {
     tx = await tx.wait();
     const executionId = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [taskHash, _solverPathRoot]);
 
-    await onchainWait(challengePeriod);
+    await sleep(challengePeriod);
 
     tx = verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: GAS_LIMIT });
     await assertRevert(tx, 'Execution is out of challenge period');
@@ -261,7 +261,7 @@ describe('Enforcer', () => {
 
     assert.deepEqual(await enforcer.bonds(solver.address), solverBond.sub(bondAmount), 'solver not slashed');
     const execution = await enforcer.executions(executionId);
-    assert.equal(execution.startBlock, 0, 'execution not deleted');
+    assert.equal(execution.startTime, 0, 'execution not deleted');
   });
 
   it('allow submit result of valid execution and slash challenger', async () => {
