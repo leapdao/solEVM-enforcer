@@ -147,4 +147,9 @@ Utils.onchainWait = async function onchainWait (t) {
   }
 };
 
+Utils.sleep = async function sleep (seconds) {
+  seconds = seconds + 1;
+  await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+};
+
 module.exports = Utils;
