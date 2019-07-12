@@ -77,6 +77,8 @@ contract Verifier is Ownable, HydratedRuntime {
         _;
     }
 
+    /// @param timeout The time the participants have to react to `submitRound, submitProof`.
+    /// Should be at least 100 blocks.
     constructor(uint256 timeout) public Ownable() {
         timeoutDuration = timeout;
     }

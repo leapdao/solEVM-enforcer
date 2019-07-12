@@ -6,7 +6,13 @@ import "./Merkelizer.slb";
 
 
 contract Enforcer is IEnforcer {
-    /// @param _taskPeriod should be min. two times the `_challengePeriod`
+    /// @param _verifier is the verifier's contract address
+    /// @param _taskPeriod The time (in blocks) how long the verification game for a given task
+    /// is active, should be min. two times the `_challengePeriod`.
+    /// @param _challengePeriod The time (in blocks) how long a execution can be challenged.
+    /// @param _bondAmount The stake each solver or challenger has to bring.
+    /// @param _maxExecutionDepth The maximum depth of the execution's merkle tree.
+    /// Depending how deep it is,
     constructor(
         address _verifier,
         uint256 _taskPeriod,
