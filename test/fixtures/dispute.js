@@ -1,3 +1,5 @@
+'use strict';
+
 const OffchainStepper = require('./../../utils/OffchainStepper');
 const Merkelizer = require('./../../utils/Merkelizer');
 const OP = require('./../../utils/constants');

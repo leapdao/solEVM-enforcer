@@ -1,3 +1,5 @@
+'use strict';
+
 const { BLOCK_GAS_LIMIT } = require('./constants');
 const ethers = require('ethers');
 

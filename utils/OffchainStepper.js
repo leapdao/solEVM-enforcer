@@ -1,3 +1,4 @@
+'use strict';
 
 const VM = require('ethereumjs-vm');
 const BN = VM.deps.ethUtil.BN;

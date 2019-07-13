@@ -1,3 +1,5 @@
+'use strict';
+
 const OP = require('./../../utils/constants');
 // TODO make a util contract
 const ethers = require('ethers');

@@ -1,3 +1,5 @@
+'use strict';
+
 const Verifier = artifacts.require('Verifier');
 const Enforcer = artifacts.require('Enforcer');
 

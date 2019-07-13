@@ -1,3 +1,5 @@
+'use strict';
+
 const assert = require('assert');
 
 const { getCodeWithStep, deployContract, deployCode, toBN } = require('./../helpers/utils');

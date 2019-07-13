@@ -1,3 +1,4 @@
+'use strict';
 
 const { range, leftPad, pushRange } = require('./../helpers/utils');
 const OP = require('./../../utils/constants');

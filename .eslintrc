@@ -1,12 +1,9 @@
 {
-  "extends" : [
-    "standard",
-    "plugin:promise/recommended"
-  ],
-  "plugins": [
-    "promise"
-  ],
+  "parserOptions": {
+    "ecmaVersion": 2018
+  },
   "env": {
+    "es6": true,
     "browser" : true,
     "node"    : true,
     "mocha"   : true,
@@ -19,9 +16,8 @@
     "web3": false
   },
   "rules": {
-
     // Strict mode
-    "strict": [2, "global"],
+    "strict": ["warn", "global"],
 
     // Code style
     "indent": [2, 2],
@@ -33,7 +29,7 @@
     "dot-notation": [2, {"allowKeywords": true, "allowPattern": ""}],
     "no-redeclare": [2, {"builtinGlobals": true}],
     "no-trailing-spaces": [2, { "skipBlankLines": true }],
-    "eol-last": 1,
+    "eol-last": 0,
     "comma-spacing": [2, {"before": false, "after": true}],
     "camelcase": [2, {"properties": "always"}],
     "no-mixed-spaces-and-tabs": [2, "smart-tabs"],

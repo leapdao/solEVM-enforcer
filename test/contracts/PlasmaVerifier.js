@@ -1,3 +1,4 @@
+'use strict';
 
 const { wallets, deployContract, txOverrides, opcodeNames } = require('./../helpers/utils');
 

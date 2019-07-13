@@ -20,29 +20,22 @@
     "test:utils": "mocha test/utils/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "lint:sol": "solhint contracts/*.{sol,slb}",
+    "lint:sol": "solhint contracts/**/*{.sol,.slb}",
     "lint:all": "yarn lint && yarn lint:sol",
     "lint:all:fix": "yarn lint:fix && yarn lint:sol",
-    "console": "truffle console",
     "compile:contracts": "truffle compile",
-    "version": "scripts/version.js",
     "coverage": "scripts/coverage.sh"
   },
   "devDependencies": {
-    "eslint": "^4.11.0",
-    "eslint-config-standard": "^10.2.1",
-    "eslint-plugin-import": "^2.8.0",
-    "eslint-plugin-node": "^5.2.1",
-    "eslint-plugin-promise": "^3.6.0",
-    "eslint-plugin-standard": "^3.0.1",
+    "eslint": "=6.0.1",
     "ganache-cli": "=6.4.0",
     "mocha": "=6.1.4",
-    "solhint": "^1.2.1",
+    "solhint": "=2.1.0",
     "truffle": "=5.0.22"
   },
   "dependencies": {
     "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r5",
-    "ethers": "^4.0.32",
+    "ethers": "=4.0.33",
     "openzeppelin-solidity": "=2.1.1"
   }
 }

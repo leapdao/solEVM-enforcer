@@ -1,3 +1,4 @@
+'use strict';
 
 const { getCode } = require('./../helpers/utils');
 const OffchainStepper = require('./../../utils/OffchainStepper');

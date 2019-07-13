@@ -1,3 +1,5 @@
+'use strict';
+
 const ethers = require('ethers');
 const debug = require('debug')('vgame-test');
 const assert = require('assert');
