@@ -1,3 +1,5 @@
+'use strict';
+
 const OP = require('./../../utils/constants');
 
 module.exports = [

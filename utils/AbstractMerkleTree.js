@@ -1,3 +1,4 @@
+'use strict';
 
 const ethers = require('ethers');
 const { ZERO_HASH } = require('./constants');

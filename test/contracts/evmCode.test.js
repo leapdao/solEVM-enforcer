@@ -1,3 +1,5 @@
+'use strict';
+
 const { deployContract } = require('./../helpers/utils');
 const BN = require('ethers').utils.BigNumber;
 const EVMCodeMock = require('./../../build/contracts/EVMCodeMock.json');

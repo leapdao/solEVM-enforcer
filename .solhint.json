@@ -1,5 +1,5 @@
 {
-  "extends": "default",
+  "extends": "solhint:default",
   "rules": {
     "no-complex-fallback": "warn",
     "indent": [
@@ -15,6 +15,6 @@
       140
     ],
     "no-inline-assembly": false,
-    "compiler-fixed": false
+    "compiler-fixed": true
   }
 }

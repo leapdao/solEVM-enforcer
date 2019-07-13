@@ -1,3 +1,5 @@
+'use strict';
+
 const fs = require('fs');
 const assert = require('assert');
 
@@ -109,7 +111,7 @@ describe('Runtime', function () {
             const path = './test/fixtures/runtimeGasUsed.js';
 
             console.log(`*** New low gas usage record. Writing results to ${path}. ***`);
-            fs.writeFileSync(path, `module.exports = ${JSON.stringify(gasUsedValues, null, 2)};`);
+            fs.writeFileSync(path, `'use strict';\nmodule.exports = ${JSON.stringify(gasUsedValues, null, 2)};`);
           }
         }
 

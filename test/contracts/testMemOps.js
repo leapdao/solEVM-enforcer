@@ -1,3 +1,5 @@
+'use strict';
+
 const { deployContract } = require('./../helpers/utils');
 
 const TestMemOps = require('./../../build/contracts/TestMemOps.json');

@@ -1,3 +1,4 @@
+'use strict';
 
 const { deployContract } = require('./../helpers/utils');
 

@@ -1,3 +1,5 @@
+'use strict';
+
 const ethers = require('ethers');
 
 const OffchainStepper = require('./OffchainStepper.js');
