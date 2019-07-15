@@ -114,8 +114,7 @@ module.exports = class ExecutionPoker {
   }
 
   async registerExecution (taskHash, evmParams) {
-    // make the last step invalid
-    const res = await this.computeCall(evmParams, true);
+    const res = await this.computeCall(evmParams);
     const bondAmount = await this.enforcer.bondAmount();
 
     this.log('registering execution:', res.steps.length, 'steps');
@@ -282,7 +281,7 @@ module.exports = class ExecutionPoker {
     return tx;
   }
 
-  async computeCall (evmParams, invalidateLastStep) {
+  async computeCall (evmParams) {
     let bytecode = await this.getCodeForParams(evmParams);
     let data = await this.getDataForParams(evmParams);
     let code = [];
@@ -300,10 +299,6 @@ module.exports = class ExecutionPoker {
 
     const stepper = new OffchainStepper();
     const steps = await stepper.run({ code, data });
-    if (invalidateLastStep) {
-      this.log('making one execution step invalid');
-      steps[steps.length - 1].gasRemaining = 22;
-    }
     const merkle = new Merkelizer().run(steps, bytecode, data);
 
     return { steps, merkle, codeFragmentTree };
