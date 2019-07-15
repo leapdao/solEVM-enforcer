@@ -550,4 +550,27 @@ module.exports = (callback) => {
       await callback(code, data, merkle, merkle, 'challenger');
     });
   });
+
+  describe('Fixture for Dispute/Verifier Logic #8 - unsupported opcode', function () {
+    const code = [
+      OP.PUSH1, '33',
+      OP.SLOAD,
+      OP.PUSH1, '00',
+      OP.RETURN,
+    ];
+    const data = '0x';
+
+    let steps;
+    let merkle;
+    const runtime = new HydratedRuntime();
+
+    before(async () => {
+      steps = await runtime.run({ code, data });
+      merkle = new Merkelizer().run(steps, code, data);
+    });
+
+    it('Challenger wins', async () => {
+      await callback(code, data, merkle, merkle, 'challenger');
+    });
+  });
 };
