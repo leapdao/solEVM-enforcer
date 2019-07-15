@@ -529,4 +529,25 @@ module.exports = (callback) => {
       await callback(code, data, solverMerkle, merkle, 'challenger');
     });
   });
+
+  describe('Fixture for Dispute/Verifier Logic #7 - stack underflow', function () {
+    const code = [
+      OP.CODECOPY,
+      OP.RETURN,
+    ];
+    const data = '0x';
+
+    let steps;
+    let merkle;
+    const runtime = new HydratedRuntime();
+
+    before(async () => {
+      steps = await runtime.run({ code, data });
+      merkle = new Merkelizer().run(steps, code, data);
+    });
+
+    it('Challenger wins', async () => {
+      await callback(code, data, merkle, merkle, 'challenger');
+    });
+  });
 };
