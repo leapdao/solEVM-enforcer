@@ -294,7 +294,7 @@ module.exports = class ExecutionPoker {
 
     let codeFragmentTree;
     // code is not on chain-🍕
-    if (evmParams.codeHash.endsWith('000000000000000000000000')) {
+    if (!evmParams.codeHash.endsWith('000000000000000000000000')) {
       codeFragmentTree = new FragmentTree().run(bytecode);
     }
 
