@@ -102,8 +102,8 @@ module.exports = class HydratedRuntime extends EVMRuntime {
     // serialize the memory if it changed
     if (memProof.readHigh !== -1 || memProof.writeHigh !== -1 || !prevMem || prevMem.length !== memSize) {
       const mem = [];
-
       const memStore = runState.memProof.data;
+
       let i = 0;
       while (i < memStore.length) {
         const hexVal = Buffer.from(memStore.slice(i, i += 32)).toString('hex');
@@ -150,7 +150,6 @@ module.exports = class HydratedRuntime extends EVMRuntime {
       step.compactStack = new Array(stackIn);
 
       // remove the number of 'consumed' elements - if any
-      let old = stackIn + 0;
       while (stackIn--) {
         step.compactStack[stackIn] = runState.prevStack.pop();
         runState.stackHashes.pop();
