@@ -42,6 +42,22 @@ class MyExecutionPoker extends ExecutionPoker {
       // ignore for unit test
     }
   }
+
+  async computeCall (evmParams) {
+    const res = await super.computeCall(evmParams);
+
+    if (this.logTag === 'solver') {
+      this.log('making one leaf invalid');
+
+      const leaf = res.merkle.leaves[0];
+      leaf.right.executionState.gasRemaining = 2222;
+      leaf.right.hash = Merkelizer.stateHash(leaf.right.executionState, leaf.right.stackHash, leaf.right.memHash);
+      leaf.hash = Merkelizer.hash(leaf.left.hash, leaf.right.hash);
+      res.merkle.recal(0);
+    }
+
+    return res;
+  }
 }
 
 async function deployContract (truffleContract, wallet, ...args) {
