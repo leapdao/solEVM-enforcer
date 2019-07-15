@@ -217,6 +217,13 @@ module.exports = (callback) => {
       const solverMerkle = new Merkelizer().run(wrongExecution, code, data);
       await callback(code, data, solverMerkle, merkle, 'challenger');
     });
+
+    it('solver wrong JUMP', async () => {
+      const wrongExecution = JSON.parse(copy);
+      wrongExecution[1].pc = 0xfff;
+      const solverMerkle = new Merkelizer().run(wrongExecution, code, data);
+      await callback(code, data, solverMerkle, merkle, 'challenger');
+    });
   });
 
   describe('solver messing with tree', function () {
@@ -452,6 +459,74 @@ module.exports = (callback) => {
 
     it('both have the same result, solver looses because of overcommit on memory', async () => {
       await callback(code, data, merkle, merkle, 'challenger');
+    });
+  });
+
+  describe('Fixture for Dispute/Verifier Logic #5 - CODECOPY', function () {
+    this.timeout(55550);
+
+    const code = [
+      OP.PUSH2, '00ff',
+      OP.PUSH1, '03',
+      OP.PUSH1, '01',
+      OP.CODECOPY,
+      OP.PUSH1, '20',
+      OP.PUSH1, '00',
+      OP.RETURN,
+    ];
+    const data = '0x';
+
+    let steps;
+    let merkle;
+    let copy;
+    const stepper = new OffchainStepper();
+
+    before(async () => {
+      steps = await stepper.run({ code, data });
+      copy = JSON.stringify(steps);
+      merkle = new Merkelizer().run(steps, code, data);
+    });
+
+    it('Solver wins', async () => {
+      const wrongExecution = JSON.parse(copy);
+      wrongExecution[3].pc = 0xfa;
+      const challengerMerkle = new Merkelizer().run(wrongExecution, code, data);
+
+      await callback(code, data, merkle, challengerMerkle, 'solver');
+    });
+  });
+
+  describe('Fixture for Dispute/Verifier Logic #6 - CODECOPY', function () {
+    this.timeout(55550);
+
+    const code = [
+      OP.PUSH2, '00ff',
+      OP.PUSH1, 'ff',
+      OP.PUSH1, '01',
+      OP.CODECOPY,
+      OP.PUSH1, '20',
+      OP.PUSH1, '00',
+      OP.RETURN,
+    ];
+    const data = '0x';
+
+    let steps;
+    let merkle;
+    let copy;
+    const stepper = new OffchainStepper();
+
+    before(async () => {
+      steps = await stepper.run({ code, data });
+      copy = JSON.stringify(steps);
+      merkle = new Merkelizer().run(steps, code, data);
+    });
+
+    it('Challenger wins', async () => {
+      const wrongExecution = JSON.parse(copy);
+      wrongExecution[3].pc = 0xfa;
+      const solverMerkle = new Merkelizer().run(wrongExecution, code, data);
+
+      await callback(code, data, solverMerkle, merkle, 'challenger');
     });
   });
 };

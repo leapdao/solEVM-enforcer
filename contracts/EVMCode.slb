@@ -16,11 +16,6 @@ library EVMCode {
         uint next;
     }
 
-    struct RawCode {
-        uint pos;
-        uint value;
-    }
-
     function nextDataNode(DataNode memory node) internal pure returns (DataNode memory next) {
         if (node.next == 0) {
             return DataNode(uint(-1), 0, 0);
@@ -31,18 +26,20 @@ library EVMCode {
         }
     }
 
-    function fromArray(RawCode[] memory codes, uint length) internal pure returns (Code memory code) {
-        require(codes.length >= 1, "Empty code array");
+    function fromArray(bytes32[] memory codes, uint length) internal pure returns (Code memory code) {
+        require(codes.length >= 2, "Empty code array");
 
         code.length = length;
-        code.root = DataNode(codes[0].pos, codes[0].value, 0);
+        code.root = DataNode(uint(codes[0]), uint(codes[1]), 0);
 
         DataNode memory current = code.root;
-        for (uint i = 1; i < codes.length; i++) {
-            require(codes[i].pos > codes[i-1].pos, "wrong code order");
-            require(codes[i].pos <= (length >> 5), "incorrect code length");
+        for (uint i = 2; i < codes.length; i += 2) {
+            uint pos = uint(codes[i]);
+            uint val = uint(codes[i + 1]);
+            require(pos > uint(codes[i - 2]), "wrong code order");
+            require(pos <= (length >> 5), "incorrect code length");
 
-            DataNode memory next = DataNode(codes[i].pos, codes[i].value, 0);
+            DataNode memory next = DataNode(pos, val, 0);
             assembly {
                 mstore(add(current, 0x40), next)
             }

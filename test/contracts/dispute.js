@@ -4,7 +4,7 @@ const ethers = require('ethers');
 const debug = require('debug')('vgame-test');
 const assert = require('assert');
 
-const { Merkelizer, ExecutionPoker, Constants } = require('./../../utils');
+const { Merkelizer, ExecutionPoker, Constants, FragmentTree } = require('./../../utils');
 const disputeFixtures = require('./../fixtures/dispute');
 const { onchainWait, deployContract, deployCode, wallets, provider } = require('./../helpers/utils');
 
@@ -45,11 +45,22 @@ class MyExecutionPoker extends ExecutionPoker {
   }
 
   async computeCall (evmParams, invalidateLastStep) {
-    return { steps: this._steps, merkle: this._merkle };
+    return { steps: this._steps, merkle: this._merkle, codeFragmentTree: this._codeFragmentTree };
   }
 
-  async requestExecution (contractAddr, callData) {
-    const codeHash = `0x${contractAddr.replace('0x', '').toLowerCase().padEnd(64, '0')}`;
+  async requestExecution (code, callData, doDeployCode) {
+    EVMParameters.blockNumber++;
+
+    let codeHash;
+
+    if (doDeployCode) {
+      const codeContract = await deployCode(code);
+      codeHash = `0x${codeContract.address.replace('0x', '').toLowerCase().padEnd(64, '0')}`;
+    } else {
+      this._codeFragmentTree = new FragmentTree().run(code.join(''));
+      codeHash = this._codeFragmentTree.root.hash;
+    }
+
     const dataHash = Merkelizer.dataHash(callData);
     const evmParams = Object.assign(EVMParameters, { codeHash, dataHash });
 
@@ -59,6 +70,53 @@ class MyExecutionPoker extends ExecutionPoker {
   log (...args) {
     debug(...args);
   }
+}
+
+async function doGame ({ verifier, code, callData, execPokerSolver, execPokerChallenger, doDeployCode }) {
+  return new Promise(
+    (resolve, reject) => {
+      let resolved = false;
+      let state = 0;
+
+      async function decide (disputeId) {
+        state++;
+        if (state !== 2) {
+          return;
+        }
+
+        const dispute = await verifier.disputes(disputeId);
+        let winner = 'challenger';
+        if ((dispute.state & SOLVER_VERIFIED) !== 0) {
+          winner = 'solver';
+        }
+        if (!resolved) {
+          resolved = true;
+          resolve(winner);
+        }
+      }
+
+      execPokerSolver.afterSubmitProof = async (disputeId) => {
+        decide(disputeId);
+      };
+      execPokerChallenger.afterSubmitProof = async (disputeId) => {
+        decide(disputeId);
+      };
+      execPokerSolver.onSlashed = () => {
+        if (!resolved) {
+          resolved = true;
+          resolve('challenger');
+        }
+      };
+      execPokerChallenger.onSlashed = () => {
+        if (!resolved) {
+          resolved = true;
+          resolve('solver');
+        }
+      };
+
+      execPokerSolver.requestExecution(code, callData, doDeployCode);
+    }
+  );
 }
 
 describe('Verifier', function () {
@@ -112,62 +170,39 @@ describe('Verifier', function () {
     execPokerChallenger.alwaysChallenge = true;
   });
 
-  disputeFixtures(
-    async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
-      // use merkle tree from fixture
-      execPokerSolver._merkle = solverMerkle;
-      execPokerSolver._steps = [];
-      execPokerChallenger._merkle = challengerMerkle;
-      execPokerChallenger._steps = [];
+  describe('with contract bytecode deployed', () => {
+    disputeFixtures(
+      async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
+        // use merkle tree from fixture
+        execPokerSolver._merkle = solverMerkle;
+        execPokerSolver._steps = [];
+        execPokerChallenger._merkle = challengerMerkle;
+        execPokerChallenger._steps = [];
 
-      const codeContract = await deployCode(code);
-      const winner = await new Promise(
-        (resolve, reject) => {
-          let resolved = false;
-          let state = 0;
+        const winner = await doGame(
+          { verifier, code, callData, execPokerSolver, execPokerChallenger, doDeployCode: true }
+        );
+        assert.equal(winner, expectedWinner, 'winner should match fixture');
+        await onchainWait(10);
+      }
+    );
+  });
 
-          async function decide (disputeId) {
-            state++;
-            if (state !== 2) {
-              return;
-            }
+  describe('without contract bytecode deployed', () => {
+    disputeFixtures(
+      async (code, callData, solverMerkle, challengerMerkle, expectedWinner) => {
+        // use merkle tree from fixture
+        execPokerSolver._merkle = solverMerkle;
+        execPokerSolver._steps = [];
+        execPokerChallenger._merkle = challengerMerkle;
+        execPokerChallenger._steps = [];
 
-            const dispute = await verifier.disputes(disputeId);
-            let winner = 'challenger';
-            if ((dispute.state & SOLVER_VERIFIED) !== 0) {
-              winner = 'solver';
-            }
-            if (!resolved) {
-              resolved = true;
-              resolve(winner);
-            }
-          }
-
-          execPokerSolver.afterSubmitProof = async (disputeId) => {
-            decide(disputeId);
-          };
-          execPokerChallenger.afterSubmitProof = async (disputeId) => {
-            decide(disputeId);
-          };
-          execPokerSolver.onSlashed = () => {
-            if (!resolved) {
-              resolved = true;
-              resolve('challenger');
-            }
-          };
-          execPokerChallenger.onSlashed = () => {
-            if (!resolved) {
-              resolved = true;
-              resolve('solver');
-            }
-          };
-
-          execPokerSolver.requestExecution(codeContract.address, callData);
-        }
-      );
-
-      assert.equal(winner, expectedWinner, 'winner should match fixture');
-      await onchainWait(10);
-    }
-  );
+        const winner = await doGame(
+          { verifier, code, callData, execPokerSolver, execPokerChallenger }
+        );
+        assert.equal(winner, expectedWinner, 'winner should match fixture');
+        await onchainWait(10);
+      }
+    );
+  });
 });

@@ -1340,11 +1340,6 @@ contract EVMRuntime is EVMConstants {
         uint cAddr = state.stack.pop();
         uint len = state.stack.pop();
 
-        if (cAddr + len > state.code.length) {
-            state.errno = ERROR_INDEX_OOB;
-            return;
-        }
-
         uint gasFee = GAS_VERYLOW + computeGasForMemoryCopy(state, mAddr, len);
 
         if (gasFee > state.gas) {

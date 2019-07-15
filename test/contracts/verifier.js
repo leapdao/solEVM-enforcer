@@ -97,6 +97,9 @@ describe('Verifier', function () {
         stackHash: ZERO_HASH,
         memHash: ZERO_HASH,
         dataHash: ZERO_HASH,
+        codeByteLength: 0,
+        codeFragments: [],
+        codeProof: [],
       };
 
       // should not accept submitProof
