@@ -554,7 +554,7 @@ module.exports = (callback) => {
   describe('Fixture for Dispute/Verifier Logic #8 - unsupported opcode', function () {
     const code = [
       OP.PUSH1, '33',
-      OP.SLOAD,
+      OP.GAS,
       OP.PUSH1, '00',
       OP.RETURN,
     ];
@@ -562,15 +562,23 @@ module.exports = (callback) => {
 
     let steps;
     let merkle;
+    let copy;
     const runtime = new HydratedRuntime();
 
     before(async () => {
       steps = await runtime.run({ code, data });
+      copy = JSON.stringify(steps);
       merkle = new Merkelizer().run(steps, code, data);
+      code[2] = OP.SLOAD;
     });
 
     it('Challenger wins', async () => {
-      await callback(code, data, merkle, merkle, 'challenger');
+      // this should point to OP.GAS which we replaced with OP.SLOAD
+      const wrongExecution = JSON.parse(copy);
+      wrongExecution[1].gasRemaining = 0xffff;
+      const solverMerkle = new Merkelizer().run(wrongExecution, code, data);
+
+      await callback(code, data, solverMerkle, merkle, 'challenger');
     });
   });
 };
