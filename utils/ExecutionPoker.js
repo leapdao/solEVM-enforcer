@@ -115,6 +115,8 @@ module.exports = class ExecutionPoker {
 
   async registerExecution (taskHash, evmParams) {
     const res = await this.computeCall(evmParams);
+    const lastExecutionStep = res.steps[res.steps.length - 1];
+    const returnData = lastExecutionStep ? lastExecutionStep.returnData : '0x';
     const bondAmount = await this.enforcer.bondAmount();
 
     this.log('registering execution:', res.steps.length, 'steps');
@@ -123,7 +125,7 @@ module.exports = class ExecutionPoker {
       taskHash,
       res.merkle.root.hash,
       new Array(res.merkle.depth).fill(ZERO_HASH),
-      ZERO_HASH,
+      returnData,
       { value: bondAmount }
     );
 
