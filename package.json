@@ -31,7 +31,8 @@
     "ganache-cli": "=6.4.0",
     "mocha": "=6.1.4",
     "solhint": "=2.1.0",
-    "truffle": "=5.0.22"
+    "truffle": "=5.0.22",
+    "truffle-hdwallet-provider": "^1.0.14"
   },
   "dependencies": {
     "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r6",
