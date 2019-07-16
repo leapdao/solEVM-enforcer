@@ -15,13 +15,6 @@ module.exports = {
     },
   },
   networks: {
-    development: {
-      host: 'localhost',
-      port: 8545,
-      network_id: '*', // eslint-disable-line camelcase
-      gas: 0xfffffffffffff,
-      gasPrice: 0x01,
-    },
     goerli: {
       provider: () => {
         return new HDWalletProvider(process.env.MNEMONIC, 'https://goerli.infura.io/v3/' + process.env.INFURA_API_KEY);
@@ -32,23 +25,23 @@ module.exports = {
     },
     ganache: {
       host: 'localhost',
-      port: 8545,
+      port: 8111,
       network_id: '*', // eslint-disable-line camelcase
-      gas: 0xfffffffffffff,
+      gas: 0xffffff,
       gasPrice: 0x01,
     },
-    coverage: {
+    geth: {
       host: 'localhost',
-      port: 8555,
+      port: 8222,
       network_id: '*', // eslint-disable-line camelcase
-      gas: 0xfffffffffffff,
+      gas: 0xffffff,
       gasPrice: 0x01,
     },
     gasPrice: {
       host: 'localhost',
-      port: 8545,
+      port: 8222,
       network_id: '*', // eslint-disable-line camelcase
-      gas: 0xfffffffffffff,
+      gas: 0xffffff,
       gasPrice: 3 * (10 ** 9),
     },
   },
