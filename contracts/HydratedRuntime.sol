@@ -36,7 +36,7 @@ contract HydratedRuntime is EVMRuntime {
         // TODO:
         // gather all proofs here
         // How we compute the proofs below is not final yet.
-        // Update memory proofs setup to use slot, value, once OffchainStepper support lands.
+        // Update memory proofs setup to use slot, value, once off-chain support lands.
         HydratedState memory hydratedState = getHydratedState(evm);
 
         bytes32 hash = hydratedState.stackHash;

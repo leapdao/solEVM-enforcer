@@ -2,7 +2,7 @@
 
 const ethers = require('ethers');
 
-const OffchainStepper = require('./OffchainStepper.js');
+const HydratedRuntime = require('./HydratedRuntime.js');
 const Merkelizer = require('./Merkelizer.js');
 const ProofHelper = require('./ProofHelper.js');
 const FragmentTree = require('./FragmentTree');
@@ -115,6 +115,8 @@ module.exports = class ExecutionPoker {
 
   async registerExecution (taskHash, evmParams) {
     const res = await this.computeCall(evmParams);
+    const lastExecutionStep = res.steps[res.steps.length - 1];
+    const returnData = lastExecutionStep ? lastExecutionStep.returnData : '0x';
     const bondAmount = await this.enforcer.bondAmount();
 
     this.log('registering execution:', res.steps.length, 'steps');
@@ -123,7 +125,7 @@ module.exports = class ExecutionPoker {
       taskHash,
       res.merkle.root.hash,
       new Array(res.merkle.depth).fill(ZERO_HASH),
-      ZERO_HASH,
+      returnData,
       { value: bondAmount }
     );
 
@@ -297,8 +299,8 @@ module.exports = class ExecutionPoker {
       codeFragmentTree = new FragmentTree().run(bytecode);
     }
 
-    const stepper = new OffchainStepper();
-    const steps = await stepper.run({ code, data });
+    const runtime = new HydratedRuntime();
+    const steps = await runtime.run({ code, data });
     const merkle = new Merkelizer().run(steps, bytecode, data);
 
     return { steps, merkle, codeFragmentTree };

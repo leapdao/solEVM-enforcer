@@ -8,12 +8,19 @@ module.exports = class ProofHelper {
   static constructProof (computationPath, { merkle, codeFragmentTree }) {
     const prevOutput = computationPath.left.executionState;
     const execState = computationPath.right.executionState;
+    let isMemoryRequired = false;
+    if (execState.memReadHigh !== -1 || execState.memWriteHigh !== -1) {
+      isMemoryRequired = true;
+    }
+    let isCallDataRequired = false;
+    if (execState.callDataReadHigh !== -1 || execState.callDataWriteHigh !== -1) {
+      isCallDataRequired = true;
+    }
+
     const proofs = {
-      stackHash: Merkelizer.stackHash(
-        prevOutput.stack.slice(0, prevOutput.stack.length - execState.compactStack.length)
-      ),
-      memHash: execState.isMemoryRequired ? ZERO_HASH : Merkelizer.memHash(prevOutput.mem),
-      dataHash: execState.isCallDataRequired ? ZERO_HASH : Merkelizer.dataHash(prevOutput.data),
+      stackHash: execState.compactStackHash,
+      memHash: isMemoryRequired ? ZERO_HASH : Merkelizer.memHash(prevOutput.mem),
+      dataHash: isCallDataRequired ? ZERO_HASH : Merkelizer.dataHash(prevOutput.data),
       codeByteLength: 0,
       codeFragments: [],
       codeProof: [],
@@ -62,9 +69,9 @@ module.exports = class ProofHelper {
     return {
       proofs,
       executionInput: {
-        data: (execState.isCallDataRequired ? prevOutput.data : '0x'),
+        data: isCallDataRequired ? prevOutput.data : '0x',
         stack: execState.compactStack,
-        mem: execState.isMemoryRequired ? prevOutput.mem : [],
+        mem: isMemoryRequired ? prevOutput.mem : [],
         customEnvironmentHash: ZERO_HASH,
         returnData: prevOutput.returnData,
         pc: prevOutput.pc,

@@ -1,7 +1,7 @@
 'use strict';
 
 const { getCode } = require('./../helpers/utils');
-const OffchainStepper = require('./../../utils/OffchainStepper');
+const { Constants, HydratedRuntime } = require('./../../utils/');
 const fixtures = require('./../fixtures/runtime');
 
 const assert = require('assert');
@@ -12,13 +12,13 @@ describe('JS Stepper', function () {
       const { pc, opcodeUnderTest } = getCode(fixture);
 
       it(fixture.description || opcodeUnderTest, async () => {
-        const stepper = new OffchainStepper();
+        const stepper = new HydratedRuntime();
         const code = typeof fixture.code === 'object' ? fixture.code : [fixture.code];
         const stack = fixture.stack || [];
         const mem = fixture.memory || '';
         const data = fixture.data || '';
-        const gasLimit = fixture.gasLimit;
-        const blockGasLimit = fixture.gasLimit;
+        const gasLimit = fixture.gasLimit || Constants.BLOCK_GAS_LIMIT;
+        const blockGasLimit = fixture.gasLimit || Constants.BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
         const args = {
           code,
@@ -33,13 +33,6 @@ describe('JS Stepper', function () {
         const steps = await stepper.run(args);
         const res = steps[steps.length - 1];
 
-        let gasUsed = 0;
-        let len = steps.length;
-
-        while (len--) {
-          gasUsed += steps[len].gasFee;
-        }
-
         if (fixture.result.stack) {
           assert.deepEqual(res.stack, fixture.result.stack, 'stack');
         }
@@ -47,7 +40,7 @@ describe('JS Stepper', function () {
           assert.deepEqual(res.mem, fixture.result.memory, 'mem');
         }
         if (fixture.result.gasUsed !== undefined) {
-          assert.equal(gasUsed, fixture.result.gasUsed, 'gasUsed');
+          assert.equal(gasRemaining - res.gasRemaining, fixture.result.gasUsed, 'gasUsed');
         }
         if (fixture.result.pc !== undefined) {
           assert.equal(res.pc, fixture.result.pc, 'pc');
