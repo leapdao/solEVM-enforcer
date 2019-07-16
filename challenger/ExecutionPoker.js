@@ -1,13 +1,16 @@
+'use strict';
+
 const ethers = require('ethers');
 
 const OffchainStepper = require('../utils/OffchainStepper.js');
 const Merkelizer = require('../utils/Merkelizer.js');
-// const ProofHelper = require('../utils/ProofHelper.js');
+const ProofHelper = require('../utils/ProofHelper.js');
 const { ZERO_HASH } = require('../utils/constants.js');
 
 module.exports = class ExecutionPoker {
-  constructor (enforcer, wallet, gasLimit = 0xfffffffffffff, logTag = 'unkn') {
+  constructor (enforcer, verifier, wallet, gasLimit = 0xfffffffffffff, logTag = 'unkn') {
     this.enforcer = enforcer.connect(wallet);
+    this.verifier = verifier.connect(wallet);
     this.wallet = wallet;
     this.gasLimit = gasLimit;
     this.logTag = logTag;
@@ -53,26 +56,26 @@ module.exports = class ExecutionPoker {
       }
     );
 
-    // this.enforcer.on(
-    //   this.enforcer.filters.Slashed(),
-    //   (execId, addr, tx) => {
-    //     if (addr === this.wallet.address) {
-    //       this.onSlashed(execId);
-    //     }
-    //   }
-    // );
+    this.enforcer.on(
+      this.enforcer.filters.Slashed(),
+      (execId, addr, tx) => {
+        if (addr === this.wallet.address) {
+          this.onSlashed(execId);
+        }
+      }
+    );
 
-    // this.enforcer.on(
-    //   this.enforcer.filters.DisputeInitialised(),
-    //   (disputeId, execId, tx) => {
-    //     let sol = this.solutions[execId];
+    this.enforcer.on(
+      this.enforcer.filters.DisputeInitialised(),
+      (disputeId, execId, tx) => {
+        let sol = this.solutions[execId];
 
-    //     if (sol) {
-    //       this.log('new dispute for', execId);
-    //       this.initDispute(disputeId, sol);
-    //     }
-    //   }
-    // );
+        if (sol) {
+          this.log('new dispute for', execId);
+          this.initDispute(disputeId, sol);
+        }
+      }
+    );
   }
 
   onSlashed (execId) {
@@ -93,33 +96,30 @@ module.exports = class ExecutionPoker {
   }
 
   async registerExecution (taskHash, evmParams) {
-    // make the last step invalid
-    const res = await this.computeCall(evmParams, true);
+    const res = await this.computeCall(evmParams);
     const lastStep = res.steps[res.steps.length - 1];
     if (!lastStep || lastStep.opcodeName !== 'RETURN') {
       console.error('Wrong last step (no RETURN)');
       console.error(lastStep);
       return;
     }
-    // return;
-    // const bondAmount = await this.enforcer.bondAmount();
-    const bondAmount = 0;
+
+    const bondAmount = await this.enforcer.bondAmount();
 
     this.log('registering execution:', res.steps.length, 'steps');
+
     const result = parseInt(lastStep.returnData, 16);
-    console.log([taskHash,
-      res.merkle.root.hash,
-      `0x${result.toString(16).padStart(2, '0')}`]);
-    let tx = await this.enforcer.registerResult(
+    let tx = await this.enforcer.register(
       taskHash,
       res.merkle.root.hash,
-      `0x${result.toString(16).padStart(2, '0')}`,
+      new Array(res.merkle.depth).fill(ZERO_HASH),
+      `0x${result.toString(16)}`,
       { value: bondAmount }
     );
-
-    tx = await tx.wait();
-
-    const evt = tx.events[0].args;
+    console.log(tx);
+    let receipt = await tx.wait();
+    console.log(receipt);
+    const evt = receipt.events[0].args;
     const executionId = ethers.utils.solidityKeccak256(
       ['bytes32', 'bytes32'],
       [taskHash, evt.solverPathRoot]
@@ -165,101 +165,101 @@ module.exports = class ExecutionPoker {
     this.log('same execution result');
   }
 
-  // initDispute (disputeId, res) {
-  //   this.log('initDispute', disputeId);
+  initDispute (disputeId, res) {
+    this.log('initDispute', disputeId);
 
-  //   let obj = {
-  //     merkle: res.merkle,
-  //     depth: res.merkle.depth,
-  //     computationPath: res.merkle.root,
-  //   };
+    let obj = {
+      merkle: res.merkle,
+      depth: res.merkle.depth,
+      computationPath: res.merkle.root,
+    };
 
-  //   this.disputes[disputeId] = obj;
+    this.disputes[disputeId] = obj;
 
-  //   this.submitRound(disputeId);
-  // }
+    this.submitRound(disputeId);
+  }
 
-  // async submitRound (disputeId) {
-  //   const obj = this.disputes[disputeId];
+  async submitRound (disputeId) {
+    const obj = this.disputes[disputeId];
 
-  //   if (obj.computationPath.isLeaf) {
-  //     this.log('reached leaves');
-  //     this.log('submitting for l=' +
-  //       obj.computationPath.left.hash + ' r=' + obj.computationPath.right.hash);
+    if (obj.computationPath.isLeaf) {
+      this.log('reached leaves');
+      this.log('submitting for l=' +
+        obj.computationPath.left.hash + ' r=' + obj.computationPath.right.hash);
 
-  //     await this.submitProof(disputeId, obj.computationPath);
-  //     return;
-  //   }
+      await this.submitProof(disputeId, obj.computationPath);
+      return;
+    }
 
-  //   const dispute = await this.verifier.disputes(disputeId);
-  //   const targetPath = this.wallet.address === dispute.challengerAddr ? dispute.challengerPath : dispute.solverPath;
-  //   const path = this.wallet.address === dispute.challengerAddr ? dispute.challenger : dispute.solver;
-  //   const nextPath = obj.merkle.getNode(targetPath);
+    const dispute = await this.verifier.disputes(disputeId);
+    const targetPath = this.wallet.address === dispute.challengerAddr ? dispute.challengerPath : dispute.solverPath;
+    const path = this.wallet.address === dispute.challengerAddr ? dispute.challenger : dispute.solver;
+    const nextPath = obj.merkle.getNode(targetPath);
 
-  //   if (!nextPath) {
-  //     this.log('submission already made by another party');
-  //     obj.computationPath = obj.merkle.getPair(path.left, path.right);
-  //     return;
-  //   }
+    if (!nextPath) {
+      this.log('submission already made by another party');
+      obj.computationPath = obj.merkle.getPair(path.left, path.right);
+      return;
+    }
 
-  //   if (obj.computationPath.left.hash === targetPath) {
-  //     this.log('goes left from ' +
-  //       obj.computationPath.hash.substring(2, 6) + ' to ' +
-  //       obj.computationPath.left.hash.substring(2, 6)
-  //     );
-  //   } else if (obj.computationPath.right.hash === targetPath) {
-  //     this.log('goes right from ' +
-  //       obj.computationPath.hash.substring(2, 6) + ' to ' +
-  //       obj.computationPath.right.hash.substring(2, 6)
-  //     );
-  //   }
+    if (obj.computationPath.left.hash === targetPath) {
+      this.log('goes left from ' +
+        obj.computationPath.hash.substring(2, 6) + ' to ' +
+        obj.computationPath.left.hash.substring(2, 6)
+      );
+    } else if (obj.computationPath.right.hash === targetPath) {
+      this.log('goes right from ' +
+        obj.computationPath.hash.substring(2, 6) + ' to ' +
+        obj.computationPath.right.hash.substring(2, 6)
+      );
+    }
 
-  //   obj.computationPath = nextPath;
+    obj.computationPath = nextPath;
 
-  //   let witnessPath;
+    let witnessPath;
 
-  //   if (dispute.witness !== ZERO_HASH) {
-  //     const path = obj.merkle.getNode(dispute.witness);
+    if (dispute.witness !== ZERO_HASH) {
+      const path = obj.merkle.getNode(dispute.witness);
 
-  //     witnessPath = { left: path.left.hash, right: path.right.hash };
-  //   } else {
-  //     witnessPath = { left: ZERO_HASH, right: ZERO_HASH };
-  //   }
+      witnessPath = { left: path.left.hash, right: path.right.hash };
+    } else {
+      witnessPath = { left: ZERO_HASH, right: ZERO_HASH };
+    }
 
-  //   let tx = await this.verifier.respond(
-  //     disputeId,
-  //     {
-  //       left: obj.computationPath.left.hash,
-  //       right: obj.computationPath.right.hash,
-  //     },
-  //     witnessPath,
-  //     { gasLimit: this.gasLimit }
-  //   );
+    let tx = await this.verifier.respond(
+      disputeId,
+      {
+        left: obj.computationPath.left.hash,
+        right: obj.computationPath.right.hash,
+      },
+      witnessPath,
+      { gasLimit: this.gasLimit }
+    );
 
-  //   tx = await tx.wait();
+    tx = await tx.wait();
 
-  //   this.log('gas used', tx.gasUsed.toString());
-  // }
+    this.log('gas used', tx.gasUsed.toString());
+  }
 
-  // async submitProof (disputeId, computationPath) {
-  //   const args = ProofHelper.constructProof(computationPath);
+  async submitProof (disputeId, computationPath) {
+    const args = ProofHelper.constructProof(computationPath);
 
-  //   this.log('submitting proof - proofs', args.proofs);
-  //   this.log('submitting proof - executionState', args.executionInput);
+    this.log('submitting proof - proofs', args.proofs);
+    this.log('submitting proof - executionState', args.executionInput);
 
-  //   let tx = await this.verifier.submitProof(
-  //     disputeId,
-  //     args.proofs,
-  //     args.executionInput,
-  //     { gasLimit: this.gasLimit }
-  //   );
+    let tx = await this.verifier.submitProof(
+      disputeId,
+      args.proofs,
+      args.executionInput,
+      { gasLimit: this.gasLimit }
+    );
 
-  //   tx = await tx.wait();
+    tx = await tx.wait();
 
-  //   this.log('submitting proof - gas used', tx.gasUsed.toString());
+    this.log('submitting proof - gas used', tx.gasUsed.toString());
 
-  //   return tx;
-  // }
+    return tx;
+  }
 
   async computeCall (evmParams, invalidateLastStep) {
     let bytecode = await this.getCodeForParams(evmParams);
