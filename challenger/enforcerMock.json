@@ -1,0 +1,213 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "name": "taskHash",
+        "type": "bytes32"
+      },
+      {
+        "components": [
+          {
+            "name": "origin",
+            "type": "address"
+          },
+          {
+            "name": "target",
+            "type": "address"
+          },
+          {
+            "name": "blockHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "blockNumber",
+            "type": "uint256"
+          },
+          {
+            "name": "time",
+            "type": "uint256"
+          },
+          {
+            "name": "txGasLimit",
+            "type": "uint256"
+          },
+          {
+            "name": "customEnvironmentHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "codeHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "dataHash",
+            "type": "bytes32"
+          }
+        ],
+        "indexed": false,
+        "name": "parameters",
+        "type": "tuple"
+      },
+      {
+        "indexed": false,
+        "name": "callData",
+        "type": "bytes"
+      }
+    ],
+    "name": "Requested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "name": "taskHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
+        "name": "solverPathRoot",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "name": "executionDepth",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "name": "result",
+        "type": "bytes"
+      }
+    ],
+    "name": "Registered",
+    "type": "event"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_taskHash",
+        "type": "bytes32"
+      },
+      {
+        "name": "_pathRoot",
+        "type": "bytes32"
+      },
+      {
+        "name": "result",
+        "type": "bytes"
+      }
+    ],
+    "name": "registerResult",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_taskHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "finalizeTask",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "components": [
+          {
+            "name": "origin",
+            "type": "address"
+          },
+          {
+            "name": "target",
+            "type": "address"
+          },
+          {
+            "name": "blockHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "blockNumber",
+            "type": "uint256"
+          },
+          {
+            "name": "time",
+            "type": "uint256"
+          },
+          {
+            "name": "txGasLimit",
+            "type": "uint256"
+          },
+          {
+            "name": "customEnvironmentHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "codeHash",
+            "type": "bytes32"
+          },
+          {
+            "name": "dataHash",
+            "type": "bytes32"
+          }
+        ],
+        "name": "_params",
+        "type": "tuple"
+      },
+      {
+        "name": "_data",
+        "type": "bytes"
+      }
+    ],
+    "name": "request",
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [
+      {
+        "name": "_taskHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "getStatus",
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "name": "",
+        "type": "bytes32[]"
+      },
+      {
+        "name": "",
+        "type": "bytes32[]"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

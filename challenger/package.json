@@ -5,6 +5,7 @@
   "license": "MIT",
   "dependencies": {
     "dashdash": "^1.14.1",
+    "ethereumjs-util": "^6.1.0",
     "ethers": "^4.0.32",
     "level": "^5.0.1"
   },
