@@ -2,6 +2,7 @@
 
 const level = require('level');
 const ethers = require('ethers');
+const BigNumber = require('bignumber.js');
 const ExecutionPoker = require('./ExecutionPoker');
 
 const cliArgs = require('./cliArgs');
@@ -15,6 +16,11 @@ try {
   console.error('Please run `npm run compile:contracts` first. 😉');
   process.exit(1);
 }
+
+const fromWei = (wei) => {
+  const dec = new BigNumber(10).pow(18);
+  return new BigNumber(wei).div(dec).toString();
+};
 
 class MyExecutionPoker extends ExecutionPoker {
   constructor (db, ...args) {
@@ -48,13 +54,14 @@ class MyExecutionPoker extends ExecutionPoker {
   const wallet = new ethers.Wallet(cliArgs.walletPriv, provider);
   const enforcer = new ethers.Contract(cliArgs.enforcerAddr, Enforcer.abi, provider);
   const verifierAddr = await enforcer.verifier();
-  console.log(`Wallet: ${wallet.address}`);
+  const balance = await wallet.getBalance();
+  console.log(`Wallet: ${wallet.address} (${fromWei(balance)} ETH)`);
   console.log(`Enforcer: ${cliArgs.enforcerAddr}`);
   console.log(`Verfier: ${verifierAddr}`);
   const verifier = new ethers.Contract(verifierAddr, Verifier.abi, provider);
 
   // ExecutionPoker will do the rest ¯\_(ツ)_/¯
-  new MyExecutionPoker(db, enforcer, verifier, wallet); // eslint-disable-line
+  new MyExecutionPoker(db, enforcer, verifier, wallet, 3000000, 'challenger'); // eslint-disable-line
 })();
 
 function onException (e) {

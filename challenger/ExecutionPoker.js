@@ -23,7 +23,7 @@ module.exports = class ExecutionPoker {
     this.enforcer.on(
       this.enforcer.filters.Requested(),
       async (taskHash, parameters, callData, tx) => {
-        console.log('Requested', taskHash, parameters, callData, tx);
+        console.log('Requested', taskHash, parameters, callData);
         const params = {
           origin: parameters[0],
           target: parameters[1],
@@ -50,6 +50,7 @@ module.exports = class ExecutionPoker {
 
         if (receipt.from === this.wallet.address) {
           this.log('execution result registered', taskHash);
+          this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
         } else {
           this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
         }
@@ -71,8 +72,23 @@ module.exports = class ExecutionPoker {
         let sol = this.solutions[execId];
 
         if (sol) {
-          this.log('new dispute for', execId);
-          this.initDispute(disputeId, sol);
+          if (!this.disputes[disputeId]) {
+            this.log('new dispute for', execId);
+            this.initDispute(disputeId, sol);
+          }
+        }
+      }
+    );
+
+    this.verifier.on(
+      this.verifier.filters.DisputeNewRound(),
+      (disputeId, timeout, solverPath, challengerPath, tx) => {
+        this.log('DisputeNewRound', disputeId, timeout, solverPath, challengerPath);
+        let o = this.disputes[disputeId];
+
+        if (o) {
+          this.log(`dispute(${disputeId}) new round`);
+          this.submitRound(disputeId);
         }
       }
     );
@@ -99,8 +115,8 @@ module.exports = class ExecutionPoker {
     const res = await this.computeCall(evmParams);
     const lastStep = res.steps[res.steps.length - 1];
     if (!lastStep || lastStep.opcodeName !== 'RETURN') {
-      console.error('Wrong last step (no RETURN)');
-      console.error(lastStep);
+      this.log('Wrong last step (no RETURN)');
+      this.log(lastStep);
       return;
     }
 
@@ -116,14 +132,13 @@ module.exports = class ExecutionPoker {
       `0x${result.toString(16)}`,
       { value: bondAmount }
     );
-    console.log(tx);
     let receipt = await tx.wait();
-    console.log(receipt);
     const evt = receipt.events[0].args;
     const executionId = ethers.utils.solidityKeccak256(
       ['bytes32', 'bytes32'],
       [taskHash, evt.solverPathRoot]
     );
+    this.log('registering execution:', receipt);
 
     this.solutions[executionId] = res;
   }
@@ -144,7 +159,7 @@ module.exports = class ExecutionPoker {
     this.log('solverHash', solverHash);
     this.log('challengerHash', challengerHash);
 
-    if (solverHash !== challengerHash) {
+    if (true || solverHash !== challengerHash) {
       const bondAmount = await this.enforcer.bondAmount();
 
       let tx = await this.enforcer.dispute(
@@ -226,19 +241,23 @@ module.exports = class ExecutionPoker {
       witnessPath = { left: ZERO_HASH, right: ZERO_HASH };
     }
 
-    let tx = await this.verifier.respond(
-      disputeId,
-      {
-        left: obj.computationPath.left.hash,
-        right: obj.computationPath.right.hash,
-      },
-      witnessPath,
-      { gasLimit: this.gasLimit }
-    );
+    try {
+      let tx = await this.verifier.respond(
+        disputeId,
+        {
+          left: obj.computationPath.left.hash,
+          right: obj.computationPath.right.hash,
+        },
+        witnessPath,
+        { gasLimit: this.gasLimit }
+      );
 
-    tx = await tx.wait();
+      tx = await tx.wait();
 
-    this.log('gas used', tx.gasUsed.toString());
+      this.log('gas used', tx.gasUsed.toString());
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   async submitProof (disputeId, computationPath) {

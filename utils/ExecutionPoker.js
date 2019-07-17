@@ -260,7 +260,7 @@ module.exports = class ExecutionPoker {
 
     tx = await tx.wait();
 
-    this.log('gas used', tx.gasUsed.toString());
+    this.log('gas used', tx.gasUsed.toString(), tx.hash);
   }
 
   async submitProof (disputeId, disputeObj) {

@@ -5,7 +5,7 @@ const Merkelizer = require('./Merkelizer');
 const { ZERO_HASH } = require('./constants');
 
 module.exports = class ProofHelper {
-  static constructProof (computationPath, { merkle, codeFragmentTree }) {
+  static constructProof (computationPath, { merkle, codeFragmentTree } = {}) {
     const prevOutput = computationPath.left.executionState;
     const execState = computationPath.right.executionState;
     let isMemoryRequired = false;
