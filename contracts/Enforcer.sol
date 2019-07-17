@@ -215,15 +215,15 @@ contract Enforcer is IEnforcer {
             // length in bytes of _result
             let resultBytesLen := mload(_result)
             // if `right` is zero, we use `left`
-            let hashLeft := eq(mload(rightPtr), 0)
+            let hashRightValue := mload(rightPtr)
 
-            if hashLeft {
+            if iszero(hashRightValue) {
                 // hash left
                 mstore(_result, mload(leftPtr))
             }
-            if iszero(hashLeft) {
+            if gt(hashRightValue, 0) {
                 // hash right
-                mstore(_result, mload(rightPtr))
+                mstore(_result, hashRightValue)
             }
             // the stateHash for the last leaf
             let stateHash := keccak256(_result, add(resultBytesLen, 0x20))
@@ -231,10 +231,10 @@ contract Enforcer is IEnforcer {
             mstore(_result, resultBytesLen)
 
             // store the updated value into `_resultProof`
-            if hashLeft {
+            if iszero(hashRightValue) {
                 mstore(leftPtr, stateHash)
             }
-            if iszero(hashLeft) {
+            if gt(hashRightValue, 0) {
                 mstore(rightPtr, stateHash)
             }
 
