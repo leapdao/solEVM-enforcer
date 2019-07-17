@@ -55,7 +55,9 @@ contract Enforcer is IEnforcer {
         bytes memory _result
     ) public payable
     {
-        uint256 executionDepth = _resultProof.length;
+        require(verifyResultProof(_solverPathRoot, _resultProof, _result) == true, "invalid resultProof");
+
+        uint256 executionDepth = _resultProof.length / 2;
         bytes32 executionId = keccak256(abi.encodePacked(_taskHash, _solverPathRoot));
 
         ExecutionResult storage executionResult = executions[executionId];
@@ -186,5 +188,78 @@ contract Enforcer is IEnforcer {
         }
 
         return (task.startTime + taskPeriod, pathRoots, resultHashes);
+    }
+
+    /// @notice Verify `returnData` of the last execution step.
+    /// @dev Attention: This function modifies the `_resultProof` array!
+    /// @return bool `true` if correct, `false` otherwise
+    function verifyResultProof(
+        bytes32 _pathRoot,
+        bytes32[] memory _resultProof,
+        bytes memory _result
+    ) public pure returns (bool) {
+        if (_resultProof.length < 2 || (_resultProof.length % 2) != 0) {
+            return false;
+        }
+
+        bool valid = true;
+        assembly {
+            // length in bytes of _resultProof
+            let len := mload(_resultProof)
+            // pointer to first value in _resultProof
+            let ptr := add(_resultProof, 0x20)
+            // pointer to _resultProof[_resultProof.length - 2]
+            let leftPtr := add(ptr, mul(sub(len, 2), 0x20))
+            // pointer to _resultProof[_resultProof.length - 1]
+            let rightPtr := add(leftPtr, 0x20)
+            // length in bytes of _result
+            let resultBytesLen := mload(_result)
+            // if `right` is zero, we use `left`
+            let hashLeft := eq(mload(rightPtr), 0)
+
+            if hashLeft {
+                // hash left
+                mstore(_result, mload(leftPtr))
+            }
+            if iszero(hashLeft) {
+                // hash right
+                mstore(_result, mload(rightPtr))
+            }
+            // the stateHash for the last leaf
+            let stateHash := keccak256(_result, add(resultBytesLen, 0x20))
+            // restore len from _result
+            mstore(_result, resultBytesLen)
+
+            // store the updated value into `_resultProof`
+            if hashLeft {
+                mstore(leftPtr, stateHash)
+            }
+            if iszero(hashLeft) {
+                mstore(rightPtr, stateHash)
+            }
+
+            let parentHash := _pathRoot
+            for { let i := 0 } lt(i, len) { i := add(i, 2) } {
+                let left := add(ptr, mul(i, 0x20))
+                let rightVal := mload(add(left, 0x20))
+                let nodeHash := keccak256(left, 0x40)
+
+                if iszero(eq(nodeHash, parentHash)) {
+                    // invalid
+                    valid := 0
+                    // end loop
+                    len := 0
+                }
+
+                // we default to take the `right` path
+                parentHash := rightVal
+                // unless if it is zero, we go `left`
+                if eq(rightVal, 0) {
+                    parentHash := mload(left)
+                }
+            }
+        }
+
+        return valid;
     }
 }

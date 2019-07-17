@@ -54,19 +54,24 @@ library Merkelizer {
             _dataHash = dataHash(self.data);
         }
 
-        return keccak256(
+        bytes32 preHash = keccak256(
             abi.encodePacked(
                 _stackHash,
                 _memHash,
                 _dataHash,
                 self.customEnvironmentHash,
-                self.returnData,
                 self.pc,
                 self.gasRemaining,
                 self.stackSize,
                 self.memSize
             )
         );
+
+        // Question: before we *eventually* implement `FragmentTree` for `returnData`,
+        // should we also hash the bytelength from `returnData`.
+        // This is probably not needed because the array would be too large anyway to verify on-chain
+        // for a possible hash-collision
+        return keccak256(abi.encodePacked(preHash, self.returnData));
     }
 
     function initialStateHash(bytes32 dataHash, bytes32 customEnvironmentHash) internal pure returns (bytes32) {
