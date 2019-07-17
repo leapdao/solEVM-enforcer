@@ -10,18 +10,19 @@ const Enforcer = require('./../../build/contracts/Enforcer.json');
 const Verifier = require('./../../build/contracts/Verifier.json');
 const VerifierMock = require('./../../build/contracts/VerifierMock.json');
 
-const GAS_LIMIT = require('./../../utils/constants').GAS_LIMIT;
+const { HydratedRuntime, Merkelizer, Constants } = require('./../../utils');
+const GAS_LIMIT = Constants.GAS_LIMIT;
 
 describe('Enforcer', () => {
-  const solverPathRoot = '0x712bc4532b751c4417b44cf11e2377778433ff720264dc8a47cb1da69d371433';
+  const code = [Constants.GAS].join('');
+  const data = '0x';
   const challengerPathRoot = '0x641db1239a480d87bdb76fc045d5f6a68ad1cbf9b93e3b2c92ea638cff6c2add';
   const result = '0x0000000000000000000000000000000000000000000000000000000000001111';
   const taskPeriod = 100000000;
   const challengePeriod = 8;
   const timeoutDuration = 2;
-  const executionDepth = 1;
-  const resultProof = new Array(executionDepth).fill(solverPathRoot);
-  const maxExecutionDepth = 1;
+  const executionDepth = 2;
+  const maxExecutionDepth = 2;
   const bondAmount = 999;
   const params = {
     origin: '0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1',
@@ -35,12 +36,32 @@ describe('Enforcer', () => {
     dataHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
   };
 
+  let dataCtr = 0;
   let enforcer;
   let verifier;
   let verifierMock;
   let solver = wallets[0];
   let challenger = wallets[1];
   let taskHash;
+  let solverMerkle;
+  let proof;
+  let returnData;
+  let solverPathRoot;
+  let alreadyRegistered;
+
+  async function newExecution (executionDepth) {
+    const code = new Array(executionDepth).fill(Constants.GAS).join('');
+    const data = '0x' + (dataCtr++).toString(16).padStart(32, '0');
+    const executionSteps = await new HydratedRuntime().run({ code, data });
+    const solverMerkle = new Merkelizer().run(executionSteps, code, data);
+    const proof = solverMerkle.computeResultProof();
+
+    return {
+      solverPathRoot: solverMerkle.root.hash,
+      resultProof: proof.resultProof,
+      returnData: proof.returnData,
+    };
+  }
 
   before('Prepare contracts', async () => {
     verifier = await deployContract(Verifier, timeoutDuration);
@@ -56,12 +77,17 @@ describe('Enforcer', () => {
     tx = await enforcer.request(params, '0x');
     tx = await tx.wait();
     taskHash = tx.events[0].args.taskHash;
+
+    const executionSteps = await new HydratedRuntime().run({ code, data });
+    solverMerkle = new Merkelizer().run(executionSteps, code, data);
+    solverPathRoot = solverMerkle.root.hash;
+    proof = solverMerkle.computeResultProof();
   });
 
   it('should allow to register and challenge execution', async () => {
     // register execution and check state
     let tx = await enforcer.register(
-      taskHash, solverPathRoot, resultProof, result,
+      taskHash, solverPathRoot, proof.resultProof, proof.returnData,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
 
@@ -108,7 +134,7 @@ describe('Enforcer', () => {
   // register
   it('not allow registration without bond', async () => {
     let tx = enforcer.register(
-      taskHash, solverPathRoot, resultProof, result,
+      taskHash, solverPathRoot, proof.resultProof, proof.returnData,
       { value: 0, gasLimit: GAS_LIMIT }
     );
 
@@ -116,8 +142,9 @@ describe('Enforcer', () => {
   });
 
   it('not allow registration of oversized execution', async () => {
+    const { solverPathRoot, resultProof, returnData } = await newExecution(maxExecutionDepth + 1);
     let tx = enforcer.register(
-      taskHash, solverPathRoot, new Array(maxExecutionDepth + 1).fill(solverPathRoot), result,
+      taskHash, solverPathRoot, resultProof, returnData,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
 
@@ -126,8 +153,10 @@ describe('Enforcer', () => {
 
   it('allow registration of new execution', async () => {
     const solverBond = await enforcer.bonds(solver.address);
+    const { solverPathRoot, resultProof, returnData } = await newExecution();
+    alreadyRegistered = { solverPathRoot, resultProof, returnData };
     let tx = await enforcer.register(
-      taskHash, solverPathRoot, resultProof, result,
+      taskHash, solverPathRoot, resultProof, returnData,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
@@ -136,7 +165,7 @@ describe('Enforcer', () => {
 
     assert.equal(event.solverPathRoot, solverPathRoot, 'solverPathRoot does not match');
     assert.equal(event.executionDepth, executionDepth, 'executionDepth does not match');
-    assert.equal(event.result, result, 'result does not match');
+    assert.equal(event.result, returnData, 'result does not match');
 
     assert.deepEqual(await enforcer.bonds(solver.address), solverBond.add(bondAmount), 'bond amount not update');
 
@@ -149,8 +178,9 @@ describe('Enforcer', () => {
   });
 
   it('not allow registration of the same execution', async () => {
+    const { solverPathRoot, resultProof, returnData } = alreadyRegistered;
     let tx = enforcer.register(
-      taskHash, solverPathRoot, resultProof, result,
+      taskHash, solverPathRoot, resultProof, returnData,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await assertRevert(tx, 'Execution already registered');
@@ -177,6 +207,7 @@ describe('Enforcer', () => {
   it('not allow dispute when there is not enough time', async () => {
     await sleep(challengePeriod - (executionDepth + 1) * timeoutDuration);
 
+    const { solverPathRoot } = alreadyRegistered;
     let tx = enforcer.dispute(
       solverPathRoot, challengerPathRoot, params,
       { value: bondAmount, gasLimit: GAS_LIMIT }
@@ -185,10 +216,10 @@ describe('Enforcer', () => {
   });
 
   it('allow dispute with valid execution', async () => {
-    const _solverPathRoot = solverPathRoot.replace('bc', '11');
+    const { solverPathRoot, resultProof, returnData } = await newExecution();
 
     let tx = await enforcer.register(
-      taskHash, _solverPathRoot, resultProof, result.replace('00', '66'),
+      taskHash, solverPathRoot, resultProof, returnData,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
@@ -196,12 +227,12 @@ describe('Enforcer', () => {
     const challengerBond = await enforcer.bonds(challenger.address);
 
     tx = await enforcer.connect(challenger).dispute(
-      _solverPathRoot, challengerPathRoot, params,
+      solverPathRoot, challengerPathRoot, params,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
 
-    const executionId = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [taskHash, _solverPathRoot]);
+    const executionId = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [taskHash, solverPathRoot]);
 
     assert.equal(tx.events[0].args.executionId, executionId, 'dispute incorrect execution');
     assert.deepEqual(
@@ -231,14 +262,14 @@ describe('Enforcer', () => {
   });
 
   it('not allow submit result of execution after challenge period', async () => {
-    const _solverPathRoot = solverPathRoot.replace('11', '22');
+    const { solverPathRoot, resultProof, returnData } = await newExecution();
 
     let tx = await enforcer.register(
-      taskHash, _solverPathRoot, resultProof, result.replace('00', '77'),
+      taskHash, solverPathRoot, resultProof, returnData,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
-    const executionId = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [taskHash, _solverPathRoot]);
+    const executionId = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [taskHash, solverPathRoot]);
 
     await sleep(challengePeriod);
 
@@ -250,7 +281,7 @@ describe('Enforcer', () => {
     const _solverPathRoot = solverPathRoot.replace('11', '55');
 
     let tx = await enforcer.register(
-      taskHash, _solverPathRoot, resultProof, result.replace('00', '88'),
+      taskHash, _solverPathRoot, proof.resultProof, proof.returnData.replace('00', '88'),
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await tx.wait();
@@ -270,7 +301,7 @@ describe('Enforcer', () => {
     const _solverPathRoot = solverPathRoot.replace('11', 'aa');
 
     let tx = await enforcer.register(
-      taskHash, _solverPathRoot, resultProof, result.replace('00', '99'),
+      taskHash, _solverPathRoot, proof.resultProof, proof.returnData.replace('00', '99'),
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await tx.wait();
@@ -304,17 +335,17 @@ describe('Enforcer', () => {
     await assertRevert(tx, 'Parameters already registered');
 
     const _solverPathRoot = solverPathRoot.replace('11', 'ac');
-    const resultBytes = result.replace('00', '99');
+    const resultBytes = proof.returnData.replace('00', '99');
 
     tx = await enforcer.register(
-      taskHash, _solverPathRoot, resultProof, resultBytes,
+      taskHash, _solverPathRoot, proof.resultProof, resultBytes,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     tx = await tx.wait();
 
     // should not work the second time 😊
     tx = enforcer.register(
-      taskHash, _solverPathRoot, resultProof, resultBytes,
+      taskHash, _solverPathRoot, proof.resultProof, proof.returnData,
       { value: bondAmount, gasLimit: GAS_LIMIT }
     );
     await assertRevert(tx, 'Execution already registered');
@@ -340,5 +371,25 @@ describe('Enforcer', () => {
     status = await enforcer.getStatus(taskHash);
     assert.deepEqual(status[1], [], 'pathRoots should be empty');
     assert.deepEqual(status[2], [], 'resultHashes should be empty');
+  });
+
+  it('not allow registration with invalid resultProof (returnData)', async () => {
+    const { solverPathRoot, resultProof, returnData } = await newExecution(maxExecutionDepth);
+    let tx = enforcer.register(
+      taskHash, solverPathRoot, resultProof, '0x1111',
+      { value: bondAmount, gasLimit: GAS_LIMIT }
+    );
+
+    await assertRevert(tx, 'invalid resultProof');
+  });
+
+  it('not allow registration with invalid resultProof (resultProof array)', async () => {
+    const { solverPathRoot, resultProof, returnData } = await newExecution(maxExecutionDepth);
+    let tx = enforcer.register(
+      taskHash, solverPathRoot, resultProof.slice(-1), returnData,
+      { value: bondAmount, gasLimit: GAS_LIMIT }
+    );
+
+    await assertRevert(tx, 'invalid resultProof');
   });
 });
