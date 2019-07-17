@@ -301,7 +301,7 @@ module.exports = class ExecutionPoker {
 
     const runtime = new HydratedRuntime();
     const steps = await runtime.run({ code, data });
-    const merkle = new Merkelizer().run(steps, bytecode, data);
+    const merkle = new Merkelizer().run(steps, bytecode, data, evmParams.customEnvironmentHash);
 
     return { steps, merkle, codeFragmentTree };
   }

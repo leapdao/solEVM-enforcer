@@ -51,7 +51,13 @@ class MyExecutionPoker extends ExecutionPoker {
 
       const leaf = res.merkle.leaves[0];
       leaf.right.executionState.gasRemaining = 2222;
-      leaf.right.hash = Merkelizer.stateHash(leaf.right.executionState, leaf.right.stackHash, leaf.right.memHash);
+      leaf.right.hash = Merkelizer.stateHash(
+        leaf.right.executionState,
+        leaf.right.stackHash,
+        leaf.right.memHash,
+        evmParams.dataHash,
+        evmParams.customEnvironmentHash
+      );
       leaf.hash = Merkelizer.hash(leaf.left.hash, leaf.right.hash);
       res.merkle.recal(0);
     }
