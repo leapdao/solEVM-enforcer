@@ -1,5 +1,4 @@
 'use strict';
-const HDWalletProvider = require('truffle-hdwallet-provider');
 
 module.exports = {
   compilers: {
@@ -16,33 +15,22 @@ module.exports = {
   },
   networks: {
     goerli: {
-      provider: () => {
-        return new HDWalletProvider(process.env.MNEMONIC, 'https://goerli.infura.io/v3/' + process.env.INFURA_API_KEY);
-      },
+      url: 'https://goerli.infura.io/v3/' + process.env.INFURA_API_KEY,
       network_id: '5', // eslint-disable-line camelcase
       gas: 6465030,
       gasPrice: 10000000000,
     },
     ganache: {
-      host: 'localhost',
-      port: 8111,
+      url: 'http://localhost:8111',
       network_id: '*', // eslint-disable-line camelcase
-      gas: 0xffffff,
-      gasPrice: 0x01,
+      gas: 7000000,
+      gasPrice: 1,
     },
     geth: {
-      host: 'localhost',
-      port: 8222,
+      url: 'http://localhost:8222',
       network_id: '*', // eslint-disable-line camelcase
-      gas: 0xffffff,
-      gasPrice: 0x01,
-    },
-    gasPrice: {
-      host: 'localhost',
-      port: 8222,
-      network_id: '*', // eslint-disable-line camelcase
-      gas: 0xffffff,
-      gasPrice: 3 * (10 ** 9),
+      gas: 7000000,
+      gasPrice: 1,
     },
   },
 };
