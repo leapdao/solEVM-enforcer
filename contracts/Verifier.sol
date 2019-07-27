@@ -4,10 +4,9 @@ pragma experimental ABIEncoderV2;
 import "./Enforcer.sol";
 import "./HydratedRuntime.sol";
 import "./Merkelizer.slb";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
-contract Verifier is Ownable, HydratedRuntime {
+contract Verifier is HydratedRuntime {
     using Merkelizer for Merkelizer.ExecutionState;
 
     struct Proofs {
@@ -82,11 +81,18 @@ contract Verifier is Ownable, HydratedRuntime {
 
     /// @param timeout The time (in seconds) the participants have to react to `submitRound, submitProof`.
     /// 30 minutes is a good value for common use-cases.
-    constructor(uint256 timeout) public Ownable() {
+    constructor(uint256 timeout) public {
         timeoutDuration = timeout;
     }
 
-    function setEnforcer(address _enforcer) public onlyOwner() {
+    // Due to the reverse dependency with Enforcer<>Verifier
+    // we have to first deploy both contracts and peg it to one another.
+    // Verifier gets deployed first, so Enforcer can be deployed with Verifier's
+    // address in constructor, but Verifier itself needs to informed about Enforcer's address
+    // after deployment. Checking if `enforcer` is `address(0)` here does the job.
+    function setEnforcer(address _enforcer) public {
+        require(address(enforcer) == address(0));
+
         enforcer = Enforcer(_enforcer);
     }
 
