@@ -199,7 +199,7 @@ module.exports = class EVMRuntime extends VM.MetaVM {
     return runState;
   }
 
-  async run ({ code, data, stack, mem, gasLimit, blockGasLimit, gasRemaining, pc, stepCount }) {
+  async run ({ code, data, stack, mem, gasLimit, blockGasLimit, gasRemaining, pc, stepCount, customEnvironment }) {
     data = data || '0x';
     blockGasLimit = Buffer.from(NumToHex(blockGasLimit || OP.BLOCK_GAS_LIMIT), 'hex');
 
@@ -242,6 +242,7 @@ module.exports = class EVMRuntime extends VM.MetaVM {
       mem,
       stack,
       gasRemaining,
+      customEnvironment,
     });
 
     await super.run(runState, stepCount | 0);
