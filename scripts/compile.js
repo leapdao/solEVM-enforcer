@@ -84,6 +84,7 @@ if (!output.contracts) {
 for (const file in output.contracts) {
   const contract = output.contracts[file];
   const sourceObj = output.sources[file];
+  const source = sources[file].content;
 
   for (const contractName in contract) {
     const obj = contract[contractName];
@@ -91,6 +92,7 @@ for (const file in output.contracts) {
     obj.id = sourceObj.id;
     obj.ast = sourceObj.ast;
     obj.legacyAST = sourceObj.legacyAST;
+    obj.source = source;
 
     const evm = obj.evm;
     delete obj.evm;
