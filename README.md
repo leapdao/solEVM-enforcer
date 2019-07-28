@@ -31,11 +31,24 @@ Please make sure to read the contribution guidelines.
 
 ## Setup
 
-Currently there are only tests using truffle. You can run the tests like this:
+You can run the tests like this:
 
 ```
 yarn
 yarn test
+```
+
+### Deployment
+
+`tools/deploy.js` - is a little deployment helper script.
+
+Additionally to the deployment variables you also have to provide the network (the network name in truffle-config).
+If the RPC provider does not support signing, you have to supply either `privKey|PRIV_KEY` or `mnemonic|MNEMONIC`
+as environment variables to this script.
+
+You can run it like this:
+```
+network=geth verifierTimeout=1800 taskPeriod=43200 challengePeriod=21600 bondAmount=10000000000000000 maxExecutionDepth=10 ./tools/deploy.js
 ```
 
 ## Runtime - EVMRuntime.sol
