@@ -84,6 +84,11 @@ describe('Enforcer', () => {
     proof = solverMerkle.computeResultProof();
   });
 
+  it('should not allow to `setEnforcer` twice', async () => {
+    const tx = verifier.setEnforcer(enforcer.address);
+    await assertRevert(tx);
+  });
+
   it('should allow to register and challenge execution', async () => {
     // register execution and check state
     let tx = await enforcer.register(
