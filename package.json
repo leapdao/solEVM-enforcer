@@ -24,9 +24,10 @@
     "lint:all": "yarn lint && yarn lint:sol",
     "lint:all:fix": "yarn lint:fix && yarn lint:sol",
     "compile:contracts": "scripts/compile.js",
-    "coverage": "scripts/coverage.sh"
+    "coverage": "scripts/start_geth.sh && RPC_PORT=8333 yarn develatus-apparatus"
   },
   "devDependencies": {
+    "develatus-apparatus": "https://github.com/pinkiebell/develatus-apparatus.git#master",
     "eslint": "=6.0.1",
     "ganache-cli": "=6.4.0",
     "mocha": "=6.1.4",
