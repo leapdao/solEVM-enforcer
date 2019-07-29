@@ -1,9 +1,9 @@
 'use strict';
 
-const level = require('level');
+// const level = require('level');
 const ethers = require('ethers');
 const BigNumber = require('bignumber.js');
-const ExecutionPoker = require('./ExecutionPoker');
+const { ExecutionPoker, executionId } = require('./ExecutionPoker');
 
 const cliArgs = require('./cliArgs');
 
@@ -46,10 +46,28 @@ class MyExecutionPoker extends ExecutionPoker {
       // do nothing
     });
   }
+
+  async onWin (execId, disputeId) {
+    this.log('onWin', execId, disputeId);
+    super.onWin(execId, disputeId);
+    this.log('onWin', this.solutions, this.solutions[execId], this.disputes[disputeId]);
+    if (this.solutions[execId] && this.disputes[disputeId]) {
+      const { taskHash } = this.solutions[execId];
+      const { computationPath, result } = this.disputes[disputeId];
+      const newExecId = executionId(taskHash, computationPath.hash);
+      this.solutions[newExecId] = {
+        taskHash,
+        result,
+      };
+      this.log('newExecId', newExecId);
+      await this.registerResult(taskHash, result);
+      this.log('new result registered');
+    }
+  }
 }
 
 (async () => {
-  const db = level('solEVM');
+  const db = null;
   const provider = new ethers.providers.JsonRpcProvider(cliArgs.ethProvider);
   const wallet = new ethers.Wallet(cliArgs.walletPriv, provider);
   const enforcer = new ethers.Contract(cliArgs.enforcerAddr, Enforcer.abi, provider);

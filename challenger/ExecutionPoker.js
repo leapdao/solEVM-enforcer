@@ -2,12 +2,22 @@
 
 const ethers = require('ethers');
 
-const OffchainStepper = require('../utils/OffchainStepper.js');
+const HydratedRuntime = require('../utils/HydratedRuntime.js');
 const Merkelizer = require('../utils/Merkelizer.js');
 const ProofHelper = require('../utils/ProofHelper.js');
+const FragmentTree = require('../utils/FragmentTree');
 const { ZERO_HASH } = require('../utils/constants.js');
 
-module.exports = class ExecutionPoker {
+const executionId = (taskHash, pathRoot) => {
+  return ethers.utils.solidityKeccak256(
+    ['bytes32', 'bytes32'],
+    [taskHash, pathRoot]
+  );
+};
+
+exports.executionId = executionId;
+
+exports.ExecutionPoker = class ExecutionPoker {
   constructor (enforcer, verifier, wallet, gasLimit = 0xfffffffffffff, logTag = 'unkn') {
     this.enforcer = enforcer.connect(wallet);
     this.verifier = verifier.connect(wallet);
@@ -20,10 +30,11 @@ module.exports = class ExecutionPoker {
     this.disputes = {};
     this.solutions = {};
 
+    this.alwaysChallenge = true;
+
     this.enforcer.on(
       this.enforcer.filters.Requested(),
       async (taskHash, parameters, callData, tx) => {
-        console.log('Requested', taskHash, parameters, callData);
         const params = {
           origin: parameters[0],
           target: parameters[1],
@@ -37,9 +48,17 @@ module.exports = class ExecutionPoker {
         };
         this.taskParams[taskHash] = params;
         this.taskCallData[params.dataHash] = callData;
+        console.log(params.dataHash, callData);
 
-        this.log('task requested', { taskHash, params });
-        this.registerExecution(taskHash, params);
+        const receipt = await tx.getTransactionReceipt();
+
+        if (receipt.from === this.wallet.address) {
+          this.log('task request', { taskHash, params });
+          this.registerExecution(taskHash, params);
+        } else {
+          this.log('task requested', { taskHash, params });
+          this.registerExecution(taskHash, params);
+        }
       }
     );
 
@@ -50,7 +69,7 @@ module.exports = class ExecutionPoker {
 
         if (receipt.from === this.wallet.address) {
           this.log('execution result registered', taskHash);
-          this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
+          // this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
         } else {
           this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
         }
@@ -62,6 +81,15 @@ module.exports = class ExecutionPoker {
       (execId, addr, tx) => {
         if (addr === this.wallet.address) {
           this.onSlashed(execId);
+        } else {
+          const entries = Object.entries(this.disputes);
+          const index = entries.findIndex(([, d]) => d.execId === execId);
+          if (index > -1) {
+            const [disputeId, dispute] = entries[index];
+            if (dispute.challengerAddr === addr) {
+              this.onWin(execId, disputeId);
+            }
+          }
         }
       }
     );
@@ -69,13 +97,9 @@ module.exports = class ExecutionPoker {
     this.enforcer.on(
       this.enforcer.filters.DisputeInitialised(),
       (disputeId, execId, tx) => {
-        let sol = this.solutions[execId];
-
-        if (sol) {
-          if (!this.disputes[disputeId]) {
-            this.log('new dispute for', execId);
-            this.initDispute(disputeId, sol);
-          }
+        if (this.solutions[execId] && !this.disputes[disputeId]) {
+          this.log('new dispute for', execId);
+          this.initDispute(disputeId, execId, tx.from, this.solutions[execId].result);
         }
       }
     );
@@ -83,10 +107,7 @@ module.exports = class ExecutionPoker {
     this.verifier.on(
       this.verifier.filters.DisputeNewRound(),
       (disputeId, timeout, solverPath, challengerPath, tx) => {
-        this.log('DisputeNewRound', disputeId, timeout, solverPath, challengerPath);
-        let o = this.disputes[disputeId];
-
-        if (o) {
+        if (this.disputes[disputeId]) {
           this.log(`dispute(${disputeId}) new round`);
           this.submitRound(disputeId);
         }
@@ -95,6 +116,9 @@ module.exports = class ExecutionPoker {
   }
 
   onSlashed (execId) {
+  }
+
+  onWin (execId, disputeId) {
   }
 
   log (...args) {
@@ -111,85 +135,104 @@ module.exports = class ExecutionPoker {
     return { taskHash, evmParameter };
   }
 
-  async registerExecution (taskHash, evmParams) {
-    const res = await this.computeCall(evmParams);
-    const lastStep = res.steps[res.steps.length - 1];
-    if (!lastStep || lastStep.opcodeName !== 'RETURN') {
-      this.log('Wrong last step (no RETURN)');
-      this.log(lastStep);
-      return;
-    }
-
+  async registerResult (taskHash, result) {
+    const lastExecutionStep = result.steps[result.steps.length - 1];
+    const returnData = lastExecutionStep ? lastExecutionStep.returnData : '0x';
     const bondAmount = await this.enforcer.bondAmount();
 
-    this.log('registering execution:', res.steps.length, 'steps');
+    this.log('registering execution:', result.steps.length, 'steps');
 
-    const result = parseInt(lastStep.returnData, 16);
-    let tx = await this.enforcer.register(
-      taskHash,
-      res.merkle.root.hash,
-      new Array(res.merkle.depth).fill(ZERO_HASH),
-      `0x${result.toString(16)}`,
-      { value: bondAmount }
-    );
-    let receipt = await tx.wait();
-    const evt = receipt.events[0].args;
-    const executionId = ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32'],
-      [taskHash, evt.solverPathRoot]
-    );
-    this.log('registering execution:', receipt);
+    try {
+      let tx = await this.enforcer.register(
+        taskHash,
+        result.merkle.root.hash,
+        new Array(result.merkle.depth).fill(ZERO_HASH),
+        returnData,
+        { value: bondAmount }
+      );
 
-    this.solutions[executionId] = res;
+      tx = await tx.wait();
+
+      const evt = tx.events[0].args;
+
+      this.solutions[executionId(taskHash, evt.solverPathRoot)] = {
+        result,
+        taskHash,
+      };
+    } catch (e) {
+      console.error('registerResult', e);
+    }
+  }
+
+  async registerExecution (taskHash, evmParams) {
+    const result = await this.computeCall(evmParams);
+    try {
+      return this.registerResult(taskHash, result);
+    } catch (e) {
+      console.error('registerExecution', e);
+    }
   }
 
   async validateExecution (taskHash, solverHash, executionDepth, resultBytes) {
-    const executionId = ethers.utils.solidityKeccak256(
-      ['bytes32', 'bytes32'],
-      [taskHash, solverHash]
-    );
-    this.log('validating execution result', executionId);
+    const execId = executionId(taskHash, solverHash);
+    this.log('validating execution result', execId);
 
     // TODO: MerkleTree resizing
     // check execution length and resize tree if necessary
     const taskParams = this.taskParams[taskHash];
     const res = await this.computeCall(taskParams);
+
+    // TODO: handle the bigger case too
+    if (executionDepth < res.merkle.depth) {
+      // scale down
+      res.merkle.tree[0] = res.merkle.tree[0].slice(0, 2 ** (executionDepth.toNumber() - 1));
+      // recalculate tree
+      res.merkle.recal();
+    }
+
     const challengerHash = res.merkle.root.hash;
 
     this.log('solverHash', solverHash);
     this.log('challengerHash', challengerHash);
 
-    if (true || solverHash !== challengerHash) {
+    if (solverHash !== challengerHash) {
       const bondAmount = await this.enforcer.bondAmount();
 
-      let tx = await this.enforcer.dispute(
-        solverHash,
-        challengerHash,
-        taskParams,
-        { value: bondAmount, gasLimit: this.gasLimit }
-      );
+      try {
+        let tx = await this.enforcer.dispute(
+          solverHash,
+          challengerHash,
+          taskParams,
+          { value: bondAmount, gasLimit: this.gasLimit }
+        );
 
-      tx = await tx.wait();
+        tx = await tx.wait();
 
-      let disputeId = tx.events[0].topics[1];
-
-      this.initDispute(disputeId, res);
+        let disputeId = tx.events[0].topics[1];
+        if (!this.disputes[disputeId]) {
+          this.initDispute(disputeId, execId, this.wallet.address, res);
+        }
+      } catch (e) {
+        console.error('validateExecution', e);
+      }
       return;
     }
 
     this.log('same execution result');
   }
 
-  initDispute (disputeId, res) {
+  initDispute (disputeId, execId, challengerAddr, res) {
     this.log('initDispute', disputeId);
 
-    let obj = {
+    this.disputes[disputeId] = {
+      result: res,
       merkle: res.merkle,
       depth: res.merkle.depth,
       computationPath: res.merkle.root,
+      codeFragmentTree: res.codeFragmentTree,
+      execId,
+      challengerAddr,
     };
-
-    this.disputes[disputeId] = obj;
 
     this.submitRound(disputeId);
   }
@@ -202,7 +245,7 @@ module.exports = class ExecutionPoker {
       this.log('submitting for l=' +
         obj.computationPath.left.hash + ' r=' + obj.computationPath.right.hash);
 
-      await this.submitProof(disputeId, obj.computationPath);
+      await this.submitProof(disputeId, obj);
       return;
     }
 
@@ -254,33 +297,37 @@ module.exports = class ExecutionPoker {
 
       tx = await tx.wait();
 
-      this.log('gas used', tx.gasUsed.toString());
+      this.log('gas used', tx.gasUsed.toString(), tx.hash);
     } catch (e) {
-      console.error(e);
+      console.error('Submit round', e);
     }
   }
 
-  async submitProof (disputeId, computationPath) {
-    const args = ProofHelper.constructProof(computationPath);
+  async submitProof (disputeId, disputeObj) {
+    const args = ProofHelper.constructProof(disputeObj.computationPath, disputeObj);
 
     this.log('submitting proof - proofs', args.proofs);
     this.log('submitting proof - executionState', args.executionInput);
 
-    let tx = await this.verifier.submitProof(
-      disputeId,
-      args.proofs,
-      args.executionInput,
-      { gasLimit: this.gasLimit }
-    );
+    try {
+      let tx = await this.verifier.submitProof(
+        disputeId,
+        args.proofs,
+        args.executionInput,
+        { gasLimit: this.gasLimit }
+      );
 
-    tx = await tx.wait();
+      tx = await tx.wait();
 
-    this.log('submitting proof - gas used', tx.gasUsed.toString());
+      this.log('submitting proof - gas used', tx.gasUsed.toString());
 
-    return tx;
+      return tx;
+    } catch (e) {
+      console.error('submitProff', e);
+    }
   }
 
-  async computeCall (evmParams, invalidateLastStep) {
+  async computeCall (evmParams) {
     let bytecode = await this.getCodeForParams(evmParams);
     let data = await this.getDataForParams(evmParams);
     let code = [];
@@ -290,16 +337,17 @@ module.exports = class ExecutionPoker {
       code.push(bytecode.substring(i, i += 2));
     }
 
-    const stepper = new OffchainStepper();
-    const steps = await stepper.run({ code, data });
-    if (invalidateLastStep) {
-      this.log('making one execution step invalid');
-      steps[steps.length - 1].gasRemaining = 22;
-      console.log(steps[steps.length - 1]);
+    let codeFragmentTree;
+    // code is not on chain-🍕
+    if (!evmParams.codeHash.endsWith('000000000000000000000000')) {
+      codeFragmentTree = new FragmentTree().run(bytecode);
     }
-    const merkle = new Merkelizer().run(steps, bytecode, data);
 
-    return { steps, merkle };
+    const runtime = new HydratedRuntime();
+    const steps = await runtime.run({ code, data });
+    const merkle = new Merkelizer().run(steps, bytecode, data, evmParams.customEnvironmentHash);
+
+    return { steps, merkle, codeFragmentTree };
   }
 
   async getCodeForParams (evmParams) {
