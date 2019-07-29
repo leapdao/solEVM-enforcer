@@ -7,6 +7,7 @@
     "bignumber.js": "^9.0.0",
     "dashdash": "^1.14.1",
     "ethereumjs-util": "^6.1.0",
+    "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r6",
     "ethers": "^4.0.32",
     "level": "^5.0.1"
   },
