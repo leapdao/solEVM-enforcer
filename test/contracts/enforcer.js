@@ -9,6 +9,7 @@ const assertRevert = require('./../helpers/assertRevert');
 const Enforcer = require('./../../build/contracts/Enforcer.json');
 const Verifier = require('./../../build/contracts/Verifier.json');
 const VerifierMock = require('./../../build/contracts/VerifierMock.json');
+const EnforcerProxyMock = require('./../../build/contracts/EnforcerProxyMock.json');
 
 const { HydratedRuntime, Merkelizer, Constants } = require('./../../utils');
 const GAS_LIMIT = Constants.GAS_LIMIT;
@@ -358,7 +359,13 @@ describe('Enforcer', () => {
     // XXX: ethers returns not the `Task` struct -  wtf???
     const task = await enforcer.tasks(taskHash);
     const executionId = ethers.utils.solidityKeccak256(['bytes32', 'bytes32'], [taskHash, _solverPathRoot]);
-    let status = await enforcer.getStatus(taskHash);
+    const enforcerProxy = await deployContract(EnforcerProxyMock, enforcer.address);
+
+    // we use the proxy here for coverage, as only transactions but not calls are covered
+    tx = await enforcerProxy.getStatus(taskHash);
+    tx = await tx.wait();
+
+    let status = tx.events[0].args;
 
     assert.equal(status[0].toString(), task.add(taskPeriod).toString(), 'taskPeriod');
     assert.deepEqual(status[1], [_solverPathRoot], 'pathRoots');
@@ -372,8 +379,11 @@ describe('Enforcer', () => {
     tx = await verifierMock.submitResult(executionId, false, challenger.address, { gasLimit: GAS_LIMIT });
     tx = await tx.wait();
 
+    tx = await enforcerProxy.getStatus(taskHash);
+    tx = await tx.wait();
+
     // should be empty now
-    status = await enforcer.getStatus(taskHash);
+    status = tx.events[0].args;
     assert.deepEqual(status[1], [], 'pathRoots should be empty');
     assert.deepEqual(status[2], [], 'resultHashes should be empty');
   });
