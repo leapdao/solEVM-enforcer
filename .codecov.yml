@@ -1,2 +1,3 @@
 ignore:
   - "contracts/mocks"
+  - "contracts/interfaces"
