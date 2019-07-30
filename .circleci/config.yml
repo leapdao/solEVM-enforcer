@@ -105,16 +105,10 @@ workflows:
       - lint:
           requires:
             - setup
-      - contracts:
-          requires:
-            - setup
       - utils:
           requires:
             - setup
       - coverage:
-          requires:
-            - setup
-      - contracts_geth:
           requires:
             - setup
       - execution_poker:
