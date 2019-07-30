@@ -27,7 +27,7 @@
     "coverage": "scripts/start_geth.sh && RPC_PORT=8333 yarn develatus-apparatus"
   },
   "devDependencies": {
-    "develatus-apparatus": "https://github.com/pinkiebell/develatus-apparatus.git#master",
+    "develatus-apparatus": "https://github.com/pinkiebell/develatus-apparatus.git#0.1.1",
     "eslint": "=6.0.1",
     "ganache-cli": "=6.4.0",
     "mocha": "=6.1.4",
