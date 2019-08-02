@@ -33,17 +33,6 @@ contract PlasmaVerifier is Verifier {
     function testRun(Input memory input) public {
         EVM memory evm;
         HydratedState memory hydratedState = initHydratedState(evm);
-        evm.context = Context(
-            // origin
-            input.caller,
-            // gasPrice
-            1,
-            0xfffffffffffffffff,
-            0,
-            0,
-            0,
-            0
-        );
         evm.data = input.callData;
         evm.gas = 0xffffffff;
         evm.code = EVMCode.fromAddress(input.spendingCondition);
@@ -65,7 +54,7 @@ contract PlasmaVerifier is Verifier {
         uint retSize = state.stack.pop();
 
         bytes memory returnData = handleCall(state, target, inOffset, inSize);
-        state.lastRet = returnData;
+        state.returnData = returnData;
 
         if (returnData.length != 0) {
             state.mem.storeBytesAndPadWithZeroes(returnData, 0, retOffset, retSize);
@@ -81,7 +70,7 @@ contract PlasmaVerifier is Verifier {
         uint retSize = state.stack.pop();
 
         bytes memory returnData = handleCall(state, target, inOffset, inSize);
-        state.lastRet = returnData;
+        state.returnData = returnData;
 
         if (returnData.length != 0) {
             state.mem.storeBytesAndPadWithZeroes(returnData, 0, retOffset, retSize);

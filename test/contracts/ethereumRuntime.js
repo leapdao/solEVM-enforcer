@@ -104,17 +104,6 @@ describe('Runtime', function () {
         gasUsedValues[index] = gasUsed;
         console.log(testName, 'gasUsed', gasUsed);
 
-        if (index + 1 === fixtures.length) {
-          console.log('totalGasUsed', totalGasUsed);
-
-          if (totalGasUsed < totalGasUsedBaseline) {
-            const path = './test/fixtures/runtimeGasUsed.js';
-
-            console.log(`*** New low gas usage record. Writing results to ${path}. ***`);
-            fs.writeFileSync(path, `'use strict';\nmodule.exports = ${JSON.stringify(gasUsedValues, null, 2)};`);
-          }
-        }
-
         const gasUsedBaseline = runtimeGasUsed[index];
 
         if (gasUsedBaseline !== undefined) {
@@ -169,6 +158,17 @@ describe('Runtime', function () {
             assert.equal(oogState.stack[0], 0);
           } else {
             assert.equal(oogState.errno, OP.ERROR_OUT_OF_GAS, 'Not out of gas');
+          }
+        }
+
+        if (index + 1 === fixtures.length) {
+          console.log(`totalGasUsed new: ${totalGasUsed} old: ${totalGasUsedBaseline}`);
+
+          if (totalGasUsed < totalGasUsedBaseline || fixtures.length !== runtimeGasUsed.length) {
+            const path = './test/fixtures/runtimeGasUsed.js';
+
+            console.log(`*** New fixtures or low gas usage record. Writing results to ${path}. ***`);
+            fs.writeFileSync(path, `'use strict';\nmodule.exports = ${JSON.stringify(gasUsedValues, null, 2)};`);
           }
         }
       });
