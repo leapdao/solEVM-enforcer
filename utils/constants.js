@@ -179,6 +179,7 @@ module.exports = {
   CALLCODE: 'f2',
   RETURN: 'f3',
   DELEGATECALL: 'f4',
+  CREATE2: 'f5',
   STATICCALL: 'fa',
   REVERT: 'fd',
   INVALID: 'fe',

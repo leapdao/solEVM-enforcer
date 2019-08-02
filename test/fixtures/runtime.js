@@ -1689,6 +1689,25 @@ module.exports = [
     },
   },
   {
+    description: 'valid JUMPI',
+    code: [
+      OP.PUSH1,
+      '01',
+      OP.PUSH1,
+      '05',
+      OP.JUMPI,
+      OP.JUMPDEST,
+    ],
+    pc: 0,
+    stack: [
+    ],
+    result: {
+      stack: [],
+      pc: 6,
+      gasUsed: 17,
+    },
+  },
+  {
     code: OP.RETURNDATASIZE,
     result: {
       stack: [
@@ -2628,6 +2647,20 @@ module.exports = [
     },
   },
   {
+    description: 'CALLDATALOAD - out of range',
+    code: OP.CALLDATALOAD,
+    stack: [
+      '0x000000000000000000000000000000000000000000000000000000000000ffff',
+    ],
+    data: '0x123456',
+    result: {
+      stack: [
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
+      gasUsed: 3,
+    },
+  },
+  {
     code: OP.CALLDATASIZE,
     data: '0x1234',
     result: {
@@ -2654,6 +2687,24 @@ module.exports = [
     },
   },
   {
+    description: 'MLOAD - out of gas',
+    code: OP.MLOAD,
+    gasRemaining: 3,
+    stack: [
+      '0x000000000000000000000000000000000000000000000000000000000000ffff',
+    ],
+    memory: [
+    ],
+    result: {
+      stack: [
+      ],
+      memory: [],
+      gasUsed: 3,
+      errno: 13,
+      pc: 0,
+    },
+  },
+  {
     code: OP.MSTORE,
     stack: [
       '0x0000000000000000000000000000000000000000000000000000000000005567',
@@ -2668,6 +2719,24 @@ module.exports = [
     },
   },
   {
+    description: 'MSTORE - out of gas',
+    gasRemaining: 3,
+    code: OP.MSTORE,
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000005567',
+      '0x000000000000000000000000000000000000000000000000000000000000ffff',
+    ],
+    result: {
+      stack: [
+      ],
+      memory: [
+      ],
+      gasUsed: 3,
+      errno: 13,
+      pc: 0,
+    },
+  },
+  {
     code: OP.MSTORE8,
     stack: [
       '0x0000000000000000000000000000000000000000000000000000000000005567',
@@ -2678,6 +2747,22 @@ module.exports = [
         '0x0067000000000000000000000000000000000000000000000000000000000000',
       ],
       gasUsed: 6,
+    },
+  },
+  {
+    description: 'MSTORE8 - out of gas',
+    code: OP.MSTORE8,
+    gasRemaining: 3,
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000005567',
+      '0x00000000000000000000000000000000000000000000000000000000000000ff',
+    ],
+    result: {
+      stack: [],
+      memory: [],
+      gasUsed: 3,
+      errno: 13,
+      pc: 0,
     },
   },
   {
@@ -2709,6 +2794,25 @@ module.exports = [
     },
   },
   {
+    description: 'CALLDATACOPY - out of gas',
+    code: OP.CALLDATACOPY,
+    gasRemaining: 8,
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+    ],
+    data: '0x06397872cdd21945455a7fdc7921e2db7bd8e402607cad66279e899f6ae9b1da',
+    result: {
+      stack: [
+      ],
+      memory: [
+      ],
+      gasUsed: 8,
+      errno: 13,
+    },
+  },
+  {
     code: [
       OP.GAS,
       OP.POP,
@@ -2724,6 +2828,26 @@ module.exports = [
         '0x0050390000000000000000000000000000000000000000000000000000000000',
       ],
       gasUsed: 9,
+    },
+  },
+  {
+    description: 'CODECOPY - out of gas',
+    code: [
+      OP.CODECOPY,
+    ],
+    gasRemaining: 8,
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+    ],
+    result: {
+      stack: [
+      ],
+      memory: [
+      ],
+      gasUsed: 8,
+      errno: 13,
     },
   },
   {
@@ -2818,6 +2942,21 @@ module.exports = [
     },
   },
   {
+    description: 'RETURN - out of gas',
+    code: OP.RETURN,
+    stack: [
+      '0x00000000000000000000000000000000000000000000000000000000000000ff',
+      OP.ZERO_HASH,
+    ],
+    gasRemaining: 2,
+    result: {
+      stack: [],
+      pc: 0,
+      gasUsed: 2,
+      errno: 13,
+    },
+  },
+  {
     code: OP.REVERT,
     stack: [
       OP.ZERO_HASH,
@@ -2828,6 +2967,22 @@ module.exports = [
       errno: 7,
       pc: 0,
       gasUsed: 0,
+    },
+  },
+  {
+    description: 'REVERT - out of gas',
+    gasRemaining: 2,
+    code: OP.REVERT,
+    stack: [
+      '0x000000000000000000000000000000000000000000000000000000000000ffff',
+      OP.ZERO_HASH,
+    ],
+    result: {
+      stack: [],
+      memory: [],
+      errno: 13,
+      pc: 0,
+      gasUsed: 2,
     },
   },
   {
@@ -2844,6 +2999,23 @@ module.exports = [
     },
   },
   {
+    description: 'RETURNDATACOPY - out of gas',
+    code: OP.RETURNDATACOPY,
+    gasRemaining: 3,
+    stack: [
+      '0x00000000000000000000000000000000000000000000000000000000000000ff',
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+    ],
+    result: {
+      stack: [
+      ],
+      pc: 0,
+      gasUsed: 3,
+      errno: 13,
+    },
+  },
+  {
     code: OP.SHA3,
     stack: [
       OP.ZERO_HASH,
@@ -2854,6 +3026,21 @@ module.exports = [
         '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470',
       ],
       gasUsed: 30,
+    },
+  },
+  {
+    description: 'SHA3 - out of gas',
+    code: OP.SHA3,
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000010',
+      OP.ZERO_HASH,
+    ],
+    gasRemaining: 31,
+    result: {
+      stack: [
+      ],
+      gasUsed: 31,
+      errno: 13,
     },
   },
   {
@@ -3122,6 +3309,74 @@ module.exports = [
     },
   },
   {
+    description: 'STATICCALL - out of gas',
+    gasRemaining: 23,
+    code: OP.STATICCALL,
+    stack: [
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000000000000000000000000002710',
+    ],
+    result: {
+      stack: [
+        OP.ZERO_HASH,
+        OP.ZERO_HASH,
+        OP.ZERO_HASH,
+        OP.ZERO_HASH,
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+        '0x0000000000000000000000000000000000000000000000000000000000002710',
+      ],
+      memory: [],
+      gasUsed: 23,
+      errno: 13,
+      pc: 0,
+    },
+  },
+  {
+    description: 'STATICCALL - out of gas taking memory costs into account',
+    gasRemaining: 703,
+    code: OP.STATICCALL,
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000fff',
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000000000000000000000000002710',
+    ],
+    result: {
+      stack: [],
+      memory: [],
+      gasUsed: 703,
+      errno: 13,
+      pc: 0,
+    },
+  },
+  {
+    description: 'STATICCALL ECRECOVER - not enough gas',
+    code: OP.STATICCALL,
+    stack: [
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000000000000000000000000000010',
+    ],
+    result: {
+      stack: [
+        OP.ZERO_HASH,
+      ],
+      memory: [],
+      gasUsed: 716,
+      pc: 1,
+      errno: 0,
+    },
+  },
+  {
     description: 'STATICCALL ECRECOVER without input/output',
     code: OP.STATICCALL,
     stack: [
@@ -3149,6 +3404,27 @@ module.exports = [
     ],
     result: {
       gasUsed: 3709,
+    },
+  },
+  {
+    description: 'STATICCALL SHA256 - not enough gas',
+    code: OP.STATICCALL,
+    stack: [
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x0000000000000000000000000000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000000000000000000000000000010',
+    ],
+    result: {
+      stack: [
+        OP.ZERO_HASH,
+      ],
+      memory: [],
+      gasUsed: 716,
+      pc: 1,
+      errno: 0,
     },
   },
   {
@@ -3182,6 +3458,27 @@ module.exports = [
     },
   },
   {
+    description: 'STATICCALL RIPEMD160 - not enough gas',
+    code: OP.STATICCALL,
+    stack: [
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x0000000000000000000000000000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000000000000000000000000000010',
+    ],
+    result: {
+      stack: [
+        OP.ZERO_HASH,
+      ],
+      memory: [],
+      gasUsed: 716,
+      pc: 1,
+      errno: 0,
+    },
+  },
+  {
     description: 'STATICCALL RIPEMD160 without input/output',
     code: OP.STATICCALL,
     stack: [
@@ -3209,6 +3506,27 @@ module.exports = [
     ],
     result: {
       gasUsed: 1429,
+    },
+  },
+  {
+    description: 'STATICCALL IDENTITY - not enough gas',
+    code: OP.STATICCALL,
+    stack: [
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x0000000000000000000000000000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000000000000000000000000000001',
+    ],
+    result: {
+      stack: [
+        OP.ZERO_HASH,
+      ],
+      memory: [],
+      gasUsed: 701,
+      pc: 1,
+      errno: 0,
     },
   },
   {
@@ -3274,6 +3592,27 @@ module.exports = [
       stack: [
         OP.ZERO_HASH,
       ],
+    },
+  },
+  {
+    description: 'CREATE2 - not supported',
+    code: OP.CREATE2,
+    stack: [
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+    ],
+    result: {
+      stack: [
+        OP.ZERO_HASH,
+        OP.ZERO_HASH,
+        OP.ZERO_HASH,
+        OP.ZERO_HASH,
+      ],
+      memory: [],
+      errno: 6,
+      pc: 0,
     },
   },
   {
