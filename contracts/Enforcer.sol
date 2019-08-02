@@ -1,7 +1,7 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./IEnforcer.sol";
+import "./interfaces/IEnforcer.sol";
 import "./Merkelizer.slb";
 
 
@@ -20,7 +20,7 @@ contract Enforcer is IEnforcer {
         uint256 _bondAmount,
         uint256 _maxExecutionDepth
     ) public {
-        verifier = Verifier(_verifier);
+        verifier = IVerifier(_verifier);
         taskPeriod = _taskPeriod;
         challengePeriod = _challengePeriod;
         bondAmount = _bondAmount;

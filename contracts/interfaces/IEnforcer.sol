@@ -1,7 +1,7 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./Verifier.sol";
+import "./IVerifier.sol";
 
 
 contract IEnforcer {
@@ -45,7 +45,7 @@ contract IEnforcer {
     uint256 public challengePeriod;
     uint256 public maxExecutionDepth;
     uint256 public bondAmount;
-    Verifier public verifier;
+    IVerifier public verifier;
 
     mapping(address => uint256) public bonds;
     mapping(bytes32 => Task) public tasks;

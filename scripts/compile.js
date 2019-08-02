@@ -27,8 +27,7 @@ while (files.length) {
 
   if (stat.isFile() && (file.endsWith('.sol') || file.endsWith('.slb') || file.endsWith('.yul'))) {
     const source = fs.readFileSync(path).toString();
-    const k = basename(path);
-    sources[k] = { content: source };
+    sources[path] = { content: source };
     process.stdout.write(`> Compiling ${path}\n`);
   }
 

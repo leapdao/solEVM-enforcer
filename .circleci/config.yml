@@ -22,9 +22,8 @@ jobs:
           name: 'setup workspace'
           command: |
             yarn
-            yarn add codecov
-            yarn add https://github.com/leapdao/solidity-coverage.git#bb22d28edb700040ddb614bb2a4605f641383ced
             yarn compile:contracts
+            wget 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.22-7fa3509e.tar.gz' -O - | tar -xz; mv geth-*/geth .
       - save_cache:
           name: 'save_cache'
           key: v1-node-{{ .Branch }}-{{ checksum "package.json" }}
@@ -73,7 +72,10 @@ jobs:
       - *restore_node_modules
       - run:
           name: 'Solidity Coverage'
-          command: yarn coverage && ./node_modules/.bin/codecov -f coverage/lcov.info
+          command: |
+            sudo yarn global add codecov
+            PATH=`pwd`:$PATH yarn coverage
+            codecov -f coverage-report.json
 
   contracts_geth:
     <<: *defaults
@@ -83,7 +85,7 @@ jobs:
       - *restore_node_modules
       - run:
           name: 'test:contracts with geth'
-          command: wget 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.22-7fa3509e.tar.gz' -O - | tar -xz; mv geth-*/geth . && PATH=`pwd`:$PATH ./scripts/test_geth.sh test/contracts/*
+          command: PATH=`pwd`:$PATH ./scripts/test_geth.sh test/contracts/*
 
   execution_poker:
     <<: *defaults
@@ -103,16 +105,10 @@ workflows:
       - lint:
           requires:
             - setup
-      - contracts:
-          requires:
-            - setup
       - utils:
           requires:
             - setup
       - coverage:
-          requires:
-            - setup
-      - contracts_geth:
           requires:
             - setup
       - execution_poker:
