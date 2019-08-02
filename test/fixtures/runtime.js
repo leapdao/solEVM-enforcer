@@ -1548,15 +1548,13 @@ module.exports = [
         OP.ZERO_HASH,
       ],
       gasUsed: 2,
+      errno: 0,
     },
   },
   {
     code: OP.GASPRICE,
     result: {
-      stack: [
-        OP.ZERO_HASH,
-      ],
-      gasUsed: 2,
+      errno: 6,
     },
   },
   {
@@ -1574,10 +1572,7 @@ module.exports = [
   {
     code: OP.COINBASE,
     result: {
-      stack: [
-        OP.ZERO_HASH,
-      ],
-      gasUsed: 2,
+      errno: 6,
     },
   },
   {
@@ -1601,58 +1596,21 @@ module.exports = [
   {
     code: OP.DIFFICULTY,
     result: {
-      stack: [
-        OP.ZERO_HASH,
-      ],
-      gasUsed: 2,
+      errno: 6,
     },
   },
   {
     code: OP.GASLIMIT,
     result: {
-      stack: [
-        '0x000000000000000000000000000000000000000000000000000fffffffffffff',
-      ],
-      gasUsed: 2,
+      errno: 6,
     },
   },
   {
-    code: OP.GASLIMIT,
-    'gasLimit': 100,
-    result: {
-      stack: [
-        '0x0000000000000000000000000000000000000000000000000000000000000064',
-      ],
-      gasUsed: 2,
-    },
-  },
-  {
-    code: [
-      OP.PC,
-      OP.GASPRICE,
-      OP.POP,
-    ],
-    pc: 0,
+    code: OP.PC,
     result: {
       stack: [
         OP.ZERO_HASH,
       ],
-      gasUsed: 6,
-    },
-  },
-  {
-    code: [
-      OP.GAS,
-      OP.GASPRICE,
-      OP.POP,
-    ],
-    pc: 0,
-    'gasLimit': 100,
-    result: {
-      stack: [
-        '0x0000000000000000000000000000000000000000000000000000000000000062',
-      ],
-      gasUsed: 6,
     },
   },
   {
@@ -1751,7 +1709,7 @@ module.exports = [
   {
     code: [
       OP.CODESIZE,
-      OP.GASPRICE,
+      OP.GAS,
       OP.POP,
     ],
     pc: 0,
@@ -2752,7 +2710,7 @@ module.exports = [
   },
   {
     code: [
-      OP.GASPRICE,
+      OP.GAS,
       OP.POP,
       OP.CODECOPY,
     ],
@@ -3726,6 +3684,22 @@ module.exports = [
         OP.ZERO_HASH,
       ],
       gasUsed: 16777915,
+    },
+  },
+  {
+    description: 'invalid opcode',
+    code: [
+      OP.TIMESTAMP,
+      '48',
+      OP.GAS,
+    ],
+    pc: 0,
+    result: {
+      stack: [
+        OP.ZERO_HASH,
+      ],
+      gasUsed: 2,
+      errno: 4,
     },
   },
 ];

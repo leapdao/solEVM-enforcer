@@ -208,22 +208,13 @@ contract Verifier is IVerifier, HydratedRuntime {
         hydratedState.stackHash = proofs.stackHash;
         hydratedState.memHash = memHash;
 
-        evm.context = Context(
-            DEFAULT_CALLER,
-            0,
-            DEFAULT_BLOCK_GAS_LIMIT,
-            0,
-            0,
-            0,
-            0
-        );
-
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
         evm.mem = EVMMemory.fromArray(executionState.mem);
+        evm.returnData = executionState.returnData;
 
         _run(evm, executionState.pc, 1);
 

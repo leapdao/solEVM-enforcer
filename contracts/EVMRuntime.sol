@@ -14,16 +14,6 @@ contract EVMRuntime is EVMConstants {
     using EVMStack for EVMStack.Stack;
     using EVMCode for EVMCode.Code;
 
-    struct Context {
-        address origin;
-        uint gasPrice;
-        uint gasLimit;
-        uint coinBase;
-        uint blockNumber;
-        uint time;
-        uint difficulty;
-    }
-
     // what we do not track  (not complete list)
     // call depth: as we do not support stateful things like call to other contracts
     // staticExec: same as above, we only support precompiles, higher implementations still can intercept calls
@@ -36,14 +26,16 @@ contract EVMRuntime is EVMConstants {
         uint pc;
 
         bytes data;
-        bytes lastRet;
         bytes returnData;
 
         EVMCode.Code code;
-        Context context;
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
 
+        uint256 blockNumber;
+        uint256 blockHash;
+        uint256 blockTime;
+        // caller is also origin, as we do not support calling other contracts
         address caller;
         address target;
     }
@@ -52,10 +44,6 @@ contract EVMRuntime is EVMConstants {
     function _run(EVM memory evm, uint pc, uint pcStepCount) internal {
         uint pcNext = 0;
         uint stepRun = 0;
-
-        if (evm.gas > evm.context.gasLimit) {
-            evm.errno = ERROR_OUT_OF_GAS;
-        }
 
         while (evm.errno == NO_ERROR && pc < evm.code.length && (pcStepCount == 0 || stepRun < pcStepCount)) {
             uint stackIn;
@@ -1274,7 +1262,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     function handleORIGIN(EVM memory state) internal {
-        state.stack.push(uint(state.context.origin));
+        state.stack.push(uint(state.caller));
     }
 
     function handleCALLER(EVM memory state) internal {
@@ -1354,7 +1342,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     function handleGASPRICE(EVM memory state) internal {
-        state.stack.push(state.context.gasPrice);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     // this can be implemented for special needs, the EVMRuntime itself should be stateless
@@ -1368,7 +1356,7 @@ contract EVMRuntime is EVMConstants {
     }
 
     function handleRETURNDATASIZE(EVM memory state) internal {
-        state.stack.push(state.lastRet.length);
+        state.stack.push(state.returnData.length);
     }
 
     function handleRETURNDATACOPY(EVM memory state) internal {
@@ -1387,7 +1375,7 @@ contract EVMRuntime is EVMConstants {
         state.gas -= gasFee;
 
         state.mem.storeBytesAndPadWithZeroes(
-            state.lastRet,
+            state.returnData,
             rAddr,
             mAddr,
             len
@@ -1401,27 +1389,27 @@ contract EVMRuntime is EVMConstants {
     // 0x4X
     function handleBLOCKHASH(EVM memory state) internal {
         state.stack.pop();
-        state.stack.push(0);
+        state.stack.push(state.blockHash);
     }
 
     function handleCOINBASE(EVM memory state) internal {
-        state.stack.push(state.context.coinBase);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     function handleTIMESTAMP(EVM memory state) internal {
-        state.stack.push(state.context.time);
+        state.stack.push(state.blockTime);
     }
 
     function handleNUMBER(EVM memory state) internal {
-        state.stack.push(state.context.blockNumber);
+        state.stack.push(state.blockNumber);
     }
 
     function handleDIFFICULTY(EVM memory state) internal {
-        state.stack.push(state.context.difficulty);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     function handleGASLIMIT(EVM memory state) internal {
-        state.stack.push(state.context.gasLimit);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
     // 0x5X
@@ -1619,7 +1607,6 @@ contract EVMRuntime is EVMConstants {
 
         retEvm.data = state.mem.toBytes(inOffset, inSize);
         retEvm.customDataPtr = state.customDataPtr;
-        retEvm.context = state.context;
 
         // we only going to support precompiles
         if (1 <= target && target <= 8) {
@@ -1646,11 +1633,11 @@ contract EVMRuntime is EVMConstants {
 
         if (retEvm.errno != NO_ERROR) {
             state.stack.push(0);
-            state.lastRet = new bytes(0);
+            state.returnData = new bytes(0);
         } else {
             state.stack.push(1);
             state.mem.storeBytesAndPadWithZeroes(retEvm.returnData, 0, retOffset, retSize);
-            state.lastRet = retEvm.returnData;
+            state.returnData = retEvm.returnData;
         }
         state.gas += retEvm.gas;
     }
