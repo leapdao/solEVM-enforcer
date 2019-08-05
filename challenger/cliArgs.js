@@ -1,3 +1,5 @@
+'use strict';
+
 const dashdash = require('dashdash');
 
 const options = [
@@ -29,6 +31,20 @@ const options = [
     env: 'ETH_PROVIDER',
     help: 'Ethereum JSON RPC url',
   },
+  {
+    names: ['delay'],
+    type: 'number',
+    env: 'DELAY',
+    help: 'Events handling delay (for temp setup)',
+    default: 0,
+  },
+  {
+    names: ['stupid'],
+    type: 'bool',
+    env: 'STUPID',
+    help: 'Enables wrong results producing',
+    default: false,
+  },
 ];
 
 const parser = dashdash.createParser({ options });
@@ -38,8 +54,10 @@ const parser = dashdash.createParser({ options });
  *  ethProvider: string;
  *  walletPriv: string;
  *  enforcerAddr: string;
+ *  delay: number;
+ *  stupid: boolean;
  * }}
-*/
+ */
 const cliArgs = parser.parse(process.argv);
 
 if (cliArgs.help) {

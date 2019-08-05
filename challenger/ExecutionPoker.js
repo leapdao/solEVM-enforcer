@@ -7,6 +7,7 @@ const Merkelizer = require('../utils/Merkelizer.js');
 const ProofHelper = require('../utils/ProofHelper.js');
 const FragmentTree = require('../utils/FragmentTree');
 const { ZERO_HASH } = require('../utils/constants.js');
+const cliArgs = require('./cliArgs');
 
 const executionId = (taskHash, pathRoot) => {
   return ethers.utils.solidityKeccak256(
@@ -32,87 +33,98 @@ exports.ExecutionPoker = class ExecutionPoker {
 
     this.alwaysChallenge = true;
 
+    const requestedHandler = async (taskHash, parameters, callData, tx) => {
+      const params = {
+        origin: parameters[0],
+        target: parameters[1],
+        blockHash: parameters[2],
+        blockNumber: parameters[3],
+        time: parameters[4],
+        txGasLimit: parameters[5],
+        customEnvironmentHash: parameters[6],
+        codeHash: parameters[7],
+        dataHash: parameters[8],
+      };
+      this.taskParams[taskHash] = params;
+      this.taskCallData[params.dataHash] = callData;
+
+      const receipt = await tx.getTransactionReceipt();
+
+      this.log('task request', { taskHash, params });
+      if (cliArgs.delay) {
+        setTimeout(() => {
+          this.registerExecution(taskHash, params);
+        }, cliArgs.delay);
+      } else {
+        this.registerExecution(taskHash, params);
+      }
+    };
     this.enforcer.on(
       this.enforcer.filters.Requested(),
-      async (taskHash, parameters, callData, tx) => {
-        const params = {
-          origin: parameters[0],
-          target: parameters[1],
-          blockHash: parameters[2],
-          blockNumber: parameters[3],
-          time: parameters[4],
-          txGasLimit: parameters[5],
-          customEnvironmentHash: parameters[6],
-          codeHash: parameters[7],
-          dataHash: parameters[8],
-        };
-        this.taskParams[taskHash] = params;
-        this.taskCallData[params.dataHash] = callData;
-        console.log(params.dataHash, callData);
-
-        const receipt = await tx.getTransactionReceipt();
-
-        if (receipt.from === this.wallet.address) {
-          this.log('task request', { taskHash, params });
-          this.registerExecution(taskHash, params);
-        } else {
-          this.log('task requested', { taskHash, params });
-          this.registerExecution(taskHash, params);
-        }
-      }
+      requestedHandler,
     );
 
+    const registeredHandler = async (taskHash, solverPathRoot, executionDepth, resultBytes, tx) => {
+      const receipt = await tx.getTransactionReceipt();
+
+      if (receipt.from === this.wallet.address) {
+        this.log('execution result registered', taskHash);
+      } else {
+        this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
+      }
+    };
     this.enforcer.on(
       this.enforcer.filters.Registered(),
-      async (taskHash, solverPathRoot, executionDepth, resultBytes, tx) => {
-        const receipt = await tx.getTransactionReceipt();
-
-        if (receipt.from === this.wallet.address) {
-          this.log('execution result registered', taskHash);
-          // this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
-        } else {
-          this.validateExecution(taskHash, solverPathRoot, executionDepth, resultBytes);
-        }
-      }
+      registeredHandler
     );
 
+    const slashedHandler = (execId, addr, tx) => {
+      if (addr === this.wallet.address) {
+        console.log('slashed', execId);
+        this.onSlashed(execId);
+      } else {
+        // const entries = Object.entries(this.disputes);
+        // const index = entries.findIndex(([, d]) => d.execId === execId);
+        // if (index > -1) {
+        //   const [disputeId, dispute] = entries[index];
+        //   if (dispute.challengerAddr === addr) {
+        //     this.onWin(execId, disputeId);
+        //   }
+        // }
+      }
+    };
     this.enforcer.on(
       this.enforcer.filters.Slashed(),
-      (execId, addr, tx) => {
-        if (addr === this.wallet.address) {
-          this.onSlashed(execId);
-        } else {
-          const entries = Object.entries(this.disputes);
-          const index = entries.findIndex(([, d]) => d.execId === execId);
-          if (index > -1) {
-            const [disputeId, dispute] = entries[index];
-            if (dispute.challengerAddr === addr) {
-              this.onWin(execId, disputeId);
-            }
-          }
-        }
-      }
+      slashedHandler
     );
 
+    const disputeHandler = (disputeId, execId, tx) => {
+      if (this.solutions[execId] && !this.disputes[disputeId]) {
+        this.log('new dispute for', execId);
+        this.initDispute(disputeId, execId, tx.from, this.solutions[execId].result);
+      }
+    };
     this.enforcer.on(
       this.enforcer.filters.DisputeInitialised(),
-      (disputeId, execId, tx) => {
-        if (this.solutions[execId] && !this.disputes[disputeId]) {
-          this.log('new dispute for', execId);
-          this.initDispute(disputeId, execId, tx.from, this.solutions[execId].result);
-        }
-      }
+      disputeHandler
     );
 
+    const newRoundHandler = (disputeId, timeout, solverPath, challengerPath, tx) => {
+      this.log(`dispute(${disputeId}) new round`, !!this.disputes[disputeId]);
+      if (this.disputes[disputeId]) {
+        this.submitRound(disputeId);
+      }
+    };
     this.verifier.on(
       this.verifier.filters.DisputeNewRound(),
-      (disputeId, timeout, solverPath, challengerPath, tx) => {
-        if (this.disputes[disputeId]) {
-          this.log(`dispute(${disputeId}) new round`);
-          this.submitRound(disputeId);
-        }
-      }
+      newRoundHandler,
     );
+
+    let baseNonce = wallet.getTransactionCount();
+    let nonceOffset = 0;
+    this.getNonce = () => {
+      return baseNonce.then((nonce) => (nonce + (nonceOffset++)));
+    };
   }
 
   onSlashed (execId) {
@@ -126,6 +138,7 @@ exports.ExecutionPoker = class ExecutionPoker {
   }
 
   async requestExecution (evmParameter, callData) {
+    console.log('nonce', await this.wallet.getTransactionCount());
     let tx = await this.enforcer.request(evmParameter, callData);
 
     tx = await tx.wait();
@@ -148,7 +161,7 @@ exports.ExecutionPoker = class ExecutionPoker {
         result.merkle.root.hash,
         new Array(result.merkle.depth).fill(ZERO_HASH),
         returnData,
-        { value: bondAmount }
+        { value: bondAmount, nonce: this.getNonce() }
       );
 
       tx = await tx.wait();
@@ -203,7 +216,7 @@ exports.ExecutionPoker = class ExecutionPoker {
           solverHash,
           challengerHash,
           taskParams,
-          { value: bondAmount, gasLimit: this.gasLimit }
+          { value: bondAmount, gasLimit: this.gasLimit, nonce: this.getNonce() }
         );
 
         tx = await tx.wait();
@@ -292,12 +305,12 @@ exports.ExecutionPoker = class ExecutionPoker {
           right: obj.computationPath.right.hash,
         },
         witnessPath,
-        { gasLimit: this.gasLimit }
+        { gasLimit: this.gasLimit, nonce: this.getNonce() }
       );
 
       tx = await tx.wait();
 
-      this.log('gas used', tx.gasUsed.toString(), tx.hash);
+      this.log('gas used', tx.gasUsed.toString(), tx.transactionHash);
     } catch (e) {
       console.error('Submit round', e);
     }
@@ -314,12 +327,12 @@ exports.ExecutionPoker = class ExecutionPoker {
         disputeId,
         args.proofs,
         args.executionInput,
-        { gasLimit: this.gasLimit }
+        { gasLimit: this.gasLimit, nonce: this.getNonce() }
       );
 
       tx = await tx.wait();
 
-      this.log('submitting proof - gas used', tx.gasUsed.toString());
+      this.log('submitting proof - gas used', tx.gasUsed.toString(), tx.transactionHash);
 
       return tx;
     } catch (e) {
@@ -356,6 +369,10 @@ exports.ExecutionPoker = class ExecutionPoker {
   }
 
   async getDataForParams (evmParams) {
+    // 50% chance for wrong result
+    if (cliArgs.stupid && Math.random() > 0.5) {
+      return '0x686109bb00000000000000000000000000000000000000000000000000000000000000061401652d77f7f18f9f69a6bd55f5d8cc90c2f34c9ed4025be2ab693b34869239';
+    }
     return this.taskCallData[evmParams.dataHash];
   }
 };
