@@ -161,7 +161,7 @@ exports.ExecutionPoker = class ExecutionPoker {
         result.merkle.root.hash,
         new Array(result.merkle.depth).fill(ZERO_HASH),
         returnData,
-        { value: bondAmount, nonce: this.getNonce() }
+        { value: bondAmount, nonce: await this.getNonce() }
       );
 
       tx = await tx.wait();
@@ -216,7 +216,7 @@ exports.ExecutionPoker = class ExecutionPoker {
           solverHash,
           challengerHash,
           taskParams,
-          { value: bondAmount, gasLimit: this.gasLimit, nonce: this.getNonce() }
+          { value: bondAmount, gasLimit: this.gasLimit, nonce: await this.getNonce() }
         );
 
         tx = await tx.wait();
@@ -297,6 +297,11 @@ exports.ExecutionPoker = class ExecutionPoker {
       witnessPath = { left: ZERO_HASH, right: ZERO_HASH };
     }
 
+    // let d = await this.verifier.disputes(disputeId);
+    // console.log(disputeId, d, {
+    //   left: obj.computationPath.left.hash,
+    //   right: obj.computationPath.right.hash,
+    // }, witnessPath);
     try {
       let tx = await this.verifier.respond(
         disputeId,
@@ -305,14 +310,19 @@ exports.ExecutionPoker = class ExecutionPoker {
           right: obj.computationPath.right.hash,
         },
         witnessPath,
-        { gasLimit: this.gasLimit, nonce: this.getNonce() }
+        { gasLimit: this.gasLimit, nonce: await this.getNonce() }
       );
 
       tx = await tx.wait();
 
       this.log('gas used', tx.gasUsed.toString(), tx.transactionHash);
     } catch (e) {
-      console.error('Submit round', e);
+      console.error('Submit round', e, {
+        left: obj.computationPath.left.hash,
+        right: obj.computationPath.right.hash,
+        witnessPath,
+        disputeId,
+      });
     }
   }
 
@@ -327,7 +337,7 @@ exports.ExecutionPoker = class ExecutionPoker {
         disputeId,
         args.proofs,
         args.executionInput,
-        { gasLimit: this.gasLimit, nonce: this.getNonce() }
+        { gasLimit: this.gasLimit, nonce: await this.getNonce() }
       );
 
       tx = await tx.wait();
@@ -369,9 +379,8 @@ exports.ExecutionPoker = class ExecutionPoker {
   }
 
   async getDataForParams (evmParams) {
-    // 50% chance for wrong result
-    if (cliArgs.stupid && Math.random() > 0.5) {
-      return '0x686109bb00000000000000000000000000000000000000000000000000000000000000061401652d77f7f18f9f69a6bd55f5d8cc90c2f34c9ed4025be2ab693b34869239';
+    if (cliArgs.stupid) {
+      return '0x686109bb000000000000000000000000000000000000000000000000000000000001178bd090f4ff7002c589483c11ed353fed58d4fe9c8a25903cbd4467f4be787054be';
     }
     return this.taskCallData[evmParams.dataHash];
   }

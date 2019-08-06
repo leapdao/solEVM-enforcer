@@ -51,18 +51,18 @@ class MyExecutionPoker extends ExecutionPoker {
     this.log('onWin', execId, disputeId);
     super.onWin(execId, disputeId);
     this.log('onWin', this.solutions, this.solutions[execId], this.disputes[disputeId]);
-    if (this.solutions[execId] && this.disputes[disputeId]) {
-      const { taskHash } = this.solutions[execId];
-      const { computationPath, result } = this.disputes[disputeId];
-      const newExecId = executionId(taskHash, computationPath.hash);
-      this.solutions[newExecId] = {
-        taskHash,
-        result,
-      };
-      this.log('newExecId', newExecId);
-      await this.registerResult(taskHash, result);
-      this.log('new result registered');
-    }
+    // if (this.solutions[execId] && this.disputes[disputeId]) {
+    //   const { taskHash } = this.solutions[execId];
+    //   const { computationPath, result } = this.disputes[disputeId];
+    //   const newExecId = executionId(taskHash, computationPath.hash);
+    //   this.solutions[newExecId] = {
+    //     taskHash,
+    //     result,
+    //   };
+    //   this.log('newExecId', newExecId);
+    //   await this.registerResult(taskHash, result);
+    //   this.log('new result registered');
+    // }
   }
 }
 
