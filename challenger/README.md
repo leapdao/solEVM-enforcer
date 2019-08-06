@@ -2,11 +2,6 @@
 
 To solve and challenge
 
-## Release
-
-1. `yarn build`
-2. `npm publish`
-
 ## Use
 
 `solevm-enforcer [ARGS]`
