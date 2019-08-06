@@ -1,5 +1,5 @@
 {
-  "name": "solevm-challenger",
+  "name": "solevm-enforcer",
   "version": "1.0.0",
   "main": "build/index.js",
   "license": "MIT",
