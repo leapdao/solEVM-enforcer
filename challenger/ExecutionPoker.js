@@ -380,7 +380,7 @@ exports.ExecutionPoker = class ExecutionPoker {
 
   async getDataForParams (evmParams) {
     if (cliArgs.stupid) {
-      return '0x686109bb000000000000000000000000000000000000000000000000000000000001178bd090f4ff7002c589483c11ed353fed58d4fe9c8a25903cbd4467f4be787054be';
+      return '0x686109bb000000000000000000000000000000000000000000000000000000000001178bd090f4ff7002c589483c11ed353fed58d4fe9c8a25903cbd4467f4be787054be'; // eslint-disable-line
     }
     return this.taskCallData[evmParams.dataHash];
   }

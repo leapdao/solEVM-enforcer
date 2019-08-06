@@ -76,6 +76,9 @@ if (!cliArgs.enforcerAddr) {
   process.exit(0);
 }
 
+// ToDo: do not use plain private key here
+// it will be saved in terminal history
+// Much better would be to use a file with private key
 if (!cliArgs.walletPriv) {
   console.log('walletPriv is required. See --help for reference');
   process.exit(0);

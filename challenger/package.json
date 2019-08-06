@@ -18,6 +18,9 @@
     "parcel-bundler": "^1.12.3"
   },
   "scripts": {
-    "build": "parcel build --target=node -d build index.js"
+    "build": "pushd .. && yarn compile:contracts && popd && parcel build --target=node -d build index.js"
+  },
+  "bin": {
+    "solevm-enforcer": "./bin.js"
   }
 }
