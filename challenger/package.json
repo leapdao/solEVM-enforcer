@@ -2,7 +2,7 @@
   "name": "solevm-enforcer",
   "version": "1.0.2",
   "main": "build/index.js",
-  "license": "MIT",
+  "license": "MPL-2.0",
   "dependencies": {
     "bignumber.js": "^9.0.0",
     "dashdash": "^1.14.1",
