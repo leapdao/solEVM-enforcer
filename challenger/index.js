@@ -1,6 +1,5 @@
 'use strict';
 
-// const level = require('level');
 const ethers = require('ethers');
 const BigNumber = require('bignumber.js');
 const { ExecutionPoker, executionId } = require('./ExecutionPoker');
@@ -22,52 +21,7 @@ const fromWei = (wei) => {
   return new BigNumber(wei).div(dec).toString();
 };
 
-class MyExecutionPoker extends ExecutionPoker {
-  constructor (db, ...args) {
-    super(...args);
-    this.db = db;
-    // this.restoreSolutions();
-    // this.solutions = new Proxy(this.solutions, {
-    //   get (solutions, execId) {
-    //     return solutions[execId];
-    //   },
-    //   set (solutions, execId, result) {
-    //     solutions[execId] = result;
-
-    //     this.db.put('solutions', JSON.stringify(solutions));
-    //   },
-    // });
-  }
-
-  restoreSolutions () {
-    this.db.get('solutions').then(json => {
-      this.solutions = JSON.parse(json); // ToDo: do proper deserialise here
-    }).catch(() => {
-      // do nothing
-    });
-  }
-
-  async onWin (execId, disputeId) {
-    this.log('onWin', execId, disputeId);
-    super.onWin(execId, disputeId);
-    this.log('onWin', this.solutions, this.solutions[execId], this.disputes[disputeId]);
-    // if (this.solutions[execId] && this.disputes[disputeId]) {
-    //   const { taskHash } = this.solutions[execId];
-    //   const { computationPath, result } = this.disputes[disputeId];
-    //   const newExecId = executionId(taskHash, computationPath.hash);
-    //   this.solutions[newExecId] = {
-    //     taskHash,
-    //     result,
-    //   };
-    //   this.log('newExecId', newExecId);
-    //   await this.registerResult(taskHash, result);
-    //   this.log('new result registered');
-    // }
-  }
-}
-
 (async () => {
-  const db = null;
   const provider = new ethers.providers.JsonRpcProvider(cliArgs.ethProvider);
   const wallet = new ethers.Wallet(cliArgs.walletPriv, provider);
   const enforcer = new ethers.Contract(cliArgs.enforcerAddr, Enforcer.abi, provider);
@@ -78,8 +32,7 @@ class MyExecutionPoker extends ExecutionPoker {
   console.log(`Verfier: ${verifierAddr}`);
   const verifier = new ethers.Contract(verifierAddr, Verifier.abi, provider);
 
-  // ExecutionPoker will do the rest ¯\_(ツ)_/¯
-  new MyExecutionPoker(db, enforcer, verifier, wallet, 3000000, 'challenger'); // eslint-disable-line
+  new ExecutionPoker(db, enforcer, verifier, wallet, 3000000, 'challenger'); // eslint-disable-line
 })();
 
 function onException (e) {
