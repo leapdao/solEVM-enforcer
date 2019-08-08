@@ -9,12 +9,12 @@ const FragmentTree = require('./FragmentTree');
 const { ZERO_HASH } = require('./constants.js');
 
 module.exports = class ExecutionPoker {
-  constructor (enforcer, verifier, wallet, gasLimit, logTag) {
+  constructor (enforcer, verifier, wallet, gasLimit = 0xfffffffffffff, logTag = 'unkn') {
     this.enforcer = enforcer.connect(wallet);
     this.verifier = verifier.connect(wallet);
     this.wallet = wallet;
-    this.gasLimit = gasLimit || 0xfffffffffffff;
-    this.logTag = logTag || 'unkn';
+    this.gasLimit = gasLimit;
+    this.logTag = logTag;
     // TODO: this needs to be garbage collected
     this.taskParams = {};
     this.taskCallData = {};
@@ -264,7 +264,7 @@ module.exports = class ExecutionPoker {
 
     tx = await tx.wait();
 
-    this.log('gas used', tx.gasUsed.toString());
+    this.log('gas used', tx.gasUsed.toString(), tx.hash);
   }
 
   async submitProof (disputeId, disputeObj) {

@@ -1,0 +1,25 @@
+{
+  "name": "solevm-enforcer",
+  "version": "1.0.3",
+  "main": "build/index.js",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "bignumber.js": "^9.0.0",
+    "dashdash": "^1.14.1",
+    "ethereumjs-util": "^6.1.0",
+    "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r6",
+    "ethers": "^4.0.32"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.0.0-0",
+    "@babel/plugin-syntax-async-generators": "^7.2.0",
+    "@babel/preset-env": "^7.5.4",
+    "parcel-bundler": "^1.12.3"
+  },
+  "scripts": {
+    "build": "pushd .. && yarn compile:contracts && popd && parcel build --target=node -d build index.js"
+  },
+  "bin": {
+    "solevm-enforcer": "./bin.js"
+  }
+}
