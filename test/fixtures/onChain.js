@@ -84,23 +84,23 @@ module.exports = [
   // Context and stack opcodes
 
   { code: [OP.PUSH20, ...split('4ae7b3e204fed41c82d57ecd2242470196d70d02'), OP.BALANCE], step: 1 },
-  { code: [OP.GASPRICE, OP.POP, OP.ADDRESS], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.ORIGIN], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.CALLER], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.ADDRESS], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.ORIGIN], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.CALLER], step: 2 },
   // always 0 in current implementation
   // TODO: do we need it non-zero?
-  { code: [OP.GASPRICE, OP.POP, OP.CALLVALUE], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.CALLVALUE], step: 2 },
   // always 0 in current implementation
   // TODO: do we need it non-zero?
-  { code: [OP.GASPRICE, OP.POP, OP.GASPRICE], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.GAS], step: 2 },
   { code: [OP.PUSH1, '00', OP.BLOCKHASH], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.COINBASE], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.TIMESTAMP], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.NUMBER], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.DIFFICULTY], step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.GASLIMIT], step: 2 },
-  { code: [OP.GASPRICE, OP.PC, OP.POP], pc: 1, step: 1 }, // PC
-  { code: [OP.GASPRICE, OP.GAS, OP.POP], pc: 1, step: 1 }, // GAS
+  { code: [OP.GAS, OP.POP, OP.COINBASE], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.TIMESTAMP], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.NUMBER], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.DIFFICULTY], step: 2 },
+  { code: [OP.GAS, OP.POP, OP.GASLIMIT], step: 2 },
+  { code: [OP.GAS, OP.PC, OP.POP], pc: 1, step: 1 }, // PC
+  { code: [OP.GAS, OP.GAS, OP.POP], pc: 1, step: 1 }, // GAS
 
   { code: [OP.JUMPDEST, OP.PUSH1, '00', OP.JUMP], step: 2 }, // jump
   { code: [OP.JUMPDEST, OP.PUSH1, '01', OP.JUMP], step: 2 }, // jump err
@@ -114,46 +114,46 @@ module.exports = [
 
   //  Code and stack opcodes (CODESIZE, PUSH1 - PUSH32)
   { code: [OP.PUSH1, '00', OP.CODESIZE], step: 1 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH1, '01', OP.POP], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH2, '01', '02'], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH3, '01', '02', '03'], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH4, ...range(10, 13)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH5, ...range(10, 14)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH6, ...range(10, 15)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH7, ...range(10, 16)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH8, ...range(10, 17)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH9, ...range(10, 18)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH10, ...range(10, 19)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH11, ...range(10, 20)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH12, ...range(10, 21)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH13, ...range(10, 22)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH14, ...range(10, 23)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH15, ...range(10, 24)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH16, ...range(10, 25)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH17, ...range(10, 26)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH18, ...range(10, 27)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH19, ...range(10, 28)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH20, ...range(10, 29)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH21, ...range(10, 30)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH22, ...range(10, 31)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH23, ...range(10, 32)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH24, ...range(10, 33)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH25, ...range(10, 34)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH26, ...range(10, 35)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH27, ...range(10, 36)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH28, ...range(10, 37)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH29, ...range(10, 38)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH30, ...range(10, 39)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH31, ...range(10, 40)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 41)], pc: 2, step: 2 },
-  { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 39)], pc: 2, step: 2 }, // PUSH out of bound
+  { code: [OP.GAS, OP.POP, OP.PUSH1, '01', OP.POP], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH2, '01', '02'], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH3, '01', '02', '03'], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH4, ...range(10, 13)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH5, ...range(10, 14)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH6, ...range(10, 15)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH7, ...range(10, 16)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH8, ...range(10, 17)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH9, ...range(10, 18)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH10, ...range(10, 19)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH11, ...range(10, 20)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH12, ...range(10, 21)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH13, ...range(10, 22)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH14, ...range(10, 23)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH15, ...range(10, 24)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH16, ...range(10, 25)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH17, ...range(10, 26)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH18, ...range(10, 27)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH19, ...range(10, 28)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH20, ...range(10, 29)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH21, ...range(10, 30)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH22, ...range(10, 31)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH23, ...range(10, 32)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH24, ...range(10, 33)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH25, ...range(10, 34)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH26, ...range(10, 35)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH27, ...range(10, 36)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH28, ...range(10, 37)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH29, ...range(10, 38)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH30, ...range(10, 39)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH31, ...range(10, 40)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH32, ...range(10, 41)], pc: 2, step: 2 },
+  { code: [OP.GAS, OP.POP, OP.PUSH32, ...range(10, 39)], pc: 2, step: 2 }, // PUSH out of bound
   // TODO this one will throw, didn't know why
-  // { code: [OP.GASPRICE, OP.POP, OP.PUSH32, ...range(10, 40)], pc: 2, step: 2 }, // PUSH out of bound
+  // { code: [OP.GAS, OP.POP, OP.PUSH32, ...range(10, 40)], pc: 2, step: 2 }, // PUSH out of bound
 
   // Data and stack opcodes
 
   { code: [OP.PUSH1, '01', OP.CALLDATALOAD], data: '0x123456', step: 1 },
-  { code: [OP.GASPRICE, OP.POP, OP.CALLDATASIZE], data: '0x1234', step: 2 },
+  { code: [OP.GAS, OP.POP, OP.CALLDATASIZE], data: '0x1234', step: 2 },
 
   // Memory and stack (MLOAD, MSTORE, MSTORE8, MSIZE)
   // MSTORE
@@ -255,7 +255,7 @@ module.exports = [
   { code: [OP.PUSH1, '04', OP.PUSH1, '00', OP.REVERT], step: 2 }, // REVERT and expand memory
   { code: [OP.PUSH1, '00', OP.PUSH1, '00', OP.PUSH1, '00', OP.RETURNDATACOPY], step: 3 },
   // INVALID opcade
-  { code: [OP.GASPRICE, OP.INVALID], step: 1 },
+  { code: [OP.GAS, OP.INVALID], step: 1 },
   // STOP
-  { code: [OP.GASPRICE, OP.STOP], step: 1 },
+  { code: [OP.GAS, OP.STOP], step: 1 },
 ];

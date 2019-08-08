@@ -115,16 +115,20 @@ module.exports = class ExecutionPoker {
 
   async registerExecution (taskHash, evmParams) {
     const res = await this.computeCall(evmParams);
-    const lastExecutionStep = res.steps[res.steps.length - 1];
-    const returnData = lastExecutionStep ? lastExecutionStep.returnData : '0x';
+    const { resultProof, returnData } = res.merkle.computeResultProof();
     const bondAmount = await this.enforcer.bondAmount();
 
     this.log('registering execution:', res.steps.length, 'steps');
 
+    // paranoia, better safe than sorry
+    if (!res.merkle.verifyResultProof(resultProof, returnData, res.merkle.root.hash)) {
+      throw new Error('Computed resultProof is invalid. Please file a bug report.');
+    }
+
     let tx = await this.enforcer.register(
       taskHash,
       res.merkle.root.hash,
-      new Array(res.merkle.depth).fill(ZERO_HASH),
+      resultProof,
       returnData,
       { value: bondAmount }
     );

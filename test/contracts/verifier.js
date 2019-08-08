@@ -72,19 +72,22 @@ describe('Verifier', function () {
       ];
       const callData = '0x12345678';
       const { taskHash, params } = await requestExecution(enforcer, code, callData);
+      const left = '0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';
+      const right = Merkelizer.hash(left, left);
+      const solverRoot = Merkelizer.hash(left, right);
 
       let tx = await enforcer.register(
         taskHash,
-        ZERO_HASH,
-        [ZERO_HASH],
-        ZERO_HASH,
+        solverRoot,
+        [left, left],
+        left,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
 
       tx = await enforcer.dispute(
-        ZERO_HASH,
+        solverRoot,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -139,19 +142,22 @@ describe('Verifier', function () {
       ];
       const callData = '0x12345679';
       const { taskHash, params } = await requestExecution(enforcer, code, callData);
+      const left = '0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';
+      const right = Merkelizer.hash(left, left);
+      const solverRoot = Merkelizer.hash(left, right);
 
       let tx = await enforcer.register(
         taskHash,
-        ZERO_HASH,
-        [ZERO_HASH],
-        ZERO_HASH,
+        solverRoot,
+        [left, left],
+        left,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
 
       tx = await tx.wait();
 
       tx = await enforcer.dispute(
-        ZERO_HASH,
+        solverRoot,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -172,18 +178,21 @@ describe('Verifier', function () {
       ];
       const callData = '0x12345680';
       const { taskHash, params } = await requestExecution(enforcer, code, callData);
+      const left = '0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';
+      const right = Merkelizer.hash(left, left);
+      const solverRoot = Merkelizer.hash(left, right);
 
       let tx = await enforcer.register(
         taskHash,
-        ZERO_HASH,
-        [ZERO_HASH],
-        ZERO_HASH,
+        solverRoot,
+        [left, left],
+        left,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
       tx = await enforcer.dispute(
-        ZERO_HASH,
+        solverRoot,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -212,20 +221,21 @@ describe('Verifier', function () {
       ];
       const callData = '0x12345680';
       const { taskHash, params } = await requestExecution(enforcer, code, callData);
-
-      let solverHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
+      const left = '0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';
+      const right = Merkelizer.hash(left, left);
+      const solverRoot = Merkelizer.hash(left, right);
 
       let tx = await enforcer.register(
         taskHash,
-        solverHash,
-        [ZERO_HASH],
-        ZERO_HASH,
+        solverRoot,
+        [left, left],
+        left,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
       tx = await enforcer.dispute(
-        solverHash,
+        solverRoot,
         ZERO_HASH,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -237,8 +247,8 @@ describe('Verifier', function () {
       tx = await verifier.respond(
         disputeId,
         {
-          left: ONE_HASH,
-          right: ZERO_HASH,
+          left: left,
+          right: right,
         },
         ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
@@ -261,19 +271,22 @@ describe('Verifier', function () {
       ];
       const callData = '0x12345680';
       const { taskHash, params } = await requestExecution(enforcer, code, callData);
+      const left = '0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';
+      const right = Merkelizer.hash(left, left);
+      const solverRoot = Merkelizer.hash(left, right);
 
       let tx = await enforcer.register(
         taskHash,
-        ZERO_HASH,
-        [ZERO_HASH],
-        ZERO_HASH,
+        solverRoot,
+        [left, left],
+        left,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
       let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
       tx = await enforcer.dispute(
-        ZERO_HASH,
+        solverRoot,
         challengerHash,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -311,20 +324,22 @@ describe('Verifier', function () {
       ];
       const callData = '0x12345680';
       const { taskHash, params } = await requestExecution(enforcer, code, callData);
+      const left = '0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';
+      const right = Merkelizer.hash(left, left);
+      const solverRoot = Merkelizer.hash(left, right);
 
-      let solverHash = Merkelizer.hash(ONE_HASH, TWO_HASH);
       let tx = await enforcer.register(
         taskHash,
-        solverHash,
-        [ZERO_HASH],
-        ZERO_HASH,
+        solverRoot,
+        [left, left],
+        left,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
       );
       tx = await tx.wait();
 
       let challengerHash = Merkelizer.hash(ONE_HASH, ZERO_HASH);
       tx = await enforcer.dispute(
-        solverHash,
+        solverRoot,
         challengerHash,
         params,
         { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -337,8 +352,8 @@ describe('Verifier', function () {
       tx = await verifier.respond(
         disputeId,
         {
-          left: ONE_HASH,
-          right: TWO_HASH,
+          left: left,
+          right: right,
         },
         ZERO_WITNESS_PATH,
         { gasLimit: GAS_LIMIT }
@@ -375,19 +390,23 @@ describe('Verifier', function () {
     ];
     const callData = '0x12345679';
     const { taskHash, params } = await requestExecution(enforcer, code, callData);
+    const left = ZERO_HASH;
+    const preRight = '0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';
+    const right = Merkelizer.hash(preRight, preRight);
+    const solverRoot = Merkelizer.hash(left, right);
 
     let tx = await enforcer.register(
       taskHash,
-      Merkelizer.hash(ZERO_HASH, ONE_HASH),
-      [ZERO_HASH],
-      ZERO_HASH,
+      solverRoot,
+      [left, preRight],
+      preRight,
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
     );
 
     tx = await tx.wait();
 
     tx = await enforcer.dispute(
-      Merkelizer.hash(ZERO_HASH, ONE_HASH),
+      solverRoot,
       Merkelizer.hash(ONE_HASH, ZERO_HASH),
       params,
       { value: 1, gasPrice: 0x01, gasLimit: GAS_LIMIT }
@@ -412,8 +431,8 @@ describe('Verifier', function () {
     tx = await verifier.respond(
       disputeId,
       {
-        left: ZERO_HASH,
-        right: ONE_HASH,
+        left: left,
+        right: right,
       },
       ZERO_WITNESS_PATH,
       { gasLimit: GAS_LIMIT }

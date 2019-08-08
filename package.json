@@ -23,21 +23,21 @@
     "lint:sol": "solhint contracts/**/*{.sol,.slb}",
     "lint:all": "yarn lint && yarn lint:sol",
     "lint:all:fix": "yarn lint:fix && yarn lint:sol",
-    "compile:contracts": "truffle compile",
-    "coverage": "scripts/coverage.sh"
+    "compile:contracts": "scripts/compile.js",
+    "coverage": "scripts/start_geth.sh && RPC_PORT=8333 yarn develatus-apparatus"
   },
   "devDependencies": {
+    "develatus-apparatus": "https://github.com/pinkiebell/develatus-apparatus.git#0.1.1",
     "eslint": "=6.0.1",
     "ganache-cli": "=6.4.0",
     "mocha": "=6.1.4",
-    "solhint": "=2.1.0",
-    "truffle": "=5.0.22",
-    "truffle-hdwallet-provider": "=1.0.14"
+    "solc": "=0.5.2",
+    "solhint": "=2.1.0"
   },
   "dependencies": {
-    "ethereumjs-vm": "https://github.com/pinkiebell/ethereumjs-vm.git#release/v2.6.0-r6",
+    "ethereumjs-util": "=6.1.0",
     "ethers": "=4.0.33",
     "keccak": "=2.0.0",
-    "openzeppelin-solidity": "=2.1.1"
+    "rustbn.js": "=0.2.0"
   }
 }

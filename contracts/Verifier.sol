@@ -1,13 +1,12 @@
 pragma solidity ^0.5.2;
 pragma experimental ABIEncoderV2;
 
-import "./Enforcer.sol";
+import "./interfaces/IVerifier.sol";
 import "./HydratedRuntime.sol";
 import "./Merkelizer.slb";
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 
-contract Verifier is Ownable, HydratedRuntime {
+contract Verifier is IVerifier, HydratedRuntime {
     using Merkelizer for Merkelizer.ExecutionState;
 
     struct Proofs {
@@ -18,49 +17,6 @@ contract Verifier is Ownable, HydratedRuntime {
         bytes32[] codeFragments;
         bytes32[] codeProof;
     }
-
-    struct ComputationPath {
-        bytes32 left;
-        bytes32 right;
-    }
-
-    // 256x32 bytes as the memory limit
-    uint constant internal MAX_MEM_WORD_COUNT = 256;
-
-    uint8 constant internal SOLVER_RESPONDED = 1 << 0;
-    uint8 constant internal CHALLENGER_RESPONDED = 1 << 1;
-    uint8 constant internal SOLVER_VERIFIED = 1 << 2;
-    uint8 constant internal CHALLENGER_VERIFIED = 1 << 3;
-    uint8 constant internal START_OF_EXECUTION = 1 << 4;
-    uint8 constant internal END_OF_EXECUTION = 1 << 5;
-    uint8 constant internal INITIAL_STATE = START_OF_EXECUTION | END_OF_EXECUTION;
-
-    struct Dispute {
-        bytes32 executionId;
-        bytes32 initialStateHash;
-        bytes32 codeHash;
-        address challengerAddr;
-
-        bytes32 solverPath;
-        bytes32 challengerPath;
-        uint256 treeDepth;
-        bytes32 witness;
-
-        ComputationPath solver;
-        ComputationPath challenger;
-
-        uint8 state;
-
-        uint256 timeout; // in seconds
-    }
-
-    event DisputeNewRound(bytes32 indexed disputeId, uint256 timeout, bytes32 solverPath, bytes32 challengerPath);
-
-    uint256 public timeoutDuration;
-
-    Enforcer public enforcer;
-
-    mapping (bytes32 => Dispute) public disputes;
 
     /**
       * @dev Throw if not called by enforcer
@@ -82,12 +38,19 @@ contract Verifier is Ownable, HydratedRuntime {
 
     /// @param timeout The time (in seconds) the participants have to react to `submitRound, submitProof`.
     /// 30 minutes is a good value for common use-cases.
-    constructor(uint256 timeout) public Ownable() {
+    constructor(uint256 timeout) public {
         timeoutDuration = timeout;
     }
 
-    function setEnforcer(address _enforcer) public onlyOwner() {
-        enforcer = Enforcer(_enforcer);
+    // Due to the reverse dependency with Enforcer<>Verifier
+    // we have to first deploy both contracts and peg it to one another.
+    // Verifier gets deployed first, so Enforcer can be deployed with Verifier's
+    // address in constructor, but Verifier itself needs to informed about Enforcer's address
+    // after deployment. Checking if `enforcer` is `address(0)` here does the job.
+    function setEnforcer(address _enforcer) public {
+        require(address(enforcer) == address(0));
+
+        enforcer = IEnforcer(_enforcer);
     }
 
     /**
@@ -245,22 +208,13 @@ contract Verifier is Ownable, HydratedRuntime {
         hydratedState.stackHash = proofs.stackHash;
         hydratedState.memHash = memHash;
 
-        evm.context = Context(
-            DEFAULT_CALLER,
-            0,
-            DEFAULT_BLOCK_GAS_LIMIT,
-            0,
-            0,
-            0,
-            0
-        );
-
         evm.data = executionState.data;
         evm.gas = executionState.gasRemaining;
         evm.caller = DEFAULT_CALLER;
         evm.target = DEFAULT_CONTRACT_ADDRESS;
         evm.stack = EVMStack.fromArray(executionState.stack);
         evm.mem = EVMMemory.fromArray(executionState.mem);
+        evm.returnData = executionState.returnData;
 
         _run(evm, executionState.pc, 1);
 

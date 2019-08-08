@@ -26,7 +26,7 @@ module.exports = (callback) => {
       OP.SWAP1,
       OP.CALLDATASIZE,
       OP.CALLDATACOPY,
-      OP.GASLIMIT,
+      OP.GAS,
       OP.PUSH1, '01',
       OP.MSTORE,
       OP.PUSH1, '00',
@@ -188,7 +188,7 @@ module.exports = (callback) => {
   describe('Fixture for Dispute/Verifier Logic #2 (JUMP)', function () {
     const code = [
       OP.PUSH1, '08', OP.JUMP, // jump to 0x08
-      OP.JUMPDEST, OP.GASLIMIT, OP.PUSH1, '0C', OP.JUMP, // 0x03. Jump to 0x0c
+      OP.JUMPDEST, OP.GAS, OP.PUSH1, '0C', OP.JUMP, // 0x03. Jump to 0x0c
       OP.JUMPDEST, OP.PUSH1, '03', OP.JUMP, // 0x08. Jump to 0x03
       OP.JUMPDEST, // 0x0c
       OP.PUSH1, '00',
