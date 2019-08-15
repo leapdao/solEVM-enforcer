@@ -156,19 +156,21 @@ exports.ExecutionPoker = class ExecutionPoker {
     this.log('registering execution:', result.steps.length, 'steps');
 
     try {
-      let tx = await this.enforcer.register(
-        taskHash,
-        result.merkle.root.hash,
-        new Array(result.merkle.depth).fill(ZERO_HASH),
-        returnData,
-        { value: bondAmount, nonce: await this.getNonce() }
-      );
+      let solverPathRoot = result.merkle.root.hash;
 
-      tx = await tx.wait();
+      if (!cliArgs.onlyChallenger) {
+        let tx = await this.enforcer.register(
+          taskHash,
+          solverPathRoot,
+          new Array(result.merkle.depth).fill(ZERO_HASH),
+          returnData,
+          { value: bondAmount, nonce: await this.getNonce() }
+        );
 
-      const evt = tx.events[0].args;
+        tx = await tx.wait();
+      }
 
-      this.solutions[executionId(taskHash, evt.solverPathRoot)] = {
+      this.solutions[executionId(taskHash, solverPathRoot)] = {
         result,
         taskHash,
       };
@@ -379,7 +381,7 @@ exports.ExecutionPoker = class ExecutionPoker {
   }
 
   async getDataForParams (evmParams) {
-    if (cliArgs.stupid) {
+    if (Math.random() <= cliArgs.invalidChallengeRate) {
       return '0x686109bb000000000000000000000000000000000000000000000000000000000001178bd090f4ff7002c589483c11ed353fed58d4fe9c8a25903cbd4467f4be787054be'; // eslint-disable-line
     }
     return this.taskCallData[evmParams.dataHash];

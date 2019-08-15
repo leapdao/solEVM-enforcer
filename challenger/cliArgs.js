@@ -39,11 +39,18 @@ const options = [
     default: 0,
   },
   {
-    names: ['stupid'],
-    type: 'bool',
-    env: 'STUPID',
-    help: 'Enables wrong results producing',
+    names: ['onlyChallenger'],
+    type: 'boolean',
+    env: 'ONLY_CHALLENGER',
+    help: 'Disables registering results, challenging only',
     default: false,
+  },
+  {
+    names: ['invalidChallengeRate'],
+    type: 'number',
+    env: 'INVALID_CHALLENGE_RATE',
+    help: 'Probability of wrong result (0-1)',
+    default: 0,
   },
 ];
 
@@ -55,7 +62,8 @@ const parser = dashdash.createParser({ options });
  *  walletPriv: string;
  *  enforcerAddr: string;
  *  delay: number;
- *  stupid: boolean;
+ *  invalidChallengeRate: number;
+ *  onlyChallenger: boolean;
  * }}
  */
 const cliArgs = parser.parse(process.argv);
