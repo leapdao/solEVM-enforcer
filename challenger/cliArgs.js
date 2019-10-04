@@ -40,7 +40,7 @@ const options = [
   },
   {
     names: ['onlyChallenger'],
-    type: 'boolean',
+    type: 'bool',
     env: 'ONLY_CHALLENGER',
     help: 'Disables registering results, challenging only',
     default: false,

@@ -153,12 +153,12 @@ exports.ExecutionPoker = class ExecutionPoker {
     const returnData = lastExecutionStep ? lastExecutionStep.returnData : '0x';
     const bondAmount = await this.enforcer.bondAmount();
 
-    this.log('registering execution:', result.steps.length, 'steps');
 
     try {
       let solverPathRoot = result.merkle.root.hash;
 
       if (!cliArgs.onlyChallenger) {
+        this.log('registering execution:', result.steps.length, 'steps');
         let tx = await this.enforcer.register(
           taskHash,
           solverPathRoot,
@@ -168,6 +168,8 @@ exports.ExecutionPoker = class ExecutionPoker {
         );
 
         tx = await tx.wait();
+      } else {
+        this.log('onlyChallenger. Execution:', result.steps.length, 'steps');
       }
 
       this.solutions[executionId(taskHash, solverPathRoot)] = {

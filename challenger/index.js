@@ -32,7 +32,7 @@ const fromWei = (wei) => {
   console.log(`Verfier: ${verifierAddr}`);
   const verifier = new ethers.Contract(verifierAddr, Verifier.abi, provider);
 
-  new ExecutionPoker(db, enforcer, verifier, wallet, 3000000, 'challenger'); // eslint-disable-line
+  new ExecutionPoker(enforcer, verifier, wallet, 3000000, 'challenger'); // eslint-disable-line
 })();
 
 function onException (e) {
