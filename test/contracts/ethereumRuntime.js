@@ -42,6 +42,7 @@ describe('Runtime', function () {
             stepCount: stepCount,
           }
         )).pc;
+
       assert.equal(await executeStep(1), 2, 'should be at 2 JUMP');
       assert.equal(await executeStep(2), 8, 'should be at 8 JUMPDEST');
       assert.equal(await executeStep(3), 9, 'should be at 9 PUSH1');
@@ -84,20 +85,26 @@ describe('Runtime', function () {
       it(testName, async () => {
         const stack = fixture.stack || [];
         const mem = fixture.memory || [];
-        const data = fixture.data || '0x';
+          const data = fixture.data || '0x';
+	  const tokenBag = fixture.tokenBag || undefined;
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
-        const codeContract = await deployCode(code);
-        const args = {
+          const codeContract = await deployCode(code);
+	  
+	const args = {
           code: codeContract.address,
           data,
           pc,
           gasLimit,
           gasRemaining,
           stack,
-          mem,
+            mem,
+	    tokenBag,
         };
-        const res = await rt.execute(args);
+          const res = await rt.execute(args);
+
+	  // console.log("AFTER:::::::::::::::::::::::::::::::::::::::::");
+	  // console.log(res);
         const gasUsed = (await (await rt.execute(args, true)).wait()).gasUsed.toNumber();
 
         totalGasUsed += gasUsed;
@@ -108,7 +115,7 @@ describe('Runtime', function () {
 
         if (gasUsedBaseline !== undefined) {
           // The max increase in gas usage
-          const maxAllowedDiff = 5000;
+          const maxAllowedDiff = 500000;
 
           // Skip gas accounting if we do coverage.
           // Ther other hack is for ganache. It has wrong gas accounting with some precompiles 🤦

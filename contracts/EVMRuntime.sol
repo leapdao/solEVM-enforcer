@@ -14,6 +14,23 @@ contract EVMRuntime is EVMConstants {
     using EVMStack for EVMStack.Stack;
     using EVMCode for EVMCode.Code;
 
+    // bridge has to defreagment the tokens
+    // bridge has to check approvals
+    // bridge has to convert color to address
+    // we are assuming all token calls cost 0 for now
+    // gas in test???
+
+    function getSig(bytes memory _msgData) internal pure returns (bytes4) {
+      return bytes4(_msgData[3]) >> 24 | bytes4(_msgData[2]) >> 16 | bytes4(_msgData[1]) >> 8 | bytes4(_msgData[0]);
+  }
+
+    struct Output {
+      address owner;
+      uint valueOrId;
+      bytes32 data;
+      address color;
+    }
+
     // what we do not track  (not complete list)
     // call depth: as we do not support stateful things like call to other contracts
     // staticExec: same as above, we only support precompiles, higher implementations still can intercept calls
@@ -32,6 +49,8 @@ contract EVMRuntime is EVMConstants {
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
 
+        Output[16] tokenBag;
+       
         uint256 blockNumber;
         uint256 blockHash;
         uint256 blockTime;
@@ -1609,7 +1628,13 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= retEvm.gas;
 
-        retEvm.data = state.mem.toBytes(inOffset, inSize);
+	bytes memory cd = state.mem.toBytes(inOffset, inSize);
+	bytes4 funSig;
+	if (cd.length > 3) {
+	  funSig = getSig(cd);
+	}
+	
+        retEvm.data = cd;
         retEvm.customDataPtr = state.customDataPtr;
 
         // we only going to support precompiles
@@ -1623,7 +1648,7 @@ contract EVMRuntime is EVMConstants {
             } else if (target == 4) {
                 handlePreC_IDENTITY(retEvm);
             } else if (target == 5) {
-                handlePreC_MODEXP(retEvm);
+	      handlePreC_MODEXP(retEvm);
             } else if (target == 6) {
                 handlePreC_ECADD(retEvm);
             } else if (target == 7) {
@@ -1631,7 +1656,30 @@ contract EVMRuntime is EVMConstants {
             } else if (target == 8) {
                 handlePreC_ECPAIRING(retEvm);
             }
-        } else {
+	} else if (funSig == 0x70a08231) {
+	  // balanceOf
+	  address addr;
+	  // [32 length, 4 funSig, 20 address]
+	  // swallow 4 for funSig and 20 for length 
+          assembly {
+	     addr := mload(add(cd,24))
+          }
+	  Output memory output;
+	  uint value = 0;
+	  for (uint i = 0; i < state.tokenBag.length; i ++) {
+	    output = state.tokenBag[i];
+	    if (output.owner == addr && output.color == address(target)) {
+	      value = output.valueOrId;
+	    }
+	  }
+	  bytes memory ret = abi.encodePacked(bytes32(value));
+
+	  retEvm.returnData = ret;
+	} else if (funSig == 0x12343434) {
+	  // readData
+	  // check address
+	}
+        else {
             retEvm.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         }
 

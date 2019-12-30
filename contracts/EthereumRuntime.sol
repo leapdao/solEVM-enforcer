@@ -20,6 +20,7 @@ contract EthereumRuntime is HydratedRuntime {
         bytes32[] stack;
         bytes32[] mem;
         bytes returnData;
+        Output[16] tokenBag;
     }
 
     struct EVMResult {
@@ -31,6 +32,7 @@ contract EthereumRuntime is HydratedRuntime {
         bytes32[] stack;
         uint pc;
         bytes32 hashValue;
+        Output[16] tokenBag;
     }
 
     // Init EVM with given stack and memory and execute from the given opcode
@@ -53,6 +55,8 @@ contract EthereumRuntime is HydratedRuntime {
         evm.stack = EVMStack.fromArray(img.stack);
         evm.mem = EVMMemory.fromArray(img.mem);
 
+	evm.tokenBag = img.tokenBag;
+
         _run(evm, img.pc, img.stepCount);
 
         bytes32 hashValue = stateHash(evm);
@@ -66,6 +70,7 @@ contract EthereumRuntime is HydratedRuntime {
         resultState.stack = EVMStack.toArray(evm.stack);
         resultState.pc = evm.pc;
         resultState.hashValue = hashValue;
+	resultState.tokenBag = evm.tokenBag;
 
         return resultState;
     }
