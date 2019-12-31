@@ -19,6 +19,8 @@ contract EVMRuntime is EVMConstants {
     // bridge has to convert color to address
     // we are assuming all token calls cost 0 for now
     // gas in test???
+    // find correct funcSigs
+    // how to deal with readData failure
 
     function getSig(bytes memory _msgData) internal pure returns (bytes4) {
       return bytes4(_msgData[3]) >> 24 | bytes4(_msgData[2]) >> 16 | bytes4(_msgData[1]) >> 8 | bytes4(_msgData[0]);
@@ -1675,9 +1677,24 @@ contract EVMRuntime is EVMConstants {
 	  bytes memory ret = abi.encodePacked(bytes32(value));
 
 	  retEvm.returnData = ret;
-	} else if (funSig == 0x12343434) {
+	} else if (funSig == 0x12341234) {
 	  // readData
-	  // check address
+	  uint tokenId;
+	  // 32 length + 4 funcSig = 36
+	  assembly {
+	     tokenId := mload(add(cd,36))
+          }
+	  Output memory output;
+	  bytes32 data;
+	  for (uint i = 0; i < state.tokenBag.length; i ++) {
+	    output = state.tokenBag[i];
+	    if (output.valueOrId == tokenId && output.color == address(target)) {
+	      data = output.data;
+	    }
+	  }
+	  bytes memory ret = abi.encodePacked(data);
+
+	  retEvm.returnData = ret;
 	}
         else {
             retEvm.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;

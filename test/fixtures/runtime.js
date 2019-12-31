@@ -4042,7 +4042,7 @@ module.exports = [
   //   },
   // },
     {
-	description: 'STATICCALL tokena for now',
+	description: 'STATICCALL balanceOf - successful read',
 	code: OP.STATICCALL,
 	memory: [
 	    '0x70a08231aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb0000000000000000',
@@ -4071,6 +4071,100 @@ module.exports = [
 	    ],
 	}
     },
+        {
+	description: 'STATICCALL balanceOf - missed color',
+	code: OP.STATICCALL,
+	memory: [
+	    '0x70a08231aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb0000000000000000',
+	],
+	stack: [
+	    '0x0000000000000000000000000000000000000000000000000000000000000020',
+	    '0x0000000000000000000000000000000000000000000000000000000000000018',
+	    '0x0000000000000000000000000000000000000000000000000000000000000018',
+	    OP.ZERO_HASH,
+	    '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+	    '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+	],
+	tokenBag: padTokenBag([{
+	    owner: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+	    valueOrId: 0xdeadbeef,
+	    data: OP.ZERO_HASH,
+	    color: '0xaccccccccccccccccccccccccccccccccccccccd',
+	}]),
+	result: {
+	    stack: [
+		'0x0000000000000000000000000000000000000000000000000000000000000001',
+	    ],
+	    memory: [
+		'0x70a08231aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb0000000000000000',
+		'0x0000000000000000000000000000000000000000000000000000000000000000'
+	    ],
+	}
+	},
+      {
+	description: 'STATICCALL balanceOf - missed address',
+	code: OP.STATICCALL,
+	memory: [
+	    '0x70a08231aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb0000000000000000',
+	],
+	stack: [
+	    '0x0000000000000000000000000000000000000000000000000000000000000020',
+	    '0x0000000000000000000000000000000000000000000000000000000000000018',
+	    '0x0000000000000000000000000000000000000000000000000000000000000018',
+	    OP.ZERO_HASH,
+	    '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+	    '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+	],
+	tokenBag: padTokenBag([{
+	    owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+	    valueOrId: 0xdeadbeef,
+	    data: OP.ZERO_HASH,
+	    color: '0xcccccccccccccccccccccccccccccccccccccccd',
+	}]),
+	result: {
+	    stack: [
+		'0x0000000000000000000000000000000000000000000000000000000000000001',
+	    ],
+	    memory: [
+		'0x70a08231aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb0000000000000000',
+		'0x0000000000000000000000000000000000000000000000000000000000000000'
+	    ],
+	}
+      },
+      {
+	description: 'STATICCALL readData - successfull read',
+	code: OP.STATICCALL,
+	memory: [
+	    '0x12341234dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+	    '0xdddddddd00000000000000000000000000000000000000000000000000000000'
+	],
+	stack: [
+	    '0x0000000000000000000000000000000000000000000000000000000000000020',
+	    '0x0000000000000000000000000000000000000000000000000000000000000024',
+	    '0x0000000000000000000000000000000000000000000000000000000000000024',
+	    OP.ZERO_HASH,
+	    '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+	    '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+	],
+	tokenBag: padTokenBag([{
+	    owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+	    valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+	    data: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+	    color: '0xcccccccccccccccccccccccccccccccccccccccd',
+	}]),
+	result: {
+	    stack: [
+		'0x0000000000000000000000000000000000000000000000000000000000000001',
+	    ],
+	    memory: [
+		'0x12341234dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+		'0xddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+		'0xeeeeeeee00000000000000000000000000000000000000000000000000000000'
+	    ],
+	}
+    },
+    // read 0 from token bag
+    // 
   // {
   //   description: 'invalid opcode',
   //   code: [
