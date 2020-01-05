@@ -4162,6 +4162,39 @@ module.exports = [
 		'0xeeeeeeee00000000000000000000000000000000000000000000000000000000'
 	    ],
 	}
+      },
+    {
+	description: 'CALL transfer - successfull transfer',
+	code: OP.CALL,
+	memory: [
+	    '0x22334455aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+	    '0x0000000000000000000000000000000000000000000000000000000000000000',
+	    '0xdeadbeef00000000000000000000000000000000000000000000000000000000'
+	],
+	stack: [
+	    '0x0000000000000000000000000000000000000000000000000000000000000020',
+	    '0x0000000000000000000000000000000000000000000000000000000000000024',
+	    '0x0000000000000000000000000000000000000000000000000000000000000024',
+	    OP.ZERO_HASH,
+	    '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+	    '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+	],
+	tokenBag: padTokenBag([{
+	    owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+	    valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+	    data: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+	    color: '0xcccccccccccccccccccccccccccccccccccccccd',
+	}]),
+	result: {
+	    stack: [
+		'0x0000000000000000000000000000000000000000000000000000000000000001',
+	    ],
+	    memory: [
+		'0x12341234dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+		'0xddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+		'0xeeeeeeee00000000000000000000000000000000000000000000000000000000'
+	    ],
+	}
     },
     // read 0 from token bag
     // 
