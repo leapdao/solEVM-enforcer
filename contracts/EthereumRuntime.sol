@@ -5,6 +5,7 @@ pragma experimental ABIEncoderV2;
 import { EVMCode } from "./EVMCode.slb";
 import { EVMStack } from "./EVMStack.slb";
 import { EVMMemory } from "./EVMMemory.slb";
+import { EVMTokenBag } from "./EVMTokenBag.slb";
 import { HydratedRuntime } from "./HydratedRuntime.sol";
 
 
@@ -20,7 +21,7 @@ contract EthereumRuntime is HydratedRuntime {
         bytes32[] stack;
         bytes32[] mem;
         bytes returnData;
-        Output[16] tokenBag;
+        EVMTokenBag.TokenBag tokenBag;
     }
 
     struct EVMResult {
@@ -32,7 +33,7 @@ contract EthereumRuntime is HydratedRuntime {
         bytes32[] stack;
         uint pc;
         bytes32 hashValue;
-        Output[16] tokenBag;
+        EVMTokenBag.TokenBag tokenBag;
     }
 
     // Init EVM with given stack and memory and execute from the given opcode

@@ -7,12 +7,14 @@ import { EVMMemory } from "./EVMMemory.slb";
 import { EVMStack } from "./EVMStack.slb";
 import { EVMUtils } from "./EVMUtils.slb";
 import { EVMCode } from "./EVMCode.slb";
+import { EVMTokenBag } from "./EVMTokenBag.slb";
 
 
 contract EVMRuntime is EVMConstants {
     using EVMMemory for EVMMemory.Memory;
     using EVMStack for EVMStack.Stack;
     using EVMCode for EVMCode.Code;
+    using EVMTokenBag for EVMTokenBag.TokenBag;
 
     // bridge has to defreagment the tokens
     // bridge has to check approvals
@@ -52,8 +54,7 @@ contract EVMRuntime is EVMConstants {
         EVMCode.Code code;
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
-
-        Output[16] tokenBag;
+        EVMTokenBag.TokenBag tokenBag;
        
         uint256 blockNumber;
         uint256 blockHash;
@@ -1574,93 +1575,77 @@ contract EVMRuntime is EVMConstants {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
+    struct StackForCall {
+      uint gas;
+      address target;
+      uint value;
+      uint inOffset;
+      uint inSize;
+      uint retOffset;
+      uint retSize;
+    }
+
     function handleCALL(EVM memory state) internal {
 
-      /* uint gas = state.stack.pop(); */
-      /* address target = address(state.stack.pop()); */
-      /* uint value = state.stack.pop(); */
-      /* uint inOffset = state.stack.pop(); */
-      /* uint inSize = state.stack.pop(); */
-      /* uint retOffset = state.stack.pop(); */
-      /* uint retSize = state.stack.pop(); */
+      StackForCall memory stack;
+      stack.gas = state.stack.pop();
+      stack.target = address(state.stack.pop());
+      stack.value = state.stack.pop();
+      stack.inOffset = state.stack.pop();
+      stack.inSize = state.stack.pop();
+      stack.retOffset = state.stack.pop();
+      stack.retSize = state.stack.pop();
 
-      /* uint gasFee = computeGasForMemory(state, retOffset + retSize, inOffset + inSize); */
+      uint gasFee = computeGasForMemory(state, stack.retOffset + stack.retSize, stack.inOffset + stack.inSize);
 
-      /* if (gasFee > state.gas) { */
-      /*     state.gas = 0; */
-      /*     state.errno = ERROR_OUT_OF_GAS; */
-      /*     return; */
-      /* } */
-      /* state.gas -= gasFee; */
+      if (gasFee > state.gas) {
+          state.gas = 0;
+          state.errno = ERROR_OUT_OF_GAS;
+          return;
+      }
+      state.gas -= gasFee;
 
-      /* bytes memory cd = state.mem.toBytes(inOffset, inSize); */
-      /* bytes4 funSig; */
-      /* if (cd.length > 3) { */
-      /*   funSig = getSig(cd); */
-      /* } */
+      bytes memory cd = state.mem.toBytes(stack.inOffset, stack.inSize);
+      bytes4 funSig;
+      if (cd.length > 3) {
+        funSig = getSig(cd);
+      }
+
+      bool success;
+      bytes memory returnData;
       
-      /* if (funSig == 0x22334455) { */
-      /* 	// transfer */
-      /* 	address dest; */
-      /* 	uint amount; */
+      if (funSig == 0x22334455) {
+      	// transfer
+      	address dest;
+      	uint amount;
 
-      /* 	assembly { */
-      /*     dest := mload(add(cd,24)) */
-      /* 	  amount := mload(add(cd, 68))   */
-      /*   } */
+      	assembly {
+          dest := mload(add(cd,24))
+      	  amount := mload(add(cd, 68))
+        }
+	EVMTokenBag.TransferParams memory params = EVMTokenBag.TransferParams({
+	  color: stack.target,
+	      from: state.caller,
+	      to: dest,
+	      value: amount
+	});
+      	success = state.tokenBag.transfer(params);
+	returnData = abi.encodePacked(success);
+      } else {
+	state.stack.push(0);
+        state.returnData = new bytes(0);
+      	return;
+      }
 
-      /* 	Output memory destOutput; */
-      /* 	Output memory sourceOutput; */
-      /* 	Output memory output; */
-      /* 	for (uint i = 0; i < state.tokenBag.length; i ++) { */
-      /* 	  output = state.tokenBag[i]; */
-      /* 	  if (output.owner == state.caller && output.color == target) { */
-      /* 	     sourceOutput = output; */
-      /* 	  } */
-      /* 	  if (output.owner == dest && output.color == target) { */
-      /*        destOutput = output; */
-      /* 	  } */
-      /* 	} */
-	
-      /* 	if (sourceOutput.valueOrId < amount) { */
-      /*     // signal failure */
-      /* 	  state.stack.push(0); */
-      /* 	  state.returnData = new bytes(0); */
-      /* 	  return; */
-      /* 	} */
-      /* 	// no token for destination in tokenBag */
-      /* 	if (destOutput.owner != dest) { */
-      /* 	  // either assign empty output or fail (if bag full) */
+      if (!success) {
+	state.stack.push(0);
+        state.returnData = new bytes(0);
+      	return;
+      }
 
-      /* 	  uint emptyTokenId = 1337; */
-      /* 	  // find emptyToken  */
-      /* 	  for (uint i = 0; i < state.tokenBag.length; i ++) { */
-      /* 	    if (state.tokenBag[i].owner == address(0) { */
-      /* 	      emptyTokenId = i; */
-      /* 	    } */
-      /*     } */
-      /* 	  if (emptyTokenId == 1337) { */
-      /* 	    // signal failure */
-      /* 	    state.stack.push(0); */
-      /* 	    state.returnData = new bytes(0); */
-      /* 	    return; */
-      /* 	  } */
-      /* 	  state.tokenBag[emptyTokenId] = Output({ */
-      /* 	    owner: dest, */
-      /* 		valueOrId: 0, */
-      /* 		data: 0, */
-      /* 		color: target */
-      /* 	  }); */
-      /* 	  destOutput = state.tokenBag[emptyTokenId]; */
-      /* 	} */
-	
-      /* 	sourceOutput.valueOrId -= amount; */
-      /* 	destOutput.valueOrId += amount; */
-      /* } else { */
-	
-      /* } */
-	
-      // state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+      state.stack.push(1);
+      state.mem.storeBytesAndPadWithZeroes(returnData, 0, stack.retOffset, stack.retSize);
+      state.returnData = returnData;
     }
 
     function handleCALLCODE(EVM memory state) internal {
@@ -1753,14 +1738,7 @@ contract EVMRuntime is EVMConstants {
           assembly {
 	     addr := mload(add(cd,24))
           }
-	  Output memory output;
-	  uint value = 0;
-	  for (uint i = 0; i < state.tokenBag.length; i ++) {
-	    output = state.tokenBag[i];
-	    if (output.owner == addr && output.color == address(target)) {
-	      value = output.valueOrId;
-	    }
-	  }
+	  uint value = state.tokenBag.balanceOf(address(target), addr);
 	  bytes memory ret = abi.encodePacked(bytes32(value));
 
 	  retEvm.returnData = ret;
@@ -1771,14 +1749,7 @@ contract EVMRuntime is EVMConstants {
 	  assembly {
 	     tokenId := mload(add(cd,36))
           }
-	  Output memory output;
-	  bytes32 data;
-	  for (uint i = 0; i < state.tokenBag.length; i ++) {
-	    output = state.tokenBag[i];
-	    if (output.valueOrId == tokenId && output.color == address(target)) {
-	      data = output.data;
-	    }
-	  }
+	  bytes32 data = state.tokenBag.readData(address(target), tokenId);
 	  bytes memory ret = abi.encodePacked(data);
 
 	  // what happens here if we enter token intercepts instead of precompiles

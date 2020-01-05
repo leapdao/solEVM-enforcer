@@ -1,0 +1,104 @@
+pragma solidity ^0.5.2;
+pragma experimental ABIEncoderV2;
+
+
+library EVMTokenBag {
+
+  struct Output {
+    address owner;
+    uint valueOrId;
+    bytes32 data;
+    address color;
+  }
+  
+  struct TokenBag {
+    Output[16] bag;
+  }
+
+  function balanceOf(
+		     TokenBag memory self,
+		     address color,
+		     address owner
+  ) internal pure returns (uint value) {
+    Output memory output;
+    for (uint i = 0; i < self.bag.length; i++) {
+      output = self.bag[i];
+      if (output.owner == owner && output.color == color) {
+	value = output.valueOrId;
+	break;
+      }
+    }
+  }
+
+  function readData(
+		    TokenBag memory self,
+		    address color,
+		    uint id
+		    ) internal pure returns (bytes32 data) {
+    Output memory output;
+    for (uint i = 0; i < self.bag.length; i++) {
+      output = self.bag[i];
+      if (output.valueOrId == id && output.color == color) {
+	data = output.data;
+	break;
+      }
+    }
+    
+  }
+
+  struct TransferParams {
+    address color;
+    address from;
+    address to;
+    uint value;
+  }
+
+  function transfer(
+		    TokenBag memory self,
+		    TransferParams memory params
+		    ) internal pure returns (bool) {
+    Output memory source;
+    Output memory dest;
+
+    // find source
+    for (uint i = 0; i < self.bag.length; i++) {
+      if (self.bag[i].owner == params.from && self.bag[i].color == params.color) {
+	source = self.bag[i];
+	break;
+      }
+    }
+
+    // sender does not have enough tokens to send
+    if (source.valueOrId < params.value) return false;
+
+    // find dest and/or empty
+    uint emptyId = 1337;
+    for (uint i = 0; i < self.bag.length; i++) {
+      if (self.bag[i].owner == params.to && self.bag[i].color == params.color) {
+	dest = self.bag[i];
+	break;
+      }
+      // check if empty slot
+      if (self.bag[i].owner == address(0) && emptyId == 1337) {
+	emptyId = i;
+      }
+    }
+    
+    // if no dest and no empty slot, throw
+    if (dest.owner == address(0) && emptyId == 1337) return false;
+
+    // if no dest, but we found an empty slot, assign empty slot to reciver
+    if (dest.owner == address(0)) {
+      self.bag[emptyId].owner = params.to;
+      self.bag[emptyId].color = params.color;
+      dest = self.bag[emptyId];
+    }
+
+    // now do the state transition and return success
+    // OVERFLOWS???????
+    source.valueOrId -= params.value;
+    dest.valueOrId += params.value;
+    return true;
+  }
+
+}

@@ -13,7 +13,7 @@ const emptyOutput = () => {
 };
 
 const emptyTokenBag = () => {
-    return Array.apply(null, Array(16)).map(emptyOutput);
+    return { bag: Array.apply(null, Array(16)).map(emptyOutput)};
 };
 
 

@@ -15,7 +15,7 @@ const padTokenBag = (tokenBag) => {
     while(tokenBag.length < 16) {
 	tokenBag.push(emptyOutput());
     }
-    return tokenBag;
+    return { bag: tokenBag };
 };
 
 module.exports = [
@@ -4164,38 +4164,64 @@ module.exports = [
 	}
       },
     {
-	description: 'CALL transfer - successfull transfer',
-	code: OP.CALL,
-	memory: [
-	    '0x22334455aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
-	    '0x0000000000000000000000000000000000000000000000000000000000000000',
-	    '0xdeadbeef00000000000000000000000000000000000000000000000000000000'
-	],
-	stack: [
-	    '0x0000000000000000000000000000000000000000000000000000000000000020',
-	    '0x0000000000000000000000000000000000000000000000000000000000000024',
-	    '0x0000000000000000000000000000000000000000000000000000000000000024',
+    	description: 'CALL transfer - successfull transfer',
+    	code: OP.CALL,
+    	memory: [
+    	    '0x22334455aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+    	    '0x0000000000000000000000000000000000000000000000000000000000000000',
+    	    '0xdeadbeef00000000000000000000000000000000000000000000000000000000'
+    	],
+    	stack: [
+    	    '0x0000000000000000000000000000000000000000000000000000000000000020',
+    	    '0x0000000000000000000000000000000000000000000000000000000000000044',
+    	    '0x0000000000000000000000000000000000000000000000000000000000000044',
+    	    OP.ZERO_HASH,
 	    OP.ZERO_HASH,
-	    '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
-	    '0x0000000000000000000000000000000000000000000000000000000000ffffff',
-	],
-	tokenBag: padTokenBag([{
-	    owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
-	    valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-	    data: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-	    color: '0xcccccccccccccccccccccccccccccccccccccccd',
-	}]),
-	result: {
-	    stack: [
-		'0x0000000000000000000000000000000000000000000000000000000000000001',
-	    ],
-	    memory: [
-		'0x12341234dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-		'0xddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-		'0xeeeeeeee00000000000000000000000000000000000000000000000000000000'
-	    ],
-	}
+    	    '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+    	    '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+    	],
+    	tokenBag: padTokenBag([
+	    {
+    	      owner: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+    		valueOrId: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    		data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    	      color: '0xcccccccccccccccccccccccccccccccccccccccd',
+    	    },
+	    {
+    	      owner: OP.DEFAULT_CALLER,
+    	      valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+    	      data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    	      color: '0xcccccccccccccccccccccccccccccccccccccccd',
+    	    },
+	]),
+    	result: {
+    	    stack: [
+    		'0x0000000000000000000000000000000000000000000000000000000000000001',
+    	    ],
+    	    memory: [
+    		'0x22334455aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+    	        '0x0000000000000000000000000000000000000000000000000000000000000000',
+    	        '0xdeadbeef01000000000000000000000000000000000000000000000000000000',
+		'0x0000000000000000000000000000000000000000000000000000000000000000'
+    	    ],
+	    tokenBag: padTokenBag([
+		{
+    	           owner: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+    	         	valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+    	         	data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    	           color: '0xcccccccccccccccccccccccccccccccccccccccd',
+    	         },
+	         {
+    	           owner: OP.DEFAULT_CALLER,
+    	           valueOrId: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    	           data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    	           color: '0xcccccccccccccccccccccccccccccccccccccccd',
+    	         },
+	    ]),
+    	}
     },
+
+    
     // read 0 from token bag
     // 
   // {
