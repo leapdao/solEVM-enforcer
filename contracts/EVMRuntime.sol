@@ -1565,13 +1565,13 @@ contract EVMRuntime is EVMConstants {
     }
 
     struct StackForCall {
-      uint gas;
-      address target;
-      uint value;
-      uint inOffset;
-      uint inSize;
-      uint retOffset;
-      uint retSize;
+        uint gas;
+        address target;
+        uint value;
+        uint inOffset;
+        uint inSize;
+        uint retOffset;
+        uint retSize;
     }
 
     function handleCALL(EVM memory state) internal {
@@ -1710,7 +1710,7 @@ contract EVMRuntime is EVMConstants {
             } else if (target == 4) {
                 handlePreC_IDENTITY(retEvm);
             } else if (target == 5) {
-	      handlePreC_MODEXP(retEvm);
+	        handlePreC_MODEXP(retEvm);
             } else if (target == 6) {
                 handlePreC_ECADD(retEvm);
             } else if (target == 7) {
