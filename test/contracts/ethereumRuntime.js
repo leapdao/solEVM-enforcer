@@ -4,7 +4,8 @@ const fs = require('fs');
 const assert = require('assert');
 
 const { getCode, deployContract, deployCode } =
-  require('./../helpers/utils');
+      require('./../helpers/utils');
+const { assertTokenBagEqual } = require("./../helpers/tokenBag.js");
 const fixtures = require('./../fixtures/runtime');
 const runtimeGasUsed = require('./../fixtures/runtimeGasUsed');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
@@ -155,7 +156,8 @@ describe('Runtime', function () {
 	      console.log(fixture.result.tokenBag.bag);
 	      console.log("Actual:");
 	      console.log(marshallBag(res.tokenBag.bag));
-	      assert.deepEqual(marshallBag(res.tokenBag.bag), fixture.result.tokenBag.bag, 'tokenBag');
+	      assertTokenBagEqual(fixture.result.tokenBag, res.tokenBag);
+	      // assert.deepEqual(marshallBag(res.tokenBag.bag), fixture.result.tokenBag.bag, 'tokenBag');
 	  }
         if (fixture.result.pc !== undefined) {
           assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');
