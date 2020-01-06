@@ -1632,8 +1632,7 @@ contract EVMRuntime is EVMConstants {
       	success = state.tokenBag.transfer(params);
 	returnData = abi.encodePacked(success);
       } else {
-	state.stack.push(0);
-        state.returnData = new bytes(0);
+        state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
       	return;
       }
 
