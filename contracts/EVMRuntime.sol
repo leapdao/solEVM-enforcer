@@ -20,21 +20,10 @@ contract EVMRuntime is EVMConstants {
     // bridge has to check approvals
     // bridge has to convert color to address
     // we are assuming all token calls cost 0 for now
-    // gas in test???
     // find correct funcSigs
-    // how to deal with readData failure
-    // we assume caller is always the sppending condition
-    // create a tokenBag (or new name) manipulation library
     
     function getSig(bytes memory _msgData) internal pure returns (bytes4) {
-      return bytes4(_msgData[3]) >> 24 | bytes4(_msgData[2]) >> 16 | bytes4(_msgData[1]) >> 8 | bytes4(_msgData[0]);
-  }
-
-    struct Output {
-      address owner;
-      uint valueOrId;
-      bytes32 data;
-      address color;
+        return bytes4(_msgData[3]) >> 24 | bytes4(_msgData[2]) >> 16 | bytes4(_msgData[1]) >> 8 | bytes4(_msgData[0]);
     }
 
     // what we do not track  (not complete list)

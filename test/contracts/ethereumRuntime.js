@@ -5,7 +5,7 @@ const assert = require('assert');
 
 const { getCode, deployContract, deployCode } =
       require('./../helpers/utils');
-const { assertTokenBagEqual } = require("./../helpers/tokenBag.js");
+const { assertTokenBagEqual } = require('./../helpers/tokenBag.js');
 const fixtures = require('./../fixtures/runtime');
 const runtimeGasUsed = require('./../fixtures/runtimeGasUsed');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
@@ -86,23 +86,22 @@ describe('Runtime', function () {
       it(testName, async () => {
         const stack = fixture.stack || [];
         const mem = fixture.memory || [];
-          const data = fixture.data || '0x';
-	  const tokenBag = fixture.tokenBag || undefined;
+        const data = fixture.data || '0x';
+        const tokenBag = fixture.tokenBag || undefined;
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
-          const codeContract = await deployCode(code);
-	  
-	const args = {
+        const codeContract = await deployCode(code);
+        const args = {
           code: codeContract.address,
           data,
           pc,
           gasLimit,
           gasRemaining,
           stack,
-            mem,
-	    tokenBag,
+          mem,
+	  tokenBag,
         };
-          const res = await rt.execute(args);
+        const res = await rt.execute(args);
 
         const gasUsed = (await (await rt.execute(args, true)).wait()).gasUsed.toNumber();
 
@@ -140,9 +139,9 @@ describe('Runtime', function () {
         if (fixture.result.memory) {
           assert.deepEqual(res.mem, fixture.result.memory, 'memory');
         }
-	  if (fixture.result.tokenBag) {
-	      assertTokenBagEqual(fixture.result.tokenBag, res.tokenBag);
-	  }
+        if (fixture.result.tokenBag) {
+          assertTokenBagEqual(fixture.result.tokenBag, res.tokenBag);
+        }
         if (fixture.result.pc !== undefined) {
           assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');
         }
