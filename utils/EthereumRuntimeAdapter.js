@@ -2,19 +2,7 @@
 
 const { BLOCK_GAS_LIMIT, ZERO_ADDRESS, ZERO_HASH } = require('./constants');
 const ethers = require('ethers');
-
-const emptyOutput = () => {
-    return {
-	owner: ZERO_ADDRESS,
-	valueOrId: 0x0,
-	data: ZERO_HASH,
-	color: ZERO_ADDRESS,
-    };
-};
-
-const emptyTokenBag = () => {
-    return { bag: Array.apply(null, Array(16)).map(emptyOutput)};
-};
+const { emptyTokenBag } = require('../test/helpers/tokenBag.js');
 
 
 module.exports = class EthereumRuntimeAdapter {
@@ -42,22 +30,6 @@ module.exports = class EthereumRuntimeAdapter {
       { code, data, pc, stepCount, gasRemaining, gasLimit, stack, mem, tokenBag },
     payable
   ) {
-      // console.log("BEFORE::::::::::::::::::::::::::::::::::::::::::::::::");
-      // console.log(
-      // 	  {
-      //   code: code || '0x',
-      //   data: data || '0x',
-      //   pc: pc | 0,
-      //   errno: 0,
-      //   stepCount: stepCount | 0,
-      //   gasRemaining: gasRemaining || gasLimit || BLOCK_GAS_LIMIT,
-      //   gasLimit: gasLimit || BLOCK_GAS_LIMIT,
-      //   stack: stack || [],
-      //     mem: mem || [],
-      // 	  tokenBag: tokenBag || emptyTokenBag(),
-      //   returnData: '0x',
-      // }
-      // );
     return (payable ? this.payableRuntimeContract.execute : this.runtimeContract.execute)(
       {
         code: code || '0x',
@@ -68,8 +40,8 @@ module.exports = class EthereumRuntimeAdapter {
         gasRemaining: gasRemaining || gasLimit || BLOCK_GAS_LIMIT,
         gasLimit: gasLimit || BLOCK_GAS_LIMIT,
         stack: stack || [],
-          mem: mem || [],
-	  tokenBag: tokenBag || emptyTokenBag(),
+        mem: mem || [],
+	tokenBag: tokenBag || emptyTokenBag(),
         returnData: '0x',
       }
     );

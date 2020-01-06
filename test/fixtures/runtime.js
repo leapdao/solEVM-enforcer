@@ -1,22 +1,7 @@
 'use strict';
 
 const OP = require('./../../utils/constants');
-
-const emptyOutput = () => {
-    return {
-	owner: OP.ZERO_ADDRESS,
-	valueOrId: 0x0,
-	data: OP.ZERO_HASH,
-	color: OP.ZERO_ADDRESS,
-    };
-};
-
-const padTokenBag = (tokenBag) => {
-    while(tokenBag.length < 16) {
-	tokenBag.push(emptyOutput());
-    }
-    return { bag: tokenBag };
-};
+const { padTokenBag } = require('../helpers/tokenBag.js');
 
 module.exports = [
   // {

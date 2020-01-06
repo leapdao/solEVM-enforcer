@@ -104,8 +104,6 @@ describe('Runtime', function () {
         };
           const res = await rt.execute(args);
 
-	  // console.log("AFTER:::::::::::::::::::::::::::::::::::::::::");
-	  // console.log(res);
         const gasUsed = (await (await rt.execute(args, true)).wait()).gasUsed.toNumber();
 
         totalGasUsed += gasUsed;
@@ -143,21 +141,7 @@ describe('Runtime', function () {
           assert.deepEqual(res.mem, fixture.result.memory, 'memory');
         }
 	  if (fixture.result.tokenBag) {
-	      const marshallBag = (bag) => {
-		  return bag.map(output => { return {
-		      owner: output.owner,
-		      valueOrId: output.valueOrId,
-		      data: output.data,
-		      color: output.color
-		  };
-		});
-	      };
-	      console.log("Expected");
-	      console.log(fixture.result.tokenBag.bag);
-	      console.log("Actual:");
-	      console.log(marshallBag(res.tokenBag.bag));
 	      assertTokenBagEqual(fixture.result.tokenBag, res.tokenBag);
-	      // assert.deepEqual(marshallBag(res.tokenBag.bag), fixture.result.tokenBag.bag, 'tokenBag');
 	  }
         if (fixture.result.pc !== undefined) {
           assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');
