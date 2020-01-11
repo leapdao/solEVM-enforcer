@@ -86,6 +86,7 @@ module.exports = class HydratedRuntime extends EVMRuntime {
       pc: pc,
       errno: runState.errno,
       gasRemaining: runState.gasLeft.toNumber(),
+      tokenBag: runState.tokenBag,
     };
 
     this.calculateMemProof(runState, step);

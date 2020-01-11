@@ -4173,7 +4173,7 @@ module.exports = [
         color: '0xcccccccccccccccccccccccccccccccccccccccd',
       },
       {
-        owner: OP.DEFAULT_CALLER,
+        owner: '0x' + OP.DEFAULT_CALLER,
         valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
         data: '0x0000000000000000000000000000000000000000000000000000000000000000',
         color: '0xcccccccccccccccccccccccccccccccccccccccd',
@@ -4197,7 +4197,7 @@ module.exports = [
           color: '0xcccccccccccccccccccccccccccccccccccccccd',
         },
         {
-          owner: OP.DEFAULT_CALLER,
+          owner: '0x' + OP.DEFAULT_CALLER,
           valueOrId: '0x0000000000000000000000000000000000000000000000000000000000000000',
           data: '0x0000000000000000000000000000000000000000000000000000000000000000',
           color: '0xcccccccccccccccccccccccccccccccccccccccd',

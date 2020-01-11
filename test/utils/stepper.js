@@ -3,6 +3,7 @@
 const { getCode } = require('./../helpers/utils');
 const { Constants, HydratedRuntime } = require('./../../utils/');
 const fixtures = require('./../fixtures/runtime');
+const { assertTokenBagEqual } = require('../helpers/tokenBag.js');
 
 const assert = require('assert');
 
@@ -17,6 +18,7 @@ describe('JS Stepper', function () {
         const stack = fixture.stack || [];
         const mem = fixture.memory || '';
         const data = fixture.data || '';
+        const tokenBag = fixture.tokenBag || false;
         const gasLimit = fixture.gasLimit || Constants.BLOCK_GAS_LIMIT;
         const blockGasLimit = fixture.gasLimit || Constants.BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
@@ -29,6 +31,7 @@ describe('JS Stepper', function () {
           blockGasLimit,
           gasRemaining,
           pc,
+          tokenBag,
         };
         const steps = await stepper.run(args);
         const res = steps[steps.length - 1];
@@ -38,6 +41,9 @@ describe('JS Stepper', function () {
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.mem, fixture.result.memory, 'mem');
+        }
+        if (fixture.result.tokenBag) {
+          assertTokenBagEqual(res.tokenBag, fixture.result.tokenBag);
         }
         if (fixture.result.gasUsed !== undefined) {
           assert.equal(gasRemaining - res.gasRemaining, fixture.result.gasUsed, 'gasUsed');
