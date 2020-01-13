@@ -1613,7 +1613,7 @@ contract EVMRuntime is EVMConstants {
           amount := mload(add(cData, 68))
         }
 
-      	success = state.tokenBag.transfer(
+        success = state.tokenBag.transfer(
           stack.target,
           state.caller,
           dest,
@@ -1622,13 +1622,13 @@ contract EVMRuntime is EVMConstants {
 	returnData = abi.encodePacked(success);
       } else {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
-      	return;
+        return;
       }
 
       if (!success) {
         state.stack.push(0);
         state.returnData = new bytes(0);
-      	return;
+        return;
       }
 
       state.stack.push(1);
@@ -1691,10 +1691,10 @@ contract EVMRuntime is EVMConstants {
         state.gas -= retEvm.gas;
 
         bytes memory cData = state.mem.toBytes(inOffset, inSize);
-	bytes4 funSig;
-	if (cData.length > 3) {
-	  funSig = getSig(cData);
-	}
+        bytes4 funSig;
+        if (cData.length > 3) {
+          funSig = getSig(cData);
+        }
 	
         retEvm.data = cData;
         retEvm.customDataPtr = state.customDataPtr;
@@ -1710,7 +1710,7 @@ contract EVMRuntime is EVMConstants {
             } else if (target == 4) {
                 handlePreC_IDENTITY(retEvm);
             } else if (target == 5) {
-	        handlePreC_MODEXP(retEvm);
+                handlePreC_MODEXP(retEvm);
             } else if (target == 6) {
                 handlePreC_ECADD(retEvm);
             } else if (target == 7) {
@@ -1723,7 +1723,7 @@ contract EVMRuntime is EVMConstants {
 	  // [32 length, 4 funSig, 20 address]
 	  // swallow 4 for funSig and 20 for length 
           assembly {
-	     addr := mload(add(cData,24))
+            addr := mload(add(cData,24))
           }
 	  uint value = state.tokenBag.balanceOf(address(target), addr);
 	  bytes memory ret = abi.encodePacked(bytes32(value));
