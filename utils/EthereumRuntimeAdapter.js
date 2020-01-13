@@ -1,7 +1,9 @@
 'use strict';
 
-const { BLOCK_GAS_LIMIT } = require('./constants');
+const { BLOCK_GAS_LIMIT, ZERO_ADDRESS, ZERO_HASH } = require('./constants');
 const ethers = require('ethers');
+const { emptyTokenBag } = require('../test/helpers/tokenBag.js');
+
 
 module.exports = class EthereumRuntimeAdapter {
   constructor (runtimeContract) {
@@ -25,7 +27,7 @@ module.exports = class EthereumRuntimeAdapter {
   }
 
   execute (
-    { code, data, pc, stepCount, gasRemaining, gasLimit, stack, mem },
+    { code, data, pc, stepCount, gasRemaining, gasLimit, stack, mem, tokenBag },
     payable
   ) {
     return (payable ? this.payableRuntimeContract.execute : this.runtimeContract.execute)(
@@ -39,6 +41,7 @@ module.exports = class EthereumRuntimeAdapter {
         gasLimit: gasLimit || BLOCK_GAS_LIMIT,
         stack: stack || [],
         mem: mem || [],
+        tokenBag: tokenBag || emptyTokenBag(),
         returnData: '0x',
       }
     );

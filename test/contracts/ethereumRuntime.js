@@ -4,7 +4,8 @@ const fs = require('fs');
 const assert = require('assert');
 
 const { getCode, deployContract, deployCode } =
-  require('./../helpers/utils');
+      require('./../helpers/utils');
+const { assertTokenBagEqual } = require('./../helpers/tokenBag.js');
 const fixtures = require('./../fixtures/runtime');
 const runtimeGasUsed = require('./../fixtures/runtimeGasUsed');
 const Runtime = require('./../../utils/EthereumRuntimeAdapter');
@@ -42,6 +43,7 @@ describe('Runtime', function () {
             stepCount: stepCount,
           }
         )).pc;
+
       assert.equal(await executeStep(1), 2, 'should be at 2 JUMP');
       assert.equal(await executeStep(2), 8, 'should be at 8 JUMPDEST');
       assert.equal(await executeStep(3), 9, 'should be at 9 PUSH1');
@@ -85,6 +87,7 @@ describe('Runtime', function () {
         const stack = fixture.stack || [];
         const mem = fixture.memory || [];
         const data = fixture.data || '0x';
+        const tokenBag = fixture.tokenBag || undefined;
         const gasLimit = fixture.gasLimit || BLOCK_GAS_LIMIT;
         const gasRemaining = typeof fixture.gasRemaining !== 'undefined' ? fixture.gasRemaining : gasLimit;
         const codeContract = await deployCode(code);
@@ -96,8 +99,10 @@ describe('Runtime', function () {
           gasRemaining,
           stack,
           mem,
+	  tokenBag,
         };
         const res = await rt.execute(args);
+
         const gasUsed = (await (await rt.execute(args, true)).wait()).gasUsed.toNumber();
 
         totalGasUsed += gasUsed;
@@ -108,7 +113,7 @@ describe('Runtime', function () {
 
         if (gasUsedBaseline !== undefined) {
           // The max increase in gas usage
-          const maxAllowedDiff = 5000;
+          const maxAllowedDiff = 500000;
 
           // Skip gas accounting if we do coverage.
           // Ther other hack is for ganache. It has wrong gas accounting with some precompiles 🤦
@@ -133,6 +138,9 @@ describe('Runtime', function () {
         }
         if (fixture.result.memory) {
           assert.deepEqual(res.mem, fixture.result.memory, 'memory');
+        }
+        if (fixture.result.tokenBag) {
+          assertTokenBagEqual(fixture.result.tokenBag, res.tokenBag);
         }
         if (fixture.result.pc !== undefined) {
           assert.equal(res.pc.toNumber(), fixture.result.pc, 'pc');

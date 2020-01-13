@@ -7,12 +7,24 @@ import { EVMMemory } from "./EVMMemory.slb";
 import { EVMStack } from "./EVMStack.slb";
 import { EVMUtils } from "./EVMUtils.slb";
 import { EVMCode } from "./EVMCode.slb";
+import { EVMTokenBag } from "./EVMTokenBag.slb";
 
 
 contract EVMRuntime is EVMConstants {
     using EVMMemory for EVMMemory.Memory;
     using EVMStack for EVMStack.Stack;
     using EVMCode for EVMCode.Code;
+    using EVMTokenBag for EVMTokenBag.TokenBag;
+
+    // bridge has to defreagment the tokens
+    // bridge has to check approvals
+    // bridge has to convert color to address
+    // we are assuming all token calls cost 0 for now
+    // find correct funcSigs
+    
+    function getSig(bytes memory _msgData) internal pure returns (bytes4) {
+        return bytes4(_msgData[3]) >> 24 | bytes4(_msgData[2]) >> 16 | bytes4(_msgData[1]) >> 8 | bytes4(_msgData[0]);
+    }
 
     // what we do not track  (not complete list)
     // call depth: as we do not support stateful things like call to other contracts
@@ -31,7 +43,8 @@ contract EVMRuntime is EVMConstants {
         EVMCode.Code code;
         EVMMemory.Memory mem;
         EVMStack.Stack stack;
-
+        EVMTokenBag.TokenBag tokenBag;
+       
         uint256 blockNumber;
         uint256 blockHash;
         uint256 blockTime;
@@ -1551,8 +1564,76 @@ contract EVMRuntime is EVMConstants {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
     }
 
+    struct StackForCall {
+        uint gas;
+        address target;
+        uint value;
+        uint inOffset;
+        uint inSize;
+        uint retOffset;
+        uint retSize;
+    }
+
     function handleCALL(EVM memory state) internal {
+
+      StackForCall memory stack;
+      stack.gas = state.stack.pop();
+      stack.target = address(state.stack.pop());
+      stack.value = state.stack.pop();
+      stack.inOffset = state.stack.pop();
+      stack.inSize = state.stack.pop();
+      stack.retOffset = state.stack.pop();
+      stack.retSize = state.stack.pop();
+
+      uint gasFee = computeGasForMemory(state, stack.retOffset + stack.retSize, stack.inOffset + stack.inSize);
+
+      if (gasFee > state.gas) {
+          state.gas = 0;
+          state.errno = ERROR_OUT_OF_GAS;
+          return;
+      }
+      state.gas -= gasFee;
+
+      bytes memory cData = state.mem.toBytes(stack.inOffset, stack.inSize);
+      bytes4 funSig;
+      if (cData.length > 3) {
+        funSig = getSig(cData);
+      }
+
+      bool success;
+      bytes memory returnData;
+      
+      if (funSig == FUNCSIG_TRANSFER) {
+      	// transfer
+      	address dest;
+      	uint amount;
+
+      	assembly {
+          dest := mload(add(cData,24))
+          amount := mload(add(cData, 68))
+        }
+
+        success = state.tokenBag.transfer(
+          stack.target,
+          state.caller,
+          dest,
+          amount
+        );
+	returnData = abi.encodePacked(success);
+      } else {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
+        return;
+      }
+
+      if (!success) {
+        state.stack.push(0);
+        state.returnData = new bytes(0);
+        return;
+      }
+
+      state.stack.push(1);
+      state.mem.storeBytesAndPadWithZeroes(returnData, 0, stack.retOffset, stack.retSize);
+      state.returnData = returnData;
     }
 
     function handleCALLCODE(EVM memory state) internal {
@@ -1609,7 +1690,13 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= retEvm.gas;
 
-        retEvm.data = state.mem.toBytes(inOffset, inSize);
+        bytes memory cData = state.mem.toBytes(inOffset, inSize);
+        bytes4 funSig;
+        if (cData.length > 3) {
+          funSig = getSig(cData);
+        }
+	
+        retEvm.data = cData;
         retEvm.customDataPtr = state.customDataPtr;
 
         // we only going to support precompiles
@@ -1631,7 +1718,30 @@ contract EVMRuntime is EVMConstants {
             } else if (target == 8) {
                 handlePreC_ECPAIRING(retEvm);
             }
-        } else {
+	} else if (funSig == FUNCSIG_BALANCEOF) {
+	  address addr;
+	  // [32 length, 4 funSig, 20 address]
+	  // swallow 4 for funSig and 20 for length 
+          assembly {
+            addr := mload(add(cData,24))
+          }
+	  uint value = state.tokenBag.balanceOf(address(target), addr);
+	  bytes memory ret = abi.encodePacked(bytes32(value));
+
+	  retEvm.returnData = ret;
+	} else if (funSig == FUNCSIG_READATA) {
+	  uint tokenId;
+	  // 32 length + 4 funcSig = 36
+	  assembly {
+	     tokenId := mload(add(cData,36))
+          }
+	  bytes32 data = state.tokenBag.readData(address(target), tokenId);
+	  bytes memory ret = abi.encodePacked(data);
+
+	  // what happens here if we enter token intercepts instead of precompiles
+	  retEvm.returnData = ret;
+	}
+        else {
             retEvm.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         }
 

@@ -6,6 +6,8 @@ const BN = utils.BN;
 const OP = require('./constants');
 const OPCODES = require('./Opcodes');
 
+const { emptyTokenBag } = require('../test/helpers/tokenBag.js');
+
 const PRECOMPILED = {
   '1': require('./precompiled/01-ecrecover.js'),
   '2': require('./precompiled/02-sha256.js'),
@@ -162,6 +164,7 @@ module.exports = class EVMRuntime {
       stopped: false,
       returnValue: Buffer.alloc(0),
       validJumps: {},
+      tokenBag: obj.tokenBag || emptyTokenBag(),
     };
 
     const len = runState.code.length;
@@ -213,7 +216,7 @@ module.exports = class EVMRuntime {
     return runState;
   }
 
-  async run ({ code, data, stack, mem, gasLimit, gasRemaining, pc, stepCount }) {
+  async run ({ code, data, stack, mem, gasLimit, gasRemaining, pc, stepCount, tokenBag }) {
     data = data || '0x';
 
     if (Array.isArray(code)) {
@@ -235,6 +238,7 @@ module.exports = class EVMRuntime {
       mem,
       stack,
       gasRemaining,
+      tokenBag,
     });
 
     stepCount = stepCount | 0;
@@ -825,6 +829,44 @@ module.exports = class EVMRuntime {
   }
 
   async handleCALL (runState) {
+
+    const gasLimit = runState.stack.pop();
+    const toAddress = runState.stack.pop();
+    const value = runState.stack.pop();
+    const inOffset = runState.stack.pop();
+    const inLength = runState.stack.pop();
+    const outOffset = runState.stack.pop();
+    const outLength = runState.stack.pop();
+
+    const data = this.memLoad(runState, inOffset, inLength);
+    const funcSig = this.getFuncSig(data);
+
+    if (funcSig === OP.FUNCSIG_TRANSFER) {
+      this.subMemUsage(runState, outOffset, outLength);
+
+      if (gasLimit.gt(runState.gasLeft)) {
+        gasLimit = new BN(runState.gasLeft);
+      }
+
+      const color = '0x' + toAddress.toString(16, 40);
+      const to = utils.bufferToHex(data.slice(4, 24));
+      const from = utils.bufferToHex(runState.caller);
+      const amount = utils.bufferToHex(data.slice(36, 68));
+
+      const success = runState.tokenBag.transfer(color, from, to, amount);
+
+      if (success) {
+        runState.stack.push(new BN(OP.CALLISH_SUCCESS));
+        const returnValue =  utils.setLengthRight(utils.toBuffer('0x01'), 32);
+        this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
+        runState.returnValue = returnValue;
+      } else {
+        runState.returnValue = Buffer.alloc(0);
+        runState.stack.push(new BN(OP.CALLISH_FAIL));
+        return;
+      }
+    }
+    
     throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
 
@@ -837,17 +879,17 @@ module.exports = class EVMRuntime {
   }
 
   async handleSTATICCALL (runState) {
-    const target = runState.stack[runState.stack.length - 2] || new BN(0xff);
+    let gasLimit = runState.stack.pop();
+    const toAddress = runState.stack.pop() || new BN(0xff);
+    const inOffset = runState.stack.pop();
+    const inLength = runState.stack.pop();
+    const outOffset = runState.stack.pop();
+    const outLength = runState.stack.pop();
 
-    if (target.gten(0) && target.lten(8)) {
-      let gasLimit = runState.stack.pop();
-      const toAddress = runState.stack.pop();
-      const inOffset = runState.stack.pop();
-      const inLength = runState.stack.pop();
-      const outOffset = runState.stack.pop();
-      const outLength = runState.stack.pop();
-      const data = this.memLoad(runState, inOffset, inLength);
-
+    const data = this.memLoad(runState, inOffset, inLength);
+    const funcSig = this.getFuncSig(data);
+    
+    if (toAddress.gten(0) && toAddress.lten(8)) {
       this.subMemUsage(runState, outOffset, outLength);
 
       if (gasLimit.gt(runState.gasLeft)) {
@@ -863,12 +905,31 @@ module.exports = class EVMRuntime {
       this.subGas(runState, r.gasUsed);
       this.memStore(runState, outOffset, r.returnValue, new BN(0), outLength, true);
       return;
+    } else if (funcSig === OP.FUNCSIG_BALANCEOF) {
+      const color = '0x' + toAddress.toString(16, 40);
+      const addr = utils.bufferToHex(data.slice(4, 24));
+      const balance = runState.tokenBag.balanceOf(color, addr);
+      const returnValue =  utils.setLengthLeft(utils.toBuffer(balance), 32);
+      
+      this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
+      runState.stack.push(new BN(OP.CALLISH_SUCCESS));
+      runState.returnValue = returnValue;
+      return;
+    } else if (funcSig === OP.FUNCSIG_READATA) {
+      const color = '0x' + toAddress.toString(16, 40);
+      const tokenId = utils.bufferToHex(data.slice(4, 36));
+      const returnValue = utils.toBuffer(runState.tokenBag.readData(color, tokenId));
+
+      this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
+      runState.stack.push(new BN(OP.CALLISH_SUCCESS));
+      runState.returnValue = returnValue;
+      return;
     }
 
     // TODO: remove this and throw first, sync behaviour with contracts
     runState.returnValue = Buffer.alloc(0);
     runState.stack = runState.stack.slice(0, runState.stack.length - 6);
-    runState.stack.push(new BN(0));
+    runState.stack.push(new BN(OP.CALLISH_FAIL));
 
     throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
@@ -985,5 +1046,12 @@ module.exports = class EVMRuntime {
     }
 
     return Buffer.from(loaded);
+  }
+
+  getFuncSig (data) {
+    if (data.length < 3) {
+      return 0x00000000;
+    }
+    return utils.bufferToHex(data.slice(0, 4));
   }
 };
