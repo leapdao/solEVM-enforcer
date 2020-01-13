@@ -1594,31 +1594,31 @@ contract EVMRuntime is EVMConstants {
       }
       state.gas -= gasFee;
 
-      bytes memory cd = state.mem.toBytes(stack.inOffset, stack.inSize);
+      bytes memory cData = state.mem.toBytes(stack.inOffset, stack.inSize);
       bytes4 funSig;
-      if (cd.length > 3) {
-        funSig = getSig(cd);
+      if (cData.length > 3) {
+        funSig = getSig(cData);
       }
 
       bool success;
       bytes memory returnData;
       
-      if (funSig == 0x22334455) {
+      if (funSig == FUNCSIG_TRANSFER) {
       	// transfer
       	address dest;
       	uint amount;
 
       	assembly {
-          dest := mload(add(cd,24))
-      	  amount := mload(add(cd, 68))
+          dest := mload(add(cData,24))
+          amount := mload(add(cData, 68))
         }
-	EVMTokenBag.TransferParams memory params = EVMTokenBag.TransferParams({
-	  color: stack.target,
-	      from: state.caller,
-	      to: dest,
-	      value: amount
-	});
-      	success = state.tokenBag.transfer(params);
+
+      	success = state.tokenBag.transfer(
+          stack.target,
+          state.caller,
+          dest,
+          amount
+        );
 	returnData = abi.encodePacked(success);
       } else {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
@@ -1626,7 +1626,7 @@ contract EVMRuntime is EVMConstants {
       }
 
       if (!success) {
-	state.stack.push(0);
+        state.stack.push(0);
         state.returnData = new bytes(0);
       	return;
       }
@@ -1690,13 +1690,13 @@ contract EVMRuntime is EVMConstants {
         }
         state.gas -= retEvm.gas;
 
-	bytes memory cd = state.mem.toBytes(inOffset, inSize);
+        bytes memory cData = state.mem.toBytes(inOffset, inSize);
 	bytes4 funSig;
-	if (cd.length > 3) {
-	  funSig = getSig(cd);
+	if (cData.length > 3) {
+	  funSig = getSig(cData);
 	}
 	
-        retEvm.data = cd;
+        retEvm.data = cData;
         retEvm.customDataPtr = state.customDataPtr;
 
         // we only going to support precompiles
@@ -1718,24 +1718,22 @@ contract EVMRuntime is EVMConstants {
             } else if (target == 8) {
                 handlePreC_ECPAIRING(retEvm);
             }
-	} else if (funSig == 0x70a08231) {
-	  // balanceOf
+	} else if (funSig == FUNCSIG_BALANCEOF) {
 	  address addr;
 	  // [32 length, 4 funSig, 20 address]
 	  // swallow 4 for funSig and 20 for length 
           assembly {
-	     addr := mload(add(cd,24))
+	     addr := mload(add(cData,24))
           }
 	  uint value = state.tokenBag.balanceOf(address(target), addr);
 	  bytes memory ret = abi.encodePacked(bytes32(value));
 
 	  retEvm.returnData = ret;
-	} else if (funSig == 0x12341234) {
-	  // readData
+	} else if (funSig == FUNCSIG_READATA) {
 	  uint tokenId;
 	  // 32 length + 4 funcSig = 36
 	  assembly {
-	     tokenId := mload(add(cd,36))
+	     tokenId := mload(add(cData,36))
           }
 	  bytes32 data = state.tokenBag.readData(address(target), tokenId);
 	  bytes memory ret = abi.encodePacked(data);

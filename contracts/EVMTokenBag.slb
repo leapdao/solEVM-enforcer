@@ -45,34 +45,30 @@ library EVMTokenBag {
         }
     }
     
-    struct TransferParams {
-        address color;
-        address from;
-        address to;
-        uint value;
-    }
-    
     function transfer(
         TokenBag memory self,
-        TransferParams memory params
+        address color,
+        address from,
+        address to,
+        uint value
     ) internal pure returns (bool) {
         Output memory source;
         Output memory dest;
         // find source
         for (uint i = 0; i < self.bag.length; i++) {
-            if (self.bag[i].owner == params.from && self.bag[i].color == params.color) {
+            if (self.bag[i].owner == from && self.bag[i].color == color) {
                 source = self.bag[i];
                 break;
             }
         }
     
         // sender does not have enough tokens to send
-        if (source.valueOrId < params.value) return false;
+        if (source.valueOrId < value) return false;
     
         // find dest and/or empty
         uint emptyId = 1337;
         for (uint i = 0; i < self.bag.length; i++) {
-            if (self.bag[i].owner == params.to && self.bag[i].color == params.color) {
+            if (self.bag[i].owner == to && self.bag[i].color == color) {
                 dest = self.bag[i];
                 break;
             }
@@ -87,15 +83,15 @@ library EVMTokenBag {
         
         // if no dest, but we found an empty slot, assign empty slot to reciver
         if (dest.owner == address(0)) {
-            self.bag[emptyId].owner = params.to;
-            self.bag[emptyId].color = params.color;
+            self.bag[emptyId].owner = to;
+            self.bag[emptyId].color = color;
             dest = self.bag[emptyId];
         }
         
         // now do the state transition and return success
         // OVERFLOWS???????
-        source.valueOrId -= params.value;
-        dest.valueOrId += params.value;
+        source.valueOrId -= value;
+        dest.valueOrId += value;
         return true;
     }
 

@@ -4120,7 +4120,7 @@ module.exports = [
     description: 'STATICCALL readData - successfull read',
     code: OP.STATICCALL,
     memory: [
-      '0x12341234dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      '0x37ebbc03dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
       '0xdddddddd00000000000000000000000000000000000000000000000000000000',
     ],
     stack: [
@@ -4142,7 +4142,7 @@ module.exports = [
         '0x0000000000000000000000000000000000000000000000000000000000000001',
       ],
       memory: [
-        '0x12341234dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        '0x37ebbc03dddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
         '0xddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
         '0xeeeeeeee00000000000000000000000000000000000000000000000000000000',
       ],
@@ -4152,7 +4152,7 @@ module.exports = [
     description: 'CALL transfer - successfull transfer',
     code: OP.CALL,
     memory: [
-      '0x22334455aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+      '0xa9059cbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
       '0x0000000000000000000000000000000000000000000000000000000000000000',
       '0xdeadbeef00000000000000000000000000000000000000000000000000000000',
     ],
@@ -4184,7 +4184,7 @@ module.exports = [
         '0x0000000000000000000000000000000000000000000000000000000000000001',
       ],
       memory: [
-        '0x22334455aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+        '0xa9059cbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
         '0x0000000000000000000000000000000000000000000000000000000000000000',
         '0xdeadbeef01000000000000000000000000000000000000000000000000000000',
         '0x0000000000000000000000000000000000000000000000000000000000000000',

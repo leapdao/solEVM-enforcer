@@ -217,6 +217,11 @@ contract EVMConstants {
     uint16 constant internal GAS_EC_ADD = 500;
     uint16 constant internal GAS_EC_MUL = 40000;
 
+    // Func sigs
+    bytes4 constant internal FUNCSIG_TRANSFER = 0xa9059cbb;
+    bytes4 constant internal FUNCSIG_BALANCEOF = 0x70a08231;
+    bytes4 constant internal FUNCSIG_READATA = 0x37ebbc03;
+
     // ERRORS
 
     uint8 constant internal NO_ERROR = 0;

@@ -56,7 +56,7 @@ contract EthereumRuntime is HydratedRuntime {
         evm.stack = EVMStack.fromArray(img.stack);
         evm.mem = EVMMemory.fromArray(img.mem);
 
-	evm.tokenBag = img.tokenBag;
+        evm.tokenBag = img.tokenBag;
 
         _run(evm, img.pc, img.stepCount);
 

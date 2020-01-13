@@ -841,7 +841,7 @@ module.exports = class EVMRuntime {
     const data = this.memLoad(runState, inOffset, inLength);
     const funcSig = this.getFuncSig(data);
 
-    if (funcSig === '0x22334455') {
+    if (funcSig === OP.FUNCSIG_TRANSFER) {
       this.subMemUsage(runState, outOffset, outLength);
 
       if (gasLimit.gt(runState.gasLeft)) {
@@ -856,13 +856,13 @@ module.exports = class EVMRuntime {
       const success = runState.tokenBag.transfer(color, from, to, amount);
 
       if (success) {
-        runState.stack.push(new BN(1));
+        runState.stack.push(new BN(OP.CALLISH_SUCCESS));
         const returnValue =  utils.setLengthRight(utils.toBuffer('0x01'), 32);
         this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
         runState.returnValue = returnValue;
       } else {
         runState.returnValue = Buffer.alloc(0);
-        runState.stack.push(new BN(0));
+        runState.stack.push(new BN(OP.CALLISH_FAIL));
         return;
       }
     }
@@ -905,23 +905,23 @@ module.exports = class EVMRuntime {
       this.subGas(runState, r.gasUsed);
       this.memStore(runState, outOffset, r.returnValue, new BN(0), outLength, true);
       return;
-    } else if (funcSig === '0x70a08231') {
+    } else if (funcSig === OP.FUNCSIG_BALANCEOF) {
       const color = '0x' + toAddress.toString(16, 40);
       const addr = utils.bufferToHex(data.slice(4, 24));
       const balance = runState.tokenBag.balanceOf(color, addr);
       const returnValue =  utils.setLengthLeft(utils.toBuffer(balance), 32);
       
       this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
-      runState.stack.push(new BN(1));
+      runState.stack.push(new BN(OP.CALLISH_SUCCESS));
       runState.returnValue = returnValue;
       return;
-    } else if (funcSig === '0x12341234') {
+    } else if (funcSig === OP.FUNCSIG_READATA) {
       const color = '0x' + toAddress.toString(16, 40);
       const tokenId = utils.bufferToHex(data.slice(4, 36));
       const returnValue = utils.toBuffer(runState.tokenBag.readData(color, tokenId));
 
       this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
-      runState.stack.push(new BN(1));
+      runState.stack.push(new BN(OP.CALLISH_SUCCESS));
       runState.returnValue = returnValue;
       return;
     }
@@ -929,7 +929,7 @@ module.exports = class EVMRuntime {
     // TODO: remove this and throw first, sync behaviour with contracts
     runState.returnValue = Buffer.alloc(0);
     runState.stack = runState.stack.slice(0, runState.stack.length - 6);
-    runState.stack.push(new BN(0));
+    runState.stack.push(new BN(OP.CALLISH_FAIL));
 
     throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
   }
