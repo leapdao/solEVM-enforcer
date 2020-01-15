@@ -5,7 +5,14 @@ const { utils } = require('ethers');
 
 const { BN } = require('ethereumjs-util');
 
-const { BLOCK_GAS_LIMIT, ZERO_ADDRESS, ZERO_HASH } = require('../../utils/constants');
+const {
+  BLOCK_GAS_LIMIT,
+  ZERO_ADDRESS,
+  ZERO_HASH,
+  ERC20TYPE,
+  ERC1948TYPE,
+  ERC721TYPE
+} = require('../../utils/constants');
 
 const TokenBagHelpers = {};
 
@@ -18,6 +25,7 @@ TokenBagHelpers.assertTokenBagEqual = (expected, actual) => {
     );
     assert.equal(expectedOutput.color, actualOutput.color.toLowerCase());
     assert.equal(expectedOutput.data, actualOutput.data);
+    assert.equal(expectedOutput.tokenType, actualOutput.tokenType);
     if (actualOutput.valueOrId.toHexString) {
       assert.equal(
         expectedOutput.valueOrId,
@@ -38,6 +46,7 @@ TokenBagHelpers.emptyOutput = () => {
     valueOrId: 0x0,
     data: ZERO_HASH,
     color: ZERO_ADDRESS,
+    tokenType: ERC20TYPE,
   };
 };
 

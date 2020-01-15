@@ -4,11 +4,16 @@ pragma experimental ABIEncoderV2;
 
 library EVMTokenBag {
 
+    uint8 constant internal ERC20TYPE = 0;
+    uint8 constant internal ERC721TYPE = 1;
+    uint8 constant internal ERC1948TYPE = 2;
+  
     struct Output {
         address owner;
         uint valueOrId;
         bytes32 data;
         address color;
+        uint8 tokenType;
     }
   
     struct TokenBag {
@@ -44,55 +49,61 @@ library EVMTokenBag {
             }
         }
     }
-    
-    function transfer(
-        TokenBag memory self,
-        address color,
-        address from,
-        address to,
-        uint value
-    ) internal pure returns (bool) {
-        Output memory source;
+
+    function transferFrom(
+                          TokenBag memory self,
+                          address color,
+                          address from,
+                          address to,
+                          uint valueOrId
+                          ) internal pure returns (bool) {
+      if (to == address(0)) return false;
+      (Output memory source, bool success) = findToken(self, color, from);
+      // sender's token/tokens don't exist
+      if (!success) return false;
+      if (source.tokenType == ERC20TYPE) {
         Output memory dest;
-        // find source
-        for (uint i = 0; i < self.bag.length; i++) {
-            if (self.bag[i].owner == from && self.bag[i].color == color) {
-                source = self.bag[i];
-                break;
-            }
+        (dest, success) = findToken(self, color, to);
+        if (!success) {
+          (dest, success) = findToken(self, address(0), address(0));
         }
-    
-        // sender does not have enough tokens to send
-        if (source.valueOrId < value) return false;
-    
-        // find dest and/or empty
-        uint emptyId = 1337;
-        for (uint i = 0; i < self.bag.length; i++) {
-            if (self.bag[i].owner == to && self.bag[i].color == color) {
-                dest = self.bag[i];
-                break;
-            }
-            // check if empty slot
-            if (self.bag[i].owner == address(0) && emptyId == 1337) {
-                emptyId = i;
-            }
-        }
-      
-        // if no dest and no empty slot, throw
-        if (dest.owner == address(0) && emptyId == 1337) return false;
-        
-        // if no dest, but we found an empty slot, assign empty slot to reciver
-        if (dest.owner == address(0)) {
-            self.bag[emptyId].owner = to;
-            self.bag[emptyId].color = color;
-            dest = self.bag[emptyId];
-        }
-        
-        // now do the state transition and return success
-        // OVERFLOWS???????
-        source.valueOrId -= value;
-        dest.valueOrId += value;
+        // no slot found for output token
+        if (!success) return false;
+        // sender does not have enough tokens to send and/or underflow
+        if (source.valueOrId < valueOrId) return false;
+        // overflow
+        if (valueOrId + dest.valueOrId < valueOrId) return false;
+
+        dest.owner = to;
+        dest.color = color;
+        dest.valueOrId += valueOrId;
+        source.valueOrId -= valueOrId;
+
         return true;
+      } else if (source.tokenType == ERC721TYPE) {
+        
+      } else if (source.tokenType == ERC1948TYPE) {
+        
+      }
     }
+
+    function findToken(
+                       TokenBag memory self,
+                       address color,
+                       address owner
+                       ) internal pure returns (Output memory, bool) {
+      Output memory token;
+      bool success;
+      for (uint i = 0; i < self.bag.length; i++) {
+          if (self.bag[i].owner == owner && self.bag[i].color == color) {
+              token = self.bag[i];
+              success = true;
+              break;
+          }
+      }
+      return (token, success);
+    }
+                     
+      
 
 }

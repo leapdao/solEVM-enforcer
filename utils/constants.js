@@ -196,4 +196,8 @@ module.exports = {
 
   CALLISH_SUCCESS: 1,
   CALLISH_FAIL: 0,
+
+  ERC20TYPE: 0,
+  ERC721TYPE: 1,
+  ERC1948TYPE: 2,
 };

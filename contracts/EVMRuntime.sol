@@ -1613,7 +1613,7 @@ contract EVMRuntime is EVMConstants {
           amount := mload(add(cData, 68))
         }
 
-        success = state.tokenBag.transfer(
+        success = state.tokenBag.transferFrom(
           stack.target,
           state.caller,
           dest,
