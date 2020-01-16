@@ -58,14 +58,14 @@ library EVMTokenBag {
                           uint valueOrId
                           ) internal pure returns (bool) {
       if (to == address(0)) return false;
-      (Output memory source, bool success) = findToken(self, color, from);
+      (Output memory source, bool success) = findToken(self, color, from, valueOrId);
       // sender's token/tokens don't exist
       if (!success) return false;
       if (source.tokenType == ERC20TYPE) {
         Output memory dest;
-        (dest, success) = findToken(self, color, to);
+        (dest, success) = findToken(self, color, to, valueOrId);
         if (!success) {
-          (dest, success) = findToken(self, address(0), address(0));
+          (dest, success) = findToken(self, address(0), address(0), valueOrId);
         }
         // no slot found for output token
         if (!success) return false;
@@ -80,25 +80,35 @@ library EVMTokenBag {
         source.valueOrId -= valueOrId;
 
         return true;
-      } else if (source.tokenType == ERC721TYPE) {
-        
-      } else if (source.tokenType == ERC1948TYPE) {
-        
+      } else if (source.tokenType == ERC721TYPE || source.tokenType == ERC1948TYPE) {
+        source.owner = to;
+        return true;
+      } else {
+        return false;
       }
     }
 
     function findToken(
                        TokenBag memory self,
                        address color,
-                       address owner
+                       address owner,
+                       uint valueOrId
                        ) internal pure returns (Output memory, bool) {
       Output memory token;
       bool success;
       for (uint i = 0; i < self.bag.length; i++) {
           if (self.bag[i].owner == owner && self.bag[i].color == color) {
+            if (self.bag[i].tokenType == ERC20TYPE) {
               token = self.bag[i];
               success = true;
               break;
+            } else {
+              if (self.bag[i].valueOrId == valueOrId) {
+                token = self.bag[i];
+                success = true;
+                break;
+              }
+            }
           }
       }
       return (token, success);

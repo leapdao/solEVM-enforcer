@@ -4277,6 +4277,55 @@ module.exports = [
     },
   },
   {
+    description: 'CALL transferFrom non-fungible - successfull transfer',
+    code: OP.CALL,
+    memory: [
+      '0x23b872ddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+      '0x00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef0000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      '0xdeadbeef00000000000000000000000000000000000000000000000000000000',
+    ],
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000020',
+      '0x0000000000000000000000000000000000000000000000000000000000000064',
+      '0x0000000000000000000000000000000000000000000000000000000000000064',
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+      '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+    ],
+    tokenBag: padTokenBag([
+      {
+        owner: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+        valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+        data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        color: '0xcccccccccccccccccccccccccccccccccccccccd',
+        tokenType: 1,
+      },
+    ]),
+    result: {
+      stack: [
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+      ],
+      memory: [
+        '0x23b872ddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+        '0x00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef0000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+        '0xdeadbeef01000000000000000000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
+      tokenBag: padTokenBag([
+        {
+          owner: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef',
+          valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+          data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 1,
+        },
+      ]),
+    },
+  },
+  {
     description: 'invalid opcode',
     code: [
       OP.TIMESTAMP,

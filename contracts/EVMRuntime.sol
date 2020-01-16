@@ -1637,8 +1637,7 @@ contract EVMRuntime is EVMConstants {
           amount
         );
 	returnData = abi.encodePacked(success);
-      }
-      else {
+      } else {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         return;
       }
