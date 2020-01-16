@@ -1604,7 +1604,6 @@ contract EVMRuntime is EVMConstants {
       bytes memory returnData;
       
       if (funSig == FUNCSIG_TRANSFER) {
-      	// transfer
       	address dest;
       	uint amount;
 
@@ -1620,7 +1619,26 @@ contract EVMRuntime is EVMConstants {
           amount
         );
 	returnData = abi.encodePacked(success);
-      } else {
+      } else if (funSig == FUNCSIG_TRANSFERFROM) {
+      	address from;
+        address to;
+      	uint amount;
+
+      	assembly {
+          from := mload(add(cData,24))
+          to := mload(add(cData,56))
+          amount := mload(add(cData, 100))
+        }
+
+        success = state.tokenBag.transferFrom(
+          stack.target,
+          from,
+          to,
+          amount
+        );
+	returnData = abi.encodePacked(success);
+      }
+      else {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         return;
       }
