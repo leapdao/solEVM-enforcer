@@ -4326,6 +4326,50 @@ module.exports = [
     },
   },
   {
+    description: 'CALL writeData - successfull write',
+    code: OP.CALL,
+    memory: [
+      '0xa983d43fdddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      '0xddddddddffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffff00000000000000000000000000000000000000000000000000000000',
+    ],
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000020',
+      '0x0000000000000000000000000000000000000000000000000000000000000044',
+      '0x0000000000000000000000000000000000000000000000000000000000000044',
+      OP.ZERO_HASH,
+      '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+      '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+    ],
+    tokenBag: padTokenBag([{
+      owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+      valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      data: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      color: '0xcccccccccccccccccccccccccccccccccccccccd',
+      tokenType: 2,
+    }]),
+    result: {
+      stack: [
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+      ],
+      memory: [
+        '0xa983d43fdddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        '0xddddddddffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+        '0xffffffff01000000000000000000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
+      tokenBag: padTokenBag([
+        {
+          owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+          valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+          data: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 2,
+        },
+      ]),
+    },
+  },
+  {
     description: 'invalid opcode',
     code: [
       OP.TIMESTAMP,

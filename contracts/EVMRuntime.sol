@@ -1637,13 +1637,25 @@ contract EVMRuntime is EVMConstants {
           amount
         );
 	returnData = abi.encodePacked(success);
+      } else if (funSig == FUNCSIG_WRITEDATA) {
+        uint id;
+        bytes32 data;
+
+        assembly {
+          id := mload(add(cData, 32))
+          data := mload(add(cData, 64))
+        }
+
+        state.tokenBag.writeData(stack.target, id, data);
+        success = true;
+        returnData = abi.encodePacked(success);
       } else {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         return;
       }
 
       if (!success) {
-        state.stack.push(0);
+        state.stack.push(uint256(bytes32(funSig)));
         state.returnData = new bytes(0);
         return;
       }

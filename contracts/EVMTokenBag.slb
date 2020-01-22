@@ -25,14 +25,11 @@ library EVMTokenBag {
         address color,
         address owner
     ) internal pure returns (uint value) {
-        Output memory output;
-        for (uint i = 0; i < self.bag.length; i++) {
-            output = self.bag[i];
-            if (output.owner == owner && output.color == color) {
-      	         value = output.valueOrId;
-      	         break;
-            }
-        }
+      Output memory query;
+      query.owner = owner;
+      query.color = color;
+      (query,) = findToken2(self, query, 9);
+      value = query.valueOrId;
     }
     
     function readData(
@@ -40,14 +37,27 @@ library EVMTokenBag {
         address color,
         uint id
     ) internal pure returns (bytes32 data) {
-        Output memory output;
-        for (uint i = 0; i < self.bag.length; i++) {
-            output = self.bag[i];
-            if (output.valueOrId == id && output.color == color) {
-                data = output.data;
-                break;
-            }
-        }
+      Output memory query;
+      query.valueOrId = id;
+      query.color = color;
+      (query,) = findToken2(self, query, 10);
+      data = query.data;
+    }
+
+    function writeData(
+                       TokenBag memory self,
+                       address color,
+                       uint256 tokenId,
+                       bytes32 newData
+                       ) internal pure {
+      Output memory query;
+      bool success;
+      query.valueOrId = tokenId;
+      query.color = color;
+      (query, success) = findToken2(self, query, 10);
+      if (success) {
+        query.data = newData;
+      }
     }
 
     function transferFrom(
@@ -96,6 +106,7 @@ library EVMTokenBag {
                        ) internal pure returns (Output memory, bool) {
       Output memory token;
       bool success;
+      bytes1 selector = 0x1f;
       for (uint i = 0; i < self.bag.length; i++) {
           if (self.bag[i].owner == owner && self.bag[i].color == color) {
             if (self.bag[i].tokenType == ERC20TYPE) {
@@ -110,6 +121,31 @@ library EVMTokenBag {
               }
             }
           }
+      }
+      return (token, success);
+    }
+
+    function findToken2(
+                        TokenBag memory self,
+                        Output memory query,
+                        uint8 selector
+                        ) internal pure returns (Output memory, bool) {
+      Output memory token;
+      bool success;
+      Output memory current;
+      for (uint i = 0; i < self.bag.length; i++) {
+        current = self.bag[i];
+        bool isMatch =
+          (!(0x1 & selector != 0) || ((0x1 & selector != 0) && current.owner == query.owner)) &&
+          (!(0x2 & selector != 0) || ((0x2 & selector != 0) && current.valueOrId == query.valueOrId)) &&
+          (!(0x4 & selector != 0) || ((0x4 & selector != 0) && current.data == query.data)) &&
+          (!(0x8 & selector != 0) || ((0x8 & selector != 0) && current.color == query.color)) &&
+          (!(0x10 & selector != 0) || ((0x10 & selector != 0) && current.tokenType == query.tokenType));
+        if (isMatch) {
+          token = current;
+          success = true;
+          break;
+        }
       }
       return (token, success);
     }
