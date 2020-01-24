@@ -11,7 +11,7 @@ const {
   ZERO_HASH,
   ERC20TYPE,
   ERC1948TYPE,
-  ERC721TYPE
+  ERC721TYPE,
 } = require('../../utils/constants');
 
 const TokenBagHelpers = {};
@@ -68,53 +68,87 @@ function promote (tokenBag) {
   };
 
   function balanceOf (color, address) {
-    const tokens = this.bag.filter(o => o.color === color && o.owner === address);
-    return tokens.length === 0 ? 0 : tokens[0].valueOrId;
+    return this.findToken({
+      color: color,
+      owner: address,
+    }).valueOrId || 0;
   }
 
   function readData (color, tokenId) {
-    const tokens = this.bag.filter(o => o.color === color && o.valueOrId === tokenId);
-    return tokens.length === 0 ? ZERO_HASH : tokens[0].data;
+    return this.findToken({
+      color: color,
+      valueOrId: tokenId,
+    }).data || ZERO_HASH;
   }
 
-  function transfer (color, from, to, value) {
-    let source;
-
-    this.bag.forEach(o => {
-      if (o.color === color && o.owner === from) {
-        source = o;
-      }
+  function transferFrom (color, from, to, valueOrId) {
+    if (to === ZERO_ADDRESS) return false;
+    const source = this.findToken({
+      color: color,
+      owner: from,
     });
     if (!source) return false;
-    if (bn(source.valueOrId).lt(bn(value))) return false;
-    
-    let dest;
-    this.bag.forEach(o => {
-      if (o.color === color && o.owner === to) {
-        dest = o;
-      }
-    });
-
-    if (!dest) {
-      this.bag.forEach(o => {
-        if (!dest && o.owner === ZERO_ADDRESS) {
-          o.owner = to;
-          o.color = color;
-          dest = o;
-        }
+    if (source.tokenType === ERC20TYPE) {
+      let dest;
+      dest = this.findToken({
+        color: color,
+        owner: to,
       });
-    }
+      if (!dest) {
+        dest = this.findToken({
+          color: ZERO_ADDRESS,
+          owner: ZERO_ADDRESS,
+        });
+      }
+      if (!dest) return false;
+      if (bn(source.valueOrId).lt(bn(valueOrId))) return false;
+      if (bn(valueOrId).add(bn(dest.valueOrId)).lt(bn(valueOrId))) return false;
 
-    if (!dest) return false;
-    
-    source.valueOrId = '0x' + bn(source.valueOrId).sub(bn(value)).toString(16, 64);
-    dest.valueOrId = '0x' + bn(dest.valueOrId).add(bn(value)).toString(16, 64);
+      dest.owner = to;
+      dest.color = color;
+      source.valueOrId = '0x' + bn(source.valueOrId).sub(bn(valueOrId)).toString(16, 64);
+      dest.valueOrId = '0x' + bn(dest.valueOrId).add(bn(valueOrId)).toString(16, 64);
+
+      return true;
+    } else if (source.tokenType === ERC1948TYPE || source.tokenType === ERC721TYPE) {
+      source.owner = to;
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  function ownerOf (color, tokenId) {
+    return this.findToken({
+      color: color,
+      valueOrId: tokenId,
+    }).owner || ZERO_ADDRESS;
+  }
+
+  function writeData (color, tokenId, newData) {
+    const token = this.findToken({
+      color: color,
+      valueOrId: tokenId,
+    });
+    if (token) {
+      token.data = newData;
+    }
     return true;
+  }
+
+  function findToken (query) {
+    const tokens = this.bag.filter(o => {
+      return Object.entries(query).reduce((acc, [key, value]) => acc && (o[key] === value), true);
+    });
+    return tokens.length === 0 ? false : tokens[0];
   }
 
   tokenBag.balanceOf = balanceOf;
   tokenBag.readData = readData;
-  tokenBag.transfer = transfer;
+  tokenBag.ownerOf = ownerOf;
+  tokenBag.findToken = findToken;
+  tokenBag.writeData = writeData;
+  tokenBag.transferFrom = transferFrom;
   return tokenBag;
 }
 

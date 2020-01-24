@@ -223,6 +223,7 @@ contract EVMConstants {
     bytes4 constant internal FUNCSIG_READATA = 0x37ebbc03;
     bytes4 constant internal FUNCSIG_TRANSFERFROM = 0x23b872dd;
     bytes4 constant internal FUNCSIG_WRITEDATA = 0xa983d43f;
+    bytes4 constant internal FUNCSIG_OWNEROF = 0x6352211e;
 
     // ERRORS
 

@@ -25,11 +25,11 @@ library EVMTokenBag {
         address color,
         address owner
     ) internal pure returns (uint value) {
-      Output memory query;
-      query.owner = owner;
-      query.color = color;
-      (query,) = findToken2(self, query, 9);
-      value = query.valueOrId;
+        Output memory query;
+        query.owner = owner;
+        query.color = color;
+        (query,) = findToken2(self, query, 9);
+        value = query.valueOrId;
     }
     
     function readData(
@@ -37,117 +37,129 @@ library EVMTokenBag {
         address color,
         uint id
     ) internal pure returns (bytes32 data) {
-      Output memory query;
-      query.valueOrId = id;
-      query.color = color;
-      (query,) = findToken2(self, query, 10);
-      data = query.data;
+        Output memory query;
+        query.valueOrId = id;
+        query.color = color;
+        (query,) = findToken2(self, query, 10);
+        data = query.data;
+    }
+
+    function ownerOf(
+        TokenBag memory self,
+        address color,
+        uint id
+    ) internal pure returns (address owner) {
+        Output memory query;
+        query.valueOrId = id;
+        query.color = color;
+        (query,) = findToken2(self, query, 10);
+        owner = query.owner;
     }
 
     function writeData(
-                       TokenBag memory self,
-                       address color,
-                       uint256 tokenId,
-                       bytes32 newData
-                       ) internal pure {
-      Output memory query;
-      bool success;
-      query.valueOrId = tokenId;
-      query.color = color;
-      (query, success) = findToken2(self, query, 10);
-      if (success) {
-        query.data = newData;
-      }
+        TokenBag memory self,
+        address color,
+        uint256 tokenId,
+        bytes32 newData
+    ) internal pure {
+        Output memory query;
+        bool success;
+        query.valueOrId = tokenId;
+        query.color = color;
+        (query, success) = findToken2(self, query, 10);
+        if (success) {
+            query.data = newData;
+        }
     }
 
     function transferFrom(
-                          TokenBag memory self,
-                          address color,
-                          address from,
-                          address to,
-                          uint valueOrId
-                          ) internal pure returns (bool) {
-      if (to == address(0)) return false;
-      (Output memory source, bool success) = findToken(self, color, from, valueOrId);
-      // sender's token/tokens don't exist
-      if (!success) return false;
-      if (source.tokenType == ERC20TYPE) {
-        Output memory dest;
-        (dest, success) = findToken(self, color, to, valueOrId);
-        if (!success) {
-          (dest, success) = findToken(self, address(0), address(0), valueOrId);
-        }
-        // no slot found for output token
+        TokenBag memory self,
+        address color,
+        address from,
+        address to,
+        uint valueOrId
+    ) internal pure returns (bool) {
+        if (to == address(0)) return false;
+        (Output memory source, bool success) = findToken(self, color, from, valueOrId);
+        // sender's token/tokens don't exist
         if (!success) return false;
-        // sender does not have enough tokens to send and/or underflow
-        if (source.valueOrId < valueOrId) return false;
-        // overflow
-        if (valueOrId + dest.valueOrId < valueOrId) return false;
-
-        dest.owner = to;
-        dest.color = color;
-        dest.valueOrId += valueOrId;
-        source.valueOrId -= valueOrId;
-
-        return true;
-      } else if (source.tokenType == ERC721TYPE || source.tokenType == ERC1948TYPE) {
-        source.owner = to;
-        return true;
-      } else {
-        return false;
-      }
+        if (source.tokenType == ERC20TYPE) {
+            Output memory dest;
+            (dest, success) = findToken(self, color, to, valueOrId);
+            if (!success) {
+                (dest, success) = findToken(self, address(0), address(0), valueOrId);
+            }
+            // no slot found for output token
+            if (!success) return false;
+            // sender does not have enough tokens to send and/or underflow
+            if (source.valueOrId < valueOrId) return false;
+            // overflow
+            if (valueOrId + dest.valueOrId < valueOrId) return false;
+            
+            dest.owner = to;
+            dest.color = color;
+            dest.valueOrId += valueOrId;
+            source.valueOrId -= valueOrId;
+            
+            return true;
+        } else if (source.tokenType == ERC721TYPE || source.tokenType == ERC1948TYPE) {
+            source.owner = to;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     function findToken(
-                       TokenBag memory self,
-                       address color,
-                       address owner,
-                       uint valueOrId
-                       ) internal pure returns (Output memory, bool) {
-      Output memory token;
-      bool success;
-      bytes1 selector = 0x1f;
-      for (uint i = 0; i < self.bag.length; i++) {
-          if (self.bag[i].owner == owner && self.bag[i].color == color) {
-            if (self.bag[i].tokenType == ERC20TYPE) {
-              token = self.bag[i];
-              success = true;
-              break;
-            } else {
-              if (self.bag[i].valueOrId == valueOrId) {
-                token = self.bag[i];
-                success = true;
-                break;
-              }
+        TokenBag memory self,
+        address color,
+        address owner,
+        uint valueOrId
+    ) internal pure returns (Output memory, bool) {
+        Output memory token;
+        bool success;
+        bytes1 selector = 0x1f;
+        for (uint i = 0; i < self.bag.length; i++) {
+            if (self.bag[i].owner == owner && self.bag[i].color == color) {
+                if (self.bag[i].tokenType == ERC20TYPE) {
+                    token = self.bag[i];
+                    success = true;
+                    break;
+                } else {
+                    if (self.bag[i].valueOrId == valueOrId) {
+                        token = self.bag[i];
+                        success = true;
+                        break;
+                    }
+                }
             }
-          }
-      }
-      return (token, success);
+        }
+        return (token, success);
     }
 
     function findToken2(
-                        TokenBag memory self,
-                        Output memory query,
-                        uint8 selector
-                        ) internal pure returns (Output memory, bool) {
-      Output memory token;
-      bool success;
-      Output memory current;
-      for (uint i = 0; i < self.bag.length; i++) {
-        current = self.bag[i];
-        bool isMatch =
-          (!(0x1 & selector != 0) || ((0x1 & selector != 0) && current.owner == query.owner)) &&
-          (!(0x2 & selector != 0) || ((0x2 & selector != 0) && current.valueOrId == query.valueOrId)) &&
-          (!(0x4 & selector != 0) || ((0x4 & selector != 0) && current.data == query.data)) &&
-          (!(0x8 & selector != 0) || ((0x8 & selector != 0) && current.color == query.color)) &&
-          (!(0x10 & selector != 0) || ((0x10 & selector != 0) && current.tokenType == query.tokenType));
-        if (isMatch) {
-          token = current;
-          success = true;
-          break;
+        TokenBag memory self,
+        Output memory query,
+        uint8 selector
+    ) internal pure returns (Output memory, bool) {
+        Output memory token;
+        bool success;
+        Output memory current;
+        for (uint i = 0; i < self.bag.length; i++) {
+            current = self.bag[i];
+            bool isMatch =
+                (!(0x1 & selector != 0) || ((0x1 & selector != 0) && current.owner == query.owner)) &&
+                (!(0x2 & selector != 0) || ((0x2 & selector != 0) && current.valueOrId == query.valueOrId)) &&
+                (!(0x4 & selector != 0) || ((0x4 & selector != 0) && current.data == query.data)) &&
+                (!(0x8 & selector != 0) || ((0x8 & selector != 0) && current.color == query.color)) &&
+                (!(0x10 & selector != 0) || ((0x10 & selector != 0) && current.tokenType == query.tokenType));
+            if (isMatch) {
+                token = current;
+                success = true;
+                break;
+            }
         }
-      }
-      return (token, success);
+        return (token, success);
     }
                      
       

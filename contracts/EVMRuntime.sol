@@ -1642,8 +1642,8 @@ contract EVMRuntime is EVMConstants {
         bytes32 data;
 
         assembly {
-          id := mload(add(cData, 32))
-          data := mload(add(cData, 64))
+          id := mload(add(cData, 36))
+          data := mload(add(cData, 68))
         }
 
         state.tokenBag.writeData(stack.target, id, data);
@@ -1655,7 +1655,7 @@ contract EVMRuntime is EVMConstants {
       }
 
       if (!success) {
-        state.stack.push(uint256(bytes32(funSig)));
+        state.stack.push(0);
         state.returnData = new bytes(0);
         return;
       }
@@ -1769,7 +1769,17 @@ contract EVMRuntime is EVMConstants {
 
 	  // what happens here if we enter token intercepts instead of precompiles
 	  retEvm.returnData = ret;
-	}
+	} else if (funSig == FUNCSIG_OWNEROF) {
+          uint tokenId;
+	  // 32 length + 4 funcSig = 36
+	  assembly {
+	     tokenId := mload(add(cData,36))
+          }
+	  address owner = state.tokenBag.ownerOf(address(target), tokenId);
+	  bytes memory ret = abi.encodePacked(owner);
+
+       	  retEvm.returnData = ret;
+        }
         else {
             retEvm.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         }
