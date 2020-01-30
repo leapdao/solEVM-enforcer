@@ -137,6 +137,11 @@ library EVMTokenBag {
         return (token, success);
     }
 
+    /* This is a generalized query function on the token bag. */
+    /* Eventually replace findToken with this? This is a larger and more expensive */
+    /* function, but I think clearer. */
+    /* selector: take the fields in Output that are relevant to the query and put 1 in that place. */
+    /* example: I care about owner (position 0) and color (position 3), so 01001 = 9 */
     function findToken2(
         TokenBag memory self,
         Output memory query,
@@ -161,7 +166,4 @@ library EVMTokenBag {
         }
         return (token, success);
     }
-                     
-      
-
 }
