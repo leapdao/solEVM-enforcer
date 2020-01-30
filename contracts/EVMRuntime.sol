@@ -1620,11 +1620,11 @@ contract EVMRuntime is EVMConstants {
         );
 	returnData = abi.encodePacked(success);
       } else if (funSig == FUNCSIG_TRANSFERFROM) {
-      	address from;
+        address from;
         address to;
       	uint amount;
 
-      	assembly {
+        assembly {
           from := mload(add(cData,24))
           to := mload(add(cData,56))
           amount := mload(add(cData, 100))
@@ -1772,7 +1772,7 @@ contract EVMRuntime is EVMConstants {
 	} else if (funSig == FUNCSIG_OWNEROF) {
           uint tokenId;
 	  // 32 length + 4 funcSig = 36
-	  assembly {
+          assembly {
 	     tokenId := mload(add(cData,36))
           }
 	  address owner = state.tokenBag.ownerOf(address(target), tokenId);
