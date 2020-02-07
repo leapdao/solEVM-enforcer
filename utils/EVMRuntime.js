@@ -830,7 +830,7 @@ module.exports = class EVMRuntime {
 
   async handleCALL (runState) {
 
-    const gasLimit = runState.stack.pop();
+    let gasLimit = runState.stack.pop();
     const toAddress = runState.stack.pop();
     const value = runState.stack.pop();
     const inOffset = runState.stack.pop();
@@ -841,33 +841,46 @@ module.exports = class EVMRuntime {
     const data = this.memLoad(runState, inOffset, inLength);
     const funcSig = this.getFuncSig(data);
 
+    this.subMemUsage(runState, outOffset, outLength);
+
+    if (gasLimit.gt(runState.gasLeft)) {
+      gasLimit = new BN(runState.gasLeft);
+    }
+
+    let success;
+
     if (funcSig === OP.FUNCSIG_TRANSFER) {
-      this.subMemUsage(runState, outOffset, outLength);
-
-      if (gasLimit.gt(runState.gasLeft)) {
-        gasLimit = new BN(runState.gasLeft);
-      }
-
       const color = '0x' + toAddress.toString(16, 40);
       const to = utils.bufferToHex(data.slice(4, 24));
       const from = utils.bufferToHex(runState.caller);
       const amount = utils.bufferToHex(data.slice(36, 68));
 
-      const success = runState.tokenBag.transfer(color, from, to, amount);
+      success = runState.tokenBag.transferFrom(color, from, to, amount);
+    } else if (funcSig === OP.FUNCSIG_TRANSFERFROM) {
+      const color = '0x' + toAddress.toString(16, 40);
+      const from = utils.bufferToHex(data.slice(4, 24));
+      const to = utils.bufferToHex(data.slice(36, 56));
+      const valueOrId = utils.bufferToHex(data.slice(68, 100));
 
-      if (success) {
-        runState.stack.push(new BN(OP.CALLISH_SUCCESS));
-        const returnValue =  utils.setLengthRight(utils.toBuffer('0x01'), 32);
-        this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
-        runState.returnValue = returnValue;
-      } else {
-        runState.returnValue = Buffer.alloc(0);
-        runState.stack.push(new BN(OP.CALLISH_FAIL));
-        return;
-      }
+      success = runState.tokenBag.transferFrom(color, from, to, valueOrId);
+    } else if (funcSig === OP.FUNCSIG_WRITEDATA) {
+      const color = '0x' + toAddress.toString(16, 40);
+      const tokenId = utils.bufferToHex(data.slice(4, 36));
+      const newData = utils.bufferToHex(data.slice(36, 68));
+
+      success = runState.tokenBag.writeData(color, tokenId, newData);
     }
-    
-    throw new VmError(ERROR.INSTRUCTION_NOT_SUPPORTED);
+
+    if (success) {
+      runState.stack.push(new BN(OP.CALLISH_SUCCESS));
+      const returnValue =  utils.setLengthRight(utils.toBuffer('0x01'), 32);
+      this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
+      runState.returnValue = returnValue;
+    } else {
+      runState.returnValue = Buffer.alloc(0);
+      runState.stack.push(new BN(OP.CALLISH_FAIL));
+      return;
+    }
   }
 
   async handleCALLCODE (runState) {
@@ -919,6 +932,15 @@ module.exports = class EVMRuntime {
       const color = '0x' + toAddress.toString(16, 40);
       const tokenId = utils.bufferToHex(data.slice(4, 36));
       const returnValue = utils.toBuffer(runState.tokenBag.readData(color, tokenId));
+
+      this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
+      runState.stack.push(new BN(OP.CALLISH_SUCCESS));
+      runState.returnValue = returnValue;
+      return;
+    } else if (funcSig === OP.FUNCSIG_OWNEROF) {
+      const color = '0x' + toAddress.toString(16, 40);
+      const tokenId = utils.bufferToHex(data.slice(4, 36));
+      const returnValue = utils.toBuffer(runState.tokenBag.ownerOf(color, tokenId));
 
       this.memStore(runState, outOffset, returnValue, new BN(0), outLength, 32);
       runState.stack.push(new BN(OP.CALLISH_SUCCESS));

@@ -1604,7 +1604,6 @@ contract EVMRuntime is EVMConstants {
       bytes memory returnData;
       
       if (funSig == FUNCSIG_TRANSFER) {
-      	// transfer
       	address dest;
       	uint amount;
 
@@ -1613,13 +1612,43 @@ contract EVMRuntime is EVMConstants {
           amount := mload(add(cData, 68))
         }
 
-        success = state.tokenBag.transfer(
+        success = state.tokenBag.transferFrom(
           stack.target,
           state.caller,
           dest,
           amount
         );
 	returnData = abi.encodePacked(success);
+      } else if (funSig == FUNCSIG_TRANSFERFROM) {
+        address from;
+        address to;
+      	uint amount;
+
+        assembly {
+          from := mload(add(cData,24))
+          to := mload(add(cData,56))
+          amount := mload(add(cData, 100))
+        }
+
+        success = state.tokenBag.transferFrom(
+          stack.target,
+          from,
+          to,
+          amount
+        );
+	returnData = abi.encodePacked(success);
+      } else if (funSig == FUNCSIG_WRITEDATA) {
+        uint id;
+        bytes32 data;
+
+        assembly {
+          id := mload(add(cData, 36))
+          data := mload(add(cData, 68))
+        }
+
+        state.tokenBag.writeData(stack.target, id, data);
+        success = true;
+        returnData = abi.encodePacked(success);
       } else {
         state.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         return;
@@ -1740,7 +1769,17 @@ contract EVMRuntime is EVMConstants {
 
 	  // what happens here if we enter token intercepts instead of precompiles
 	  retEvm.returnData = ret;
-	}
+	} else if (funSig == FUNCSIG_OWNEROF) {
+          uint tokenId;
+	  // 32 length + 4 funcSig = 36
+          assembly {
+	     tokenId := mload(add(cData,36))
+          }
+	  address owner = state.tokenBag.ownerOf(address(target), tokenId);
+	  bytes memory ret = abi.encodePacked(owner);
+
+       	  retEvm.returnData = ret;
+        }
         else {
             retEvm.errno = ERROR_INSTRUCTION_NOT_SUPPORTED;
         }

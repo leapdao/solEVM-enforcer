@@ -4045,6 +4045,7 @@ module.exports = [
       valueOrId: 0xdeadbeef,
       data: OP.ZERO_HASH,
       color: '0xcccccccccccccccccccccccccccccccccccccccd',
+      tokenType: 0,
     }]),
     result: {
       stack: [
@@ -4075,6 +4076,7 @@ module.exports = [
       valueOrId: 0xdeadbeef,
       data: OP.ZERO_HASH,
       color: '0xaccccccccccccccccccccccccccccccccccccccd',
+      tokenType: 0,
     }]),
     result: {
       stack: [
@@ -4105,6 +4107,7 @@ module.exports = [
       valueOrId: 0xdeadbeef,
       data: OP.ZERO_HASH,
       color: '0xcccccccccccccccccccccccccccccccccccccccd',
+      tokenType: 0,
     }]),
     result: {
       stack: [
@@ -4136,6 +4139,7 @@ module.exports = [
       valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
       data: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
       color: '0xcccccccccccccccccccccccccccccccccccccccd',
+      tokenType: 2,
     }]),
     result: {
       stack: [
@@ -4171,12 +4175,14 @@ module.exports = [
         valueOrId: '0x0000000000000000000000000000000000000000000000000000000000000000',
         data: '0x0000000000000000000000000000000000000000000000000000000000000000',
         color: '0xcccccccccccccccccccccccccccccccccccccccd',
+        tokenType: 0,
       },
       {
         owner: '0x' + OP.DEFAULT_CALLER,
         valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
         data: '0x0000000000000000000000000000000000000000000000000000000000000000',
         color: '0xcccccccccccccccccccccccccccccccccccccccd',
+        tokenType: 0,
       },
     ]),
     result: {
@@ -4195,14 +4201,206 @@ module.exports = [
           valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
           data: '0x0000000000000000000000000000000000000000000000000000000000000000',
           color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 0,
         },
         {
           owner: '0x' + OP.DEFAULT_CALLER,
           valueOrId: '0x0000000000000000000000000000000000000000000000000000000000000000',
           data: '0x0000000000000000000000000000000000000000000000000000000000000000',
           color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 0,
         },
       ]),
+    },
+  },
+  {
+    description: 'CALL transferFrom erc20 - successfull transfer',
+    code: OP.CALL,
+    memory: [
+      '0x23b872ddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+      '0x00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef0000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      '0xdeadbeef00000000000000000000000000000000000000000000000000000000',
+    ],
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000020',
+      '0x0000000000000000000000000000000000000000000000000000000000000064',
+      '0x0000000000000000000000000000000000000000000000000000000000000064',
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+      '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+    ],
+    tokenBag: padTokenBag([
+      {
+        owner: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+        valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+        data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        color: '0xcccccccccccccccccccccccccccccccccccccccd',
+        tokenType: 0,
+      },
+      {
+        owner: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef',
+        valueOrId: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        color: '0xcccccccccccccccccccccccccccccccccccccccd',
+        tokenType: 0,
+      },
+    ]),
+    result: {
+      stack: [
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+      ],
+      memory: [
+        '0x23b872ddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+        '0x00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef0000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+        '0xdeadbeef01000000000000000000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
+      tokenBag: padTokenBag([
+        {
+          owner: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+          valueOrId: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 0,
+        },
+        {
+          owner: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef',
+          valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+          data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 0,
+        },
+      ]),
+    },
+  },
+  {
+    description: 'CALL transferFrom non-fungible - successfull transfer',
+    code: OP.CALL,
+    memory: [
+      '0x23b872ddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+      '0x00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef0000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      '0xdeadbeef00000000000000000000000000000000000000000000000000000000',
+    ],
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000020',
+      '0x0000000000000000000000000000000000000000000000000000000000000064',
+      '0x0000000000000000000000000000000000000000000000000000000000000064',
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+      '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+    ],
+    tokenBag: padTokenBag([
+      {
+        owner: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
+        valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+        data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        color: '0xcccccccccccccccccccccccccccccccccccccccd',
+        tokenType: 1,
+      },
+    ]),
+    result: {
+      stack: [
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+      ],
+      memory: [
+        '0x23b872ddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab0000000000000000',
+        '0x00000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef0000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+        '0xdeadbeef01000000000000000000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
+      tokenBag: padTokenBag([
+        {
+          owner: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeef',
+          valueOrId: '0x00000000000000000000000000000000000000000000000000000000deadbeef',
+          data: '0x0000000000000000000000000000000000000000000000000000000000000000',
+          color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 1,
+        },
+      ]),
+    },
+  },
+  {
+    description: 'CALL writeData - successfull write',
+    code: OP.CALL,
+    memory: [
+      '0xa983d43fdddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      '0xddddddddffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+      '0xffffffff00000000000000000000000000000000000000000000000000000000',
+    ],
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000020',
+      '0x0000000000000000000000000000000000000000000000000000000000000044',
+      '0x0000000000000000000000000000000000000000000000000000000000000044',
+      OP.ZERO_HASH,
+      OP.ZERO_HASH,
+      '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+      '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+    ],
+    tokenBag: padTokenBag([{
+      owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+      valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      data: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      color: '0xcccccccccccccccccccccccccccccccccccccccd',
+      tokenType: 2,
+    }]),
+    result: {
+      stack: [
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+      ],
+      memory: [
+        '0xa983d43fdddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        '0xddddddddffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+        '0xffffffff01000000000000000000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
+      tokenBag: padTokenBag([
+        {
+          owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+          valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+          data: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          color: '0xcccccccccccccccccccccccccccccccccccccccd',
+          tokenType: 2,
+        },
+      ]),
+    },
+  },
+  {
+    description: 'STATICCALL ownerOf - successfull read',
+    code: OP.STATICCALL,
+    memory: [
+      '0x6352211edddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      '0xdddddddd00000000000000000000000000000000000000000000000000000000',
+    ],
+    stack: [
+      '0x0000000000000000000000000000000000000000000000000000000000000020',
+      '0x0000000000000000000000000000000000000000000000000000000000000024',
+      '0x0000000000000000000000000000000000000000000000000000000000000024',
+      OP.ZERO_HASH,
+      '0x000000000000000000000000cccccccccccccccccccccccccccccccccccccccd',
+      '0x0000000000000000000000000000000000000000000000000000000000ffffff',
+    ],
+    tokenBag: padTokenBag([{
+      owner: '0xfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb',
+      valueOrId: '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+      data: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+      color: '0xcccccccccccccccccccccccccccccccccccccccd',
+      tokenType: 2,
+    }]),
+    result: {
+      stack: [
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+      ],
+      memory: [
+        '0x6352211edddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        '0xddddddddfaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabb0000000000000000',
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
     },
   },
   {
